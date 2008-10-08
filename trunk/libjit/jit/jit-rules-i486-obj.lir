@@ -1,0 +1,1131 @@
+JIT_OP_LOAD_RELATIVE_SBYTE:
+	[=reg, imm, imm] -> {
+		x86_widen_mem(inst, $1, $2 + $3, 1, 0);
+	}
+	[=reg, reg, imm] -> {
+		x86_widen_membase(inst, $1, $2, $3, 1, 0);
+	}
+
+JIT_OP_LOAD_RELATIVE_UBYTE:
+	[=reg, imm, imm] -> {
+		x86_widen_mem(inst, $1, $2 + $3, 0, 0);
+	}
+	[=reg, reg, imm] -> {
+		x86_widen_membase(inst, $1, $2, $3, 0, 0);
+	}
+
+JIT_OP_LOAD_RELATIVE_SHORT:
+	[=reg, imm, imm] -> {
+		x86_widen_mem(inst, $1, $2 + $3, 1, 1);
+	}
+	[=reg, reg, imm] -> {
+		x86_widen_membase(inst, $1, $2, $3, 1, 1);
+	}
+
+JIT_OP_LOAD_RELATIVE_USHORT:
+	[=reg, imm, imm] -> {
+		x86_widen_mem(inst, $1, $2 + $3, 0, 1);
+	}
+	[=reg, reg, imm] -> {
+		x86_widen_membase(inst, $1, $2, $3, 0, 1);
+	}
+
+JIT_OP_LOAD_RELATIVE_INT:
+	[=reg, imm, imm] -> {
+		x86_mov_reg_mem(inst, $1, $2 + $3, 4);
+	}
+	[=reg, reg, imm] -> {
+		x86_mov_reg_membase(inst, $1, $2, $3, 4);
+	}
+
+JIT_OP_LOAD_RELATIVE_LONG:
+	[=local, imm, imm] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_mem(inst, gpreg1, $2 + $3, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4); 
+		x86_mov_reg_mem(inst, gpreg1, $2 + $3 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		
+	}
+	[=lreg, imm, imm] -> {
+		x86_mov_reg_mem(inst, $1, $2 + $3, 4);
+		x86_mov_reg_mem(inst, lir_register_pair($1), $2 + $3 + 4, 4);
+	}
+	[=local, reg, imm] -> { 
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_membase(inst, gpreg1, $2, $3, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, $2, $3 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		
+	}	
+	[=lreg, reg, imm] -> {
+		inst = masm_mov_reg_membase(inst, $1, $2, $3, jit_value_get_type(dest));
+	}
+
+JIT_OP_LOAD_RELATIVE_FLOAT32:
+	[=freg, imm, imm] -> {
+		sse_movss_xmreg_mem(inst, $1, $2 + $3);
+	}
+	[=freg, reg, imm] -> {
+		sse_movss_xmreg_membase(inst, $1, $2, $3);
+	}
+
+JIT_OP_LOAD_RELATIVE_FLOAT64:
+	[=freg, imm, imm] -> {
+		sse2_movsd_xmreg_mem(inst, $1, $2 + $3);
+	}
+	[=freg, reg, imm] -> {
+		sse2_movsd_xmreg_membase(inst, $1, $2, $3);
+	}
+
+JIT_OP_LOAD_RELATIVE_NFLOAT:
+	[=local, imm, imm] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_mem(inst, gpreg1, $2 + $3, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4); 
+		x86_mov_reg_mem(inst, gpreg1, $2 + $3 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_mem(inst, gpreg1, $2 + $3 + 8, 4);
+			x86_mov_membase_reg(inst, X86_EBP, $1 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=local, reg, imm] -> { 
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_membase(inst, gpreg1, $2, $3, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, $2, $3 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg1, $2, $3 + 8, 4);
+			x86_mov_membase_reg(inst, X86_EBP, $1 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=freg, imm, imm] -> {
+		sse2_movsd_xmreg_mem(inst, $1, $2 + $3);
+	}
+	[=freg, reg, imm] -> {
+		sse2_movsd_xmreg_membase(inst, $1, $2, $3);
+	}
+
+
+JIT_OP_LOAD_RELATIVE_STRUCT:
+	[=local, imm, imm] -> {
+		int size = jit_type_get_size(jit_value_get_type(dest));
+		find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+		if(save_gpreg1) x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 16);
+		inst = lir_memory_copy_from_mem(inst, X86_EBP, $1, (void *)($2 + $3), size, gpreg1);
+		if(save_gpreg1) x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 16);
+		
+	}
+	[=local, reg, imm] -> {
+		inst = masm_mov_membase_membase(inst, X86_EBP, $1, $2, $3, jit_type_get_size(jit_value_get_type(dest)));
+	}
+
+JIT_OP_STORE_RELATIVE_BYTE:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $3, $2, 1);
+	}
+	[=imm, reg, imm] -> {
+		if($2 != X86_ESI && $2 != X86_EDI)
+		{
+			x86_mov_mem_reg(inst, $1 + $3, $2, 1);
+		}
+		else
+		{
+			find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+			x86_mov_reg_reg(inst, gpreg1, $2, 4);
+			x86_mov_mem_reg(inst, $1 + $3, gpreg1, 1);
+			
+		}
+	}
+	[=reg, imm, imm] -> {
+		x86_mov_membase_imm(inst, $1, $3, $2, 1);
+	}
+	[=reg, reg, imm] -> {
+		if($2 != X86_ESI && $2 != X86_EDI)
+		{
+			x86_mov_membase_reg(inst, $1, $3, $2, 1);
+		}
+		else
+		{
+			find_one_gp_reg_cond3(inst, $1, X86_ESI, X86_EDI);
+			x86_mov_reg_reg(inst, gpreg1, $2, 4);
+			x86_mov_membase_reg(inst, $1, $3, gpreg1, 1);
+			
+		}
+	}
+
+JIT_OP_STORE_RELATIVE_SHORT:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $3, $2, 2);
+	}
+	[=imm, reg, imm] -> {
+		x86_mov_mem_reg(inst, $1 + $3, $2, 2);
+	}
+	[=reg, imm, imm] -> {
+		x86_mov_membase_imm(inst, $1, $3, $2, 2);
+	}
+	[=reg, reg, imm] -> {
+		x86_mov_membase_reg(inst, $1, $3, $2, 2);
+	}
+
+JIT_OP_STORE_RELATIVE_INT:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $3, $2, 4);
+	}
+	[=imm, reg, imm] -> {
+		x86_mov_mem_reg(inst, $1 + $3, $2, 4);
+	}
+	[=reg, imm, imm] -> {
+		x86_mov_membase_imm(inst, $1, $3, $2, 4);
+	}
+	[=reg, reg, imm] -> {
+		x86_mov_membase_reg(inst, $1, $3, $2, 4);
+	}
+
+JIT_OP_STORE_RELATIVE_LONG:
+	[=imm, imm, imm] -> {
+		jit_uint *long_value = (jit_uint*)($2);
+		jit_uint low_dword = long_value[0];
+		jit_uint high_dword = long_value[1];
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_mem_imm(inst, $1 + $3, low_dword, 4);
+		x86_mov_mem_imm(inst, $1 + $3 + 4, high_dword, 4);
+	}
+	[=imm, local, imm] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+		x86_mov_mem_reg(inst, $1 + $3, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 4, 4);
+		x86_mov_mem_reg(inst, $1 + $3 + 4, gpreg1, 4);
+		
+	}
+	[=imm, lreg, imm] -> {
+		x86_mov_mem_reg(inst, $1 + $3, $2, 4);
+		x86_mov_mem_reg(inst, $1 + $3 + 4, lir_register_pair($2), 4);
+	}
+	[=reg, imm, imm] -> {
+		x86_mov_membase_imm(inst, $1, $3, *((jit_uint *)($2)), 4);
+		x86_mov_membase_imm(inst, $1, $3 + 4, *((jit_uint *)($2 + 4)), 4);
+	}
+	[=reg, local, imm] -> {
+		find_one_gp_reg_cond1(inst, $1);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+		x86_mov_membase_reg(inst, $1, $3, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 4, 4);
+		x86_mov_membase_reg(inst, $1, $3 + 4, gpreg1, 4);
+		
+	}
+	[=reg, lreg, imm] -> {
+		inst = masm_mov_membase_reg(inst, $1, $3, $2, sourceType);
+	}
+
+JIT_OP_STORE_RELATIVE_FLOAT32:
+	[=imm, imm, imm] -> {
+		jit_uint *float_value = (jit_uint*)($2);
+		jit_uint low_dword = float_value[0];
+		x86_mov_mem_imm(inst, $1 + $3, low_dword, 4);
+	}
+	[=imm, freg, imm] -> {
+		sse_movss_mem_xmreg(inst, $1 + $3, $2);
+	}
+	[=reg, imm, imm] -> {
+		jit_uint float_value = *((jit_uint *)($2));
+		x86_mov_membase_imm(inst, $1, $3, float_value, 4);
+	}
+	[=reg, freg, imm] -> {
+		sse_movss_membase_xmreg(inst, $1, $3, $2);
+	}
+
+JIT_OP_STORE_RELATIVE_FLOAT64:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $3, ((jit_uint*)($2))[0], 4);
+		x86_mov_mem_imm(inst, $1 + $3 + 4, ((jit_uint*)($2))[1], 4);
+	}
+	[=imm, freg, imm] -> {
+		sse2_movsd_mem_xmreg(inst, $1 + $3, $2);
+	}
+	[=reg, imm, imm] -> {
+		jit_uint *value = (jit_uint*)($2);
+		x86_mov_membase_imm(inst, $1, $3, value[0], 4);
+		x86_mov_membase_imm(inst, $1, $3 + 4, value[1], 4);
+	}
+	[=reg, freg, imm] -> {
+		sse2_movsd_membase_xmreg(inst, $1, $3, $2);
+	}
+
+
+JIT_OP_STORE_RELATIVE_NFLOAT:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $3, ((jit_uint *)($2))[0], 4);
+		x86_mov_mem_imm(inst, $1 + $3 + 4, ((jit_uint *)($2))[1], 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_mem_imm(inst, $1 + $3 + 8, ((jit_uint *)($2))[2], 4);
+		}
+	}
+	[=imm, local, imm] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+		x86_mov_mem_reg(inst, $1 + $3, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 4, 4);
+		x86_mov_mem_reg(inst, $1 + $3 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 8, 4);
+			x86_mov_mem_reg(inst, $1 + $3 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=imm, freg, imm] -> {
+		sse2_movsd_mem_xmreg(inst, $1 + $3, $2);
+	}
+	[=reg, imm, imm] -> {
+		jit_uint *ptr = (jit_uint*)($2);
+		x86_mov_membase_imm(inst, $1, $3, ptr[0], 4);
+		x86_mov_membase_imm(inst, $1, $3 + 4, ptr[1], 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_membase_imm(inst, $1, $3 + 8, ptr[2], 4);
+		}
+	}
+	[=reg, local, imm] -> {
+		find_one_gp_reg_cond1(inst, $1);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+		x86_mov_membase_reg(inst, $1, $3, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 4, 4);
+		x86_mov_membase_reg(inst, $1, $3 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 8, 4);
+			x86_mov_membase_reg(inst, $1, $3 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=reg, freg, imm] -> {
+		sse2_movsd_membase_xmreg(inst, $1, $3, $2);
+	}
+
+
+JIT_OP_STORE_RELATIVE_STRUCT:
+	[=imm, local, imm] -> {
+		int size = jit_type_get_size(jit_value_get_type(value1));
+		find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+		if(save_gpreg1) x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 16);
+		inst = lir_memory_copy_to_mem(inst, (void *)($1 + $3), X86_EBP, $2, size, gpreg1);
+		if(save_gpreg1) x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 16);
+		
+	}
+	[=reg, local, imm] -> {
+		inst = masm_mov_membase_membase(inst, $1, $3, X86_EBP, $2, jit_type_get_size(sourceType));
+	}
+
+JIT_OP_STORE_ELEMENT_BYTE:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $2, $3, 1);
+	}
+	[=imm, imm, reg] -> {
+		if($3 != X86_ESI && $3 != X86_EDI)
+		{
+			x86_mov_mem_reg(inst, $1 + $2, $3, 1);
+		}
+		else
+		{
+			find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+			x86_mov_reg_reg(inst, gpreg1, $3, 4);
+			x86_mov_mem_reg(inst, $1 + $2, gpreg1, 1);
+			
+		}
+	}
+	[=imm, reg, imm] -> {
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_imm(inst, gpreg1, 0, $2, 0, $3, 1);
+		
+	}
+	[=imm, reg, reg] -> {
+		if($3 != X86_ESI && $3 != X86_EDI)
+		{
+			find_one_gp_reg_cond2(inst, $2, $3);
+			x86_mov_reg_imm(inst, gpreg1, $1);
+			x86_mov_memindex_reg(inst, gpreg1, 0, $2, 0, $3, 1);
+			
+		}
+		else
+		{
+			// was find_two_gp_regs_cond2_cond2_for_gpreg1(inst, $2, $3, X86_ESI, X86_EDI);
+			find_two_gp_regs_cond1_cond2_for_gpreg1(inst, $2, X86_ESI, X86_EDI);
+			x86_mov_reg_reg(inst, gpreg1, $3, 4);
+			x86_mov_reg_imm(inst, gpreg2, $1);
+			x86_mov_memindex_reg(inst, gpreg2, 0, $2, 0, gpreg1, 1);
+			
+		}
+	}
+	[=reg, imm, imm] -> {
+		x86_mov_membase_imm(inst, $1, $2, $3, 1);
+	}
+	[=reg, imm, reg] -> {
+		if($3 != X86_ESI && $3 != X86_EDI)
+		{
+			x86_mov_membase_reg(inst, $1, $2, $3, 1);
+		}
+		else
+		{
+			find_one_gp_reg_cond3(inst, $1, X86_ESI, X86_EDI);
+			x86_mov_reg_reg(inst, gpreg1, $3, 4);
+			x86_mov_membase_reg(inst, $1, $2, gpreg1, 1);
+			
+		}
+	}
+	[=reg, reg, imm] -> {
+		x86_mov_memindex_imm(inst, $1, 0, $2, 0, $3, 1);
+	}
+	[=reg, reg, reg] -> {
+		if($3 != X86_ESI && $3 != X86_EDI)
+		{
+			x86_mov_memindex_reg(inst, $1, 0, $2, 0, $3, 1);
+		}
+		else
+		{
+			find_one_gp_reg_cond4(inst, $1, $2, X86_ESI, X86_EDI);
+			x86_mov_reg_reg(inst, gpreg1, $3, 4);
+			x86_mov_memindex_reg(inst, $1, 0, $2, 0, gpreg1, 1);
+			
+		}
+	}
+
+JIT_OP_STORE_ELEMENT_SHORT:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $2 * 2, $3, 2);
+	}
+	[=imm, imm, reg] -> {
+		x86_mov_mem_reg(inst, $1 + $2 * 2, $3, 2);
+	}
+	[=imm, reg, imm] -> {
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_imm(inst, gpreg1, 0, $2, 1, $3, 2);
+		
+	}
+	[=imm, reg, reg] -> {
+		find_one_gp_reg_cond2(inst, $2, $3);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_reg(inst, gpreg1, 0, $2, 1, $3, 2);
+		
+	}
+	[=reg, imm, imm] -> {
+		x86_mov_membase_imm(inst, $1, $2 * 2, $3, 2);
+	}
+	[=reg, imm, reg] -> {
+		x86_mov_membase_reg(inst, $1, $2 * 2, $3, 2);
+	}
+	[=reg, reg, imm] -> {
+		x86_mov_memindex_imm(inst, $1, 0, $2, 1, $3, 2);
+	}
+	[=reg, reg, reg] -> {
+		x86_mov_memindex_reg(inst, $1, 0, $2, 1, $3, 2);
+	}
+
+JIT_OP_STORE_ELEMENT_INT:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $2 * 4, $3, 4);
+	}
+	[=imm, imm, reg] -> {
+		x86_mov_mem_reg(inst, $1 + $2 * 4, $3, 4);
+	}
+	[=imm, reg, imm] -> {
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_imm(inst, gpreg1, 0, $2, 2, $3, 4);
+		
+	}
+	[=imm, reg, reg] -> {
+		find_one_gp_reg_cond2(inst, $2, $3);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_reg(inst, gpreg1, 0, $2, 2, $3, 4);
+		
+	}
+	[=reg, imm, imm] -> {
+		x86_mov_membase_imm(inst, $1, $2 * 4, $3, 4);
+	}
+	[=reg, imm, reg] -> {
+		x86_mov_membase_reg(inst, $1, $2 * 4, $3, 4);
+	}
+	[=reg, reg, imm] -> {
+		x86_mov_memindex_imm(inst, $1, 0, $2, 2, $3, 4);
+	}
+	[=reg, reg, reg] -> {
+		x86_mov_memindex_reg(inst, $1, 0, $2, 2, $3, 4);
+	}
+
+JIT_OP_STORE_ELEMENT_LONG:
+	[=imm, imm, imm] -> {
+		jit_uint low_dword = ((jit_uint *)($3))[0];
+		jit_uint high_dword = ((jit_uint *)($3))[1];
+		x86_mov_mem_imm(inst, $1 + $2 * 8, low_dword, 4);
+		x86_mov_mem_imm(inst, $1 + $2 * 8 + 4, high_dword, 4);
+	}
+	[=imm, imm, local] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3, 4);
+		x86_mov_mem_reg(inst, $1 + $2 * 8, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3 + 4, 4);
+		x86_mov_mem_reg(inst, $1 + $2 * 8 + 4, gpreg1, 4);
+		
+	}
+	[=imm, imm, lreg] -> {
+		x86_mov_mem_reg(inst, $1 + $2 * 8, $3, 4);
+		x86_mov_mem_reg(inst, $1 + $2 * 8 + 4, lir_register_pair($3), 4);
+	}
+	[=imm, reg, imm] -> {
+		jit_uint low_dword = ((jit_uint *)($3))[0];
+		jit_uint high_dword = ((jit_uint *)($3))[1];
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_imm(inst, gpreg1, 0, $2, 3, low_dword, 4);
+		x86_mov_memindex_imm(inst, gpreg1, 4, $2, 3, high_dword, 4);
+		
+	}
+	[=imm, reg, local] -> {
+		find_two_gp_regs_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3, 4);	
+		x86_mov_memindex_reg(inst, gpreg1, 0, $2, 3, gpreg2, 4);
+		x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3 + 4, 4);
+		x86_mov_memindex_reg(inst, gpreg1, 4, $2, 3, gpreg2, 4);
+		
+	}
+	[=imm, reg, lreg] -> {
+		find_one_gp_reg_cond3(inst, $2, $3, lir_register_pair($3));
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_reg(inst, gpreg1, 0, $2, 3, $3, 4);
+		x86_mov_memindex_reg(inst, gpreg1, 4, $2, 3, lir_register_pair($3), 4);
+		
+	}
+	[=reg, imm, imm] -> {
+		jit_uint low_dword = ((jit_uint *)($3))[0];
+		jit_uint high_dword = ((jit_uint *)($3))[1];
+		x86_mov_membase_imm(inst, $1, $2 * 8, low_dword, 4);
+		x86_mov_membase_imm(inst, $1, $2 * 8 + 4, high_dword, 4);
+	}
+	[=reg, imm, local] -> {
+		find_one_gp_reg_cond1(inst, $1);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3, 4);
+		x86_mov_membase_reg(inst, $1, $2 * 8, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3 + 4, 4);
+		x86_mov_membase_reg(inst, $1, $2 * 8 + 4, gpreg1, 4);
+		
+	}
+	[=reg, imm, lreg] -> {
+		x86_mov_membase_reg(inst, $1, $2 * 8, $3, 4);
+		x86_mov_membase_reg(inst, $1, $2 * 8 + 4, lir_register_pair($3), 4);
+	}
+	[=reg, reg, imm] -> {
+		jit_uint low_dword = ((jit_uint *)($3))[0];
+		jit_uint high_dword = ((jit_uint *)($3))[1];
+		x86_mov_memindex_imm(inst, $1, 0, $2, 3, low_dword, 4);
+		x86_mov_memindex_imm(inst, $1, 4, $2, 3, high_dword, 4);
+	}
+	[=reg, reg, local] -> {
+		find_two_gp_regs(inst);
+		x86_lea_memindex(inst, gpreg1, $1, 0, $2, 3);
+		x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3, 4);
+		x86_mov_membase_reg(inst, gpreg1, 0, gpreg2, 4);
+		x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3 + 4, 4);
+		x86_mov_membase_reg(inst, gpreg1, 4, gpreg2, 4);
+		
+	}
+	[=reg, reg, lreg] -> {
+		find_one_gp_reg_cond2(inst, $3, lir_register_pair($3));
+		x86_lea_memindex(inst, gpreg1, $1, 0, $2, 3);
+		x86_mov_membase_reg(inst, gpreg1, 0, $3, 4);
+		x86_mov_membase_reg(inst, gpreg1, 4, lir_register_pair($3), 4);
+		
+	}
+
+JIT_OP_STORE_ELEMENT_FLOAT32:
+	[=imm, imm, imm] -> {
+		jit_uint value = ((jit_uint *)($3))[0];
+		x86_mov_mem_imm(inst, $1 + $2 * 4, value, 4);
+	}
+	[=imm, imm, freg] -> {
+		sse_movss_mem_xmreg(inst, $1 + $2 * 4, $3);
+	}
+	[=imm, reg, imm] -> {
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		jit_uint value = ((jit_uint *)($3))[0];
+		x86_mov_memindex_imm(inst, gpreg1, 0, $2, 2, value, 4);
+		
+	}
+	[=imm, reg, freg] -> {
+		if(!lir_gp_reg_is_free(func, $2))
+		{
+			find_one_gp_reg(inst);
+			x86_mov_reg_reg(inst, gpreg1, $2, 4);
+			x86_alu_reg_imm(inst, X86_SHL, gpreg1, 2);
+			sse_movss_membase_xmreg(inst, gpreg1, $1, $3);		
+			
+		}
+		else
+		{
+			x86_alu_reg_imm(inst, X86_SHL, $2, 2);
+			sse_movss_membase_xmreg(inst, $2, $1, $3);
+		}
+	}
+	[=reg, imm, imm] -> {
+		jit_uint value = ((jit_uint*)($3))[0];
+		x86_mov_membase_imm(inst, $1, $2 * 4, value, 4);
+	}
+	[=reg, imm, freg] -> {
+		sse_movss_membase_xmreg(inst, $1, $2 * 4, $3);
+	}
+	[=reg, reg, imm] -> {
+		jit_uint value = ((jit_uint *)($3))[0];
+		x86_mov_memindex_imm(inst, $1, 0, $2, 2, value, 4);
+	}
+	[=reg, reg, freg] -> {
+		find_one_gp_reg(inst);
+		x86_lea_memindex(inst, gpreg1, $1, 0, $2, 2);
+		sse_movss_membase_xmreg(inst, gpreg1, 0, $3);
+		
+	}
+
+
+JIT_OP_STORE_ELEMENT_FLOAT64:
+	[=imm, imm, imm] -> {
+		jit_uint low_dword = ((jit_uint *)($3))[0];
+		jit_uint high_dword = ((jit_uint *)($3))[1];
+		x86_mov_mem_imm(inst, $1 + $2 * 8, low_dword, 4);
+		x86_mov_mem_imm(inst, $1 + $2 * 8 + 4, high_dword, 4);
+	}
+	[=imm, imm, freg] -> {
+		sse2_movsd_mem_xmreg(inst, $1 + $2 * 8, $3);
+	}
+	[=imm, reg, imm] -> {
+		jit_uint low_dword = ((jit_uint *)($3))[0];
+		jit_uint high_dword = ((jit_uint *)($3))[1];
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_imm(inst, gpreg1, 0, $2, 3, low_dword, 4);
+		x86_mov_memindex_imm(inst, gpreg1, 4, $2, 3, high_dword, 4);
+		
+	}
+	[=imm, reg, freg] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_reg(inst, gpreg1, $2, 4);
+		x86_alu_reg_imm(inst, X86_SHL, gpreg1, 3);
+		sse2_movsd_membase_xmreg(inst, gpreg1, $1, $3);		
+		
+	}
+	[=reg, imm, imm] -> {
+		jit_uint low_dword = ((jit_uint*)($3))[0];
+		jit_uint high_dword = ((jit_uint*)($3))[1];
+		x86_mov_membase_imm(inst, $1, $2 * 8, low_dword, 4);
+		x86_mov_membase_imm(inst, $1, $2 * 8 + 4, high_dword, 4);
+	}
+	[=reg, imm, freg] -> {
+		sse2_movsd_membase_xmreg(inst, $1, $2 * 8, $3);
+	}
+	[=reg, reg, imm] -> {
+		jit_uint low_dword = ((jit_uint *)($3))[0];
+		jit_uint high_dword = ((jit_uint *)($3))[1];
+		x86_mov_memindex_imm(inst, $1, 0, $2, 3, low_dword, 4);
+		x86_mov_memindex_imm(inst, $1, 4, $2, 3, high_dword, 4);
+	}
+	[=reg, reg, freg] -> {
+		find_one_gp_reg(inst);
+		x86_lea_memindex(inst, gpreg1, $1, 0, $2, 2);
+		sse2_movsd_membase_xmreg(inst, gpreg1, 0, $3);
+		
+	}
+
+
+JIT_OP_STORE_ELEMENT_NFLOAT:
+	[=imm, imm, imm] -> {
+		x86_mov_mem_imm(inst, $1 + $2 * 8, ((jit_uint *)($3))[0], 4);
+		x86_mov_mem_imm(inst, $1 + $2 * 8 + 4, ((jit_uint *)($3))[1], 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_mem_imm(inst, $1 + $2 * 8 + 8, ((jit_uint *)($3))[2], 4);
+		}
+	}
+	[=imm, imm, local] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3, 4);
+		x86_mov_mem_reg(inst, $1 + $2 * 8, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3 + 4, 4);
+		x86_mov_mem_reg(inst, $1 + $2 * 8 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3 + 8, 4);
+			x86_mov_mem_reg(inst, $1 + $2 * 8 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=imm, imm, freg] -> {
+		sse2_movsd_mem_xmreg(inst, $1 + $2 * 8, $3);
+	}
+	[=imm, reg, imm] -> {
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_memindex_imm(inst, gpreg1, 0, $2, 3, ((jit_uint *)($3))[0], 4);
+		x86_mov_memindex_imm(inst, gpreg1, 4, $2, 3, ((jit_uint *)($3))[1], 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_memindex_imm(inst, gpreg1, 8, $2, 3, ((jit_uint *)($3))[2], 4);
+		}
+		
+	}
+	[=imm, reg, local] -> {
+		find_two_gp_regs_cond1(inst, $2);
+		x86_mov_reg_imm(inst, gpreg1, $1);
+		x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3, 4);	
+		x86_mov_memindex_reg(inst, gpreg1, 0, $2, 3, gpreg2, 4);
+		x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3 + 4, 4);
+		x86_mov_memindex_reg(inst, gpreg1, 4, $2, 3, gpreg2, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3 + 8, 4);
+			x86_mov_memindex_reg(inst, gpreg1, 8, $2, 3, gpreg2, 4);
+		}
+		
+	}
+	[=imm, reg, freg] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_reg(inst, gpreg1, $2, 4);
+		x86_alu_reg_imm(inst, X86_SHL, gpreg1, 3);
+		sse2_movsd_membase_xmreg(inst, gpreg1, $1, $3);		
+		
+	}
+	[=reg, imm, imm] -> {
+		x86_mov_membase_imm(inst, $1, $2 * 8, ((jit_uint *)($3))[0], 4);
+		x86_mov_membase_imm(inst, $1, $2 * 8 + 4, ((jit_uint *)($3))[1], 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_membase_imm(inst, $1, $2 * 8 + 8, ((jit_uint *)($3))[2], 4);
+		}
+	}
+	[=reg, imm, local] -> {
+		find_one_gp_reg_cond1(inst, $1);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3, 4);
+		x86_mov_membase_reg(inst, $1, $2 * 8, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3 + 4, 4);
+		x86_mov_membase_reg(inst, $1, $2 * 8 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3 + 8, 4);
+			x86_mov_membase_reg(inst, $1, $2 * 8 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=reg, imm, freg] -> {
+		sse2_movsd_membase_xmreg(inst, $1, $2 * 8, $3);
+	}
+	[=reg, reg, imm] -> {
+		x86_mov_memindex_imm(inst, $1, 0, $2, 3, ((jit_uint *)($3))[0], 4);
+		x86_mov_memindex_imm(inst, $1, 4, $2, 3, ((jit_uint *)($3))[1], 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_memindex_imm(inst, $1, 8, $2, 3, ((jit_uint *)($3))[2], 4);
+		}
+	}
+	[=reg, reg, local] -> {
+		find_two_gp_regs(inst);
+		x86_lea_memindex(inst, gpreg1, $1, 0, $2, 3);
+		x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3, 4);
+		x86_mov_membase_reg(inst, gpreg1, 0, gpreg2, 4);
+		x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3 + 4, 4);
+		x86_mov_membase_reg(inst, gpreg1, 4, gpreg2, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg2, X86_EBP, $3 + 8, 4);
+			x86_mov_membase_reg(inst, gpreg1, 8, gpreg2, 4);
+		}
+		
+	}
+	[=reg, reg, freg] -> {
+		find_one_gp_reg(inst);
+		x86_lea_memindex(inst, gpreg1, $1, 0, $2, 2);
+		sse2_movsd_membase_xmreg(inst, gpreg1, 0, $3);
+		
+	}
+
+
+JIT_OP_LOAD_ELEMENT_SBYTE:
+	[=reg, imm, imm] -> {
+		x86_widen_mem(inst, $1, $2 + $3, 1, 0);
+	}
+	[=reg, imm, reg] -> {
+		if($1 != $3)
+		{
+			x86_mov_reg_imm(inst, $1, $2);
+			x86_widen_memindex(inst, $1, $1, 0, $3, 0, 1, 0);
+		}
+		else
+		{
+			find_one_gp_reg_cond1(inst, $1);
+			x86_mov_reg_imm(inst, gpreg1, $2);
+			x86_widen_memindex(inst, $1, gpreg1, 0, $3, 0, 1, 0);
+			
+		}
+	}
+	[=reg, reg, imm] -> {
+		x86_widen_membase(inst, $1, $2, $3, 1, 0);
+	}
+	[=reg, reg, reg] -> {
+		x86_widen_memindex(inst, $1, $2, 0, $3, 0, 1, 0);
+	}
+
+
+JIT_OP_LOAD_ELEMENT_UBYTE:
+	[=reg, imm, imm] -> {
+		x86_widen_mem(inst, $1, $2 + $3, 0, 0);
+	}
+	[=reg, imm, reg] -> {
+		if($1 != $3)
+		{
+			x86_mov_reg_imm(inst, $1, $2);
+			x86_widen_memindex(inst, $1, $1, 0, $3, 0, 0, 0);
+		}
+		else
+		{
+			find_one_gp_reg_cond1(inst, $1);
+			x86_mov_reg_imm(inst, gpreg1, $2);
+			x86_widen_memindex(inst, $1, gpreg1, 0, $3, 0, 0, 0);
+			
+		}
+	}
+	[=reg, reg, imm] -> {
+		x86_widen_membase(inst, $1, $2, $3 * 2, 0, 0);
+	}
+	[=reg, reg, reg] -> {
+		x86_widen_memindex(inst, $1, $2, 0, $3, 0, 0, 0);
+	}
+
+JIT_OP_LOAD_ELEMENT_SHORT:
+	[=reg, imm, imm] -> {
+		x86_widen_mem(inst, $1, $2 + $3 * 2, 1, 1);
+	}
+	[=reg, imm, reg] -> {
+		if($1 != $3)
+		{
+			x86_mov_reg_imm(inst, $1, $2);
+			x86_widen_memindex(inst, $1, $1, 0, $3, 1, 1, 1);
+		}
+		else
+		{
+			find_one_gp_reg_cond1(inst, $1);
+			x86_mov_reg_imm(inst, gpreg1, $2);
+			x86_widen_memindex(inst, $1, gpreg1, 0, $3, 1, 1, 1);
+			
+		}
+	}
+	[=reg, reg, imm] -> {
+		x86_widen_membase(inst, $1, $2, $3 * 2, 1, 1);
+	}
+	[=reg, reg, reg] -> {
+		x86_widen_memindex(inst, $1, $2, 0, $3, 1, 1, 1);
+	}
+
+JIT_OP_LOAD_ELEMENT_USHORT:
+	[=reg, imm, imm] -> {
+		x86_widen_mem(inst, $1, $2 + $3 * 2, 0, 1);
+	}
+	[=reg, imm, reg] -> {
+		if($1 != $3)
+		{
+			x86_mov_reg_imm(inst, $1, $2);
+			x86_widen_memindex(inst, $1, $1, 0, $3, 1, 0, 1);
+		}
+		else
+		{
+			find_one_gp_reg_cond1(inst, $1);
+			x86_mov_reg_imm(inst, gpreg1, $2);
+			x86_widen_memindex(inst, $1, gpreg1, 0, $3, 1, 0, 1);
+			
+		}
+	}
+	[=reg, reg, imm] -> {
+		x86_widen_membase(inst, $1, $2, $3 * 2, 0, 1);
+	}
+	[=reg, reg, reg] -> {
+		x86_widen_memindex(inst, $1, $2, 0, $3, 1, 0, 1);
+	}
+
+JIT_OP_LOAD_ELEMENT_INT:
+	[=reg, imm, imm] -> {
+		x86_mov_reg_mem(inst, $1, $2 + $3 * 4, 4);
+	}
+	[=reg, imm, reg] -> {
+		if($1 != $3)
+		{
+			x86_mov_reg_imm(inst, $1, $2);
+			x86_mov_reg_memindex(inst, $1, $1, 0, $3, 2, 4);
+		}
+		else
+		{
+			find_one_gp_reg_cond1(inst, $1);
+			x86_mov_reg_imm(inst, gpreg1, $2);
+			x86_mov_reg_memindex(inst, $1, gpreg1, 0, $3, 2, 4);
+			
+		}
+	}
+	[=reg, reg, imm] -> {
+		x86_mov_reg_membase(inst, $1, $2, $3 * 4, 4);
+	}
+	[=reg, reg, reg] -> {
+		x86_mov_reg_memindex(inst, $1, $2, 0, $3, 2, 4);
+	}
+
+JIT_OP_LOAD_ELEMENT_LONG:
+	[=local, imm, imm] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_mem(inst, gpreg1, $2 + $3 * 8, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4); 
+		x86_mov_reg_mem(inst, gpreg1, $2 + $3 * 8 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		
+	}
+	[=local, imm, reg] -> {
+		find_two_gp_regs(inst);
+		x86_mov_reg_reg(inst, gpreg1, $3, 4);
+		x86_shift_reg_imm(inst, X86_SHL, gpreg1, 3);
+		x86_mov_reg_membase(inst, gpreg2, gpreg1, $2, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg2, 4);
+		x86_mov_reg_membase(inst, gpreg2, gpreg1, $2 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg2, 4);
+		
+	}
+	[=local, reg, imm] -> { 
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_membase(inst, gpreg1, $2, $3 * 8, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, $2, $3 * 8 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		
+	}
+	[=local, reg, reg] -> {
+		find_one_gp_reg_cond2(inst, $2, $3);
+		x86_mov_reg_memindex(inst, gpreg1, $2, 0, $3, 3, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+		x86_mov_reg_memindex(inst, gpreg1, $2, 4, $3, 3, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		
+	}
+	[=lreg, imm, imm] -> {
+		x86_mov_reg_mem(inst, $1, $2 + $3 * 8, 4);
+		x86_mov_reg_mem(inst, lir_register_pair($1), $2 + $3 * 8 + 4, 4);
+	}
+	[=lreg, imm, reg] -> {
+		x86_mov_reg_reg(inst, $1, $3, 4);
+		x86_shift_reg_imm(inst, X86_SHL, $1, 3);
+		x86_mov_reg_membase(inst, lir_register_pair($1), $1, $2 + 4, 4);
+		x86_mov_reg_membase(inst, $1, $1, $2, 4);
+	}
+	[=lreg, reg, imm] -> { 
+		inst = masm_mov_reg_membase(inst, $1, $2, $3 * 8, jit_value_get_type(dest));
+	}
+	[=lreg, reg, reg] -> {
+		if($1 != $2)
+		{
+			if($1 != $3)
+			{
+				x86_mov_reg_memindex(inst, $1, $2, 0, $3, 3, 4);
+				x86_mov_reg_memindex(inst, lir_register_pair($1), $2, 4, $3, 3, 4);
+			}
+			else if(lir_register_pair($1) != $2)
+			{
+				x86_mov_reg_memindex(inst, lir_register_pair($1), $2, 4, $3, 3, 4);
+				x86_mov_reg_memindex(inst, $1, $2, 0, $3, 3, 4);
+			}
+			else // lir_register_pair($1) == $2 && $1 == $3
+			{
+				find_one_gp_reg_cond2(inst, $2, $3);
+				x86_mov_reg_reg(inst, gpreg1, $3, 4);
+				x86_mov_reg_memindex(inst, $1, $2, 0, gpreg1, 3, 4);
+				x86_mov_reg_memindex(inst, lir_register_pair($1), $2, 4, gpreg1, 3, 4);
+				
+			}
+		}
+		else
+		{
+			if(lir_register_pair($1) != $3)
+			{
+				x86_mov_reg_memindex(inst, lir_register_pair($1), $2, 4, $3, 3, 4);
+				x86_mov_reg_memindex(inst, $1, $2, 0, $3, 3, 4);
+			}
+			else if($1 != $2)
+			{
+				x86_mov_reg_memindex(inst, $1, $2, 0, $3, 3, 4);
+				x86_mov_reg_memindex(inst, lir_register_pair($1), $2, 4, $3, 3, 4);
+			}
+			else // lir_register_pair($1) == $3 && $1 == $2
+			{
+				find_one_gp_reg_cond2(inst, $2, $3);
+				x86_mov_reg_reg(inst, gpreg1, $3, 4);
+				x86_mov_reg_memindex(inst, lir_register_pair($1), $2, 4, gpreg1, 3, 4);
+				x86_mov_reg_memindex(inst, $1, $2, 0, gpreg1, 3, 4);
+				
+			}
+		}
+	}
+
+
+JIT_OP_LOAD_ELEMENT_FLOAT32:
+	[=freg, imm, imm] -> {
+		sse_movss_xmreg_mem(inst, $1, $2 + $3 * 4);
+	}
+	[=freg, imm, reg] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_reg(inst, gpreg1, $3, 4);
+		x86_shift_reg_imm(inst, X86_SHL, gpreg1, 2);
+		sse_movss_xmreg_membase(inst, $1, gpreg1, $2);
+		
+	}
+	[=freg, reg, imm] -> {
+		sse_movss_xmreg_membase(inst, $1, $2, $3 * 4);
+	}
+	[=freg, reg, reg] -> {
+		find_one_gp_reg(inst);
+		x86_lea_memindex(inst, gpreg1, $2, 0, $3, 2);
+		sse_movss_xmreg_membase(inst, $1, gpreg1, 0);
+		
+	}
+
+JIT_OP_LOAD_ELEMENT_FLOAT64:
+	[=freg, imm, imm] -> {
+		sse2_movsd_xmreg_mem(inst, $1, $2 + $3 * 8);
+	}
+	[=freg, imm, reg] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_reg(inst, gpreg1, $3, 4);
+		x86_shift_reg_imm(inst, X86_SHL, gpreg1, 3);
+		sse2_movsd_xmreg_membase(inst, $1, gpreg1, $2);
+		
+	}
+	[=freg, reg, imm] -> {
+		sse2_movsd_xmreg_membase(inst, $1, $2, $3 * 8);
+	}
+	[=freg, reg, reg] -> {
+		find_one_gp_reg(inst);
+		x86_lea_memindex(inst, gpreg1, $2, 0, $3, 3);
+		sse2_movsd_xmreg_membase(inst, $1, gpreg1, 0);
+		
+	}	
+
+
+JIT_OP_LOAD_ELEMENT_NFLOAT:
+	[=local, imm, imm] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_mem(inst, gpreg1, $2 + $3 * 8, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4); 
+		x86_mov_reg_mem(inst, gpreg1, $2 + $3 * 8 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_mem(inst, gpreg1, $2 + $3 * 8 + 8, 4);
+			x86_mov_membase_reg(inst, X86_EBP, $1 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=local, imm, reg] -> {
+		find_two_gp_regs(inst);
+		x86_mov_reg_reg(inst, gpreg1, $3, 4);
+		x86_shift_reg_imm(inst, X86_SHL, gpreg1, 3);
+		x86_mov_reg_membase(inst, gpreg2, gpreg1, $2, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg2, 4);
+		x86_mov_reg_membase(inst, gpreg2, gpreg1, $2 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg2, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg2, gpreg1, $2 + 8, 4);
+			x86_mov_membase_reg(inst, X86_EBP, $1 + 8, gpreg2, 4);
+		}
+		
+	}
+	[=local, reg, imm] -> { 
+		find_one_gp_reg_cond1(inst, $2);
+		x86_mov_reg_membase(inst, gpreg1, $2, $3 * 8, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, $2, $3 * 8 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_membase(inst, gpreg1, $2, $3 * 8 + 8, 4);
+			x86_mov_membase_reg(inst, X86_EBP, $1 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=local, reg, reg] -> {
+		find_one_gp_reg_cond2(inst, $2, $3);
+		x86_mov_reg_memindex(inst, gpreg1, $2, 0, $3, 3, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+		x86_mov_reg_memindex(inst, gpreg1, $2, 4, $3, 3, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_reg_memindex(inst, gpreg1, $2, 8, $3, 3, 4);
+			x86_mov_membase_reg(inst, X86_EBP, $1 + 8, gpreg1, 4);
+		}
+		
+	}
+	[=freg, imm, imm] -> {
+		sse2_movsd_xmreg_mem(inst, $1, $2 + $3 * 8);
+	}
+	[=freg, imm, reg] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_reg(inst, gpreg1, $3, 4);
+		x86_shift_reg_imm(inst, X86_SHL, gpreg1, 3);
+		sse2_movsd_xmreg_membase(inst, $1, gpreg1, $2);
+		
+	}
+	[=freg, reg, imm] -> {
+		sse2_movsd_xmreg_membase(inst, $1, $2, $3 * 8);
+	}
+	[=freg, reg, reg] -> {
+		find_one_gp_reg(inst);
+		x86_lea_memindex(inst, gpreg1, $2, 0, $3, 3);
+		sse2_movsd_xmreg_membase(inst, $1, gpreg1, 0);
+		
+	}
+
+JIT_OP_COPY_LOAD_SBYTE, JIT_OP_COPY_LOAD_UBYTE, JIT_OP_COPY_STORE_BYTE, JIT_OP_COPY_LOAD_SHORT, JIT_OP_COPY_LOAD_USHORT, JIT_OP_COPY_STORE_SHORT, JIT_OP_COPY_INT, JIT_OP_COPY_LONG, JIT_OP_COPY_FLOAT32, JIT_OP_COPY_FLOAT64, JIT_OP_COPY_NFLOAT, JIT_OP_COPY_STRUCT:
+	[=reg, reg] -> {
+		// Both registers and locals allocated are 32-bits long.
+		// Just storing the first 8 or 16 bits we could lose the format,
+		// for example, in "int a = 0xffeedd; short b = (short)a;"
+		// gives 0xffffeedd, and not 0xeedd.
+		inst = masm_mov_reg_reg(inst, $1, $2, sourceType);
+	}
+	[=reg, local] -> {
+		inst = masm_mov_reg_membase(inst, $1, X86_EBP, $2, sourceType);
+	}
+	[=reg, imm] -> {
+		inst = masm_mov_reg_imm(inst, $1, $2, sourceType);
+	}
+	[=local, reg] -> {
+		inst = masm_mov_membase_reg(inst, X86_EBP, $1, $2, sourceType);
+	}
+	[=local, local] -> {
+		inst = masm_mov_membase_membase(inst, X86_EBP, $1, X86_EBP, $2, lir_type_get_size(jit_value_get_type(dest)));
+	}
+	[=local, imm] -> {
+		inst = masm_mov_membase_imm(inst, X86_EBP, $1, $2, sourceType);
+	}
+
+JIT_OP_ADDRESS_OF:
+	[=reg, local] -> {
+		x86_lea_membase(inst, $1, X86_EBP, $2);
+	}
+
+JIT_OP_MEMCPY:
+       [=reg, reg, imm] -> {
+             inst = masm_mov_membase_membase(inst, $1, 0, $2, 0, $3);
+       }

@@ -1,0 +1,160 @@
+JIT_OP_FTAN, JIT_OP_DTAN:
+	[] -> {
+		inst = masm_mov_st0_value(inst, insn->value1);
+		x86_fld1(inst);
+		x86_fpatan(inst);
+		x86_fldz(inst);
+		x86_fp_op_reg(inst, X86_FADD, 1, 1);
+		inst = masm_mov_value_st0(inst, insn->dest);
+	}
+
+JIT_OP_FCOS, JIT_OP_DCOS:
+	[] -> {
+		inst = masm_mov_st0_value(inst, insn->value1);
+		x86_fcos(inst);
+		x86_fldz(inst);
+		x86_fp_op_reg(inst, X86_FADD, 1, 1);
+		inst = masm_mov_value_st0(inst, insn->dest);
+	}
+
+JIT_OP_FSIN, JIT_OP_DSIN:
+	[] -> {
+		inst = masm_mov_st0_value(inst, insn->value1);
+		x86_fsin(inst);
+		x86_fldz(inst);
+		x86_fp_op_reg(inst, X86_FADD, 1, 1);
+		inst = masm_mov_value_st0(inst, insn->dest);
+	}
+
+JIT_OP_FSQRT, JIT_OP_DSQRT:
+	[=freg, imm] -> {
+		inst = masm_mov_membase_imm(inst, X86_ESP, -32, $2, sourceType);
+		emit_sse_instruction_reg_membase(inst, (machine_code1), (machine_code2), $1, X86_ESP, -32);
+	}
+	[=local, imm] -> {
+		find_one_xmm_reg(inst);
+		inst = masm_mov_membase_imm(inst, X86_EBP, $1, $2, sourceType);
+		emit_sse_instruction_reg_membase(inst, (machine_code1), (machine_code2), xmmreg1, X86_EBP, $1);
+		inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
+		
+	}
+	[=freg, freg] -> {
+		emit_sse_instruction_reg_reg(inst, (machine_code1), (machine_code2), $1, $2);
+	}
+	[=freg, local] -> {
+		emit_sse_instruction_reg_membase(inst, (machine_code1), (machine_code2), $1, X86_EBP, $2);
+	}
+	[=local, freg] -> {
+		find_one_xmm_reg(inst);
+		emit_sse_instruction_reg_reg(inst, (machine_code1), (machine_code2), xmmreg1, $2);
+		inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
+		
+	}
+	[=local, local] -> {
+		find_one_xmm_reg(inst);
+		emit_sse_instruction_reg_membase(inst, (machine_code1), (machine_code2), xmmreg1, X86_EBP, $2);
+		inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
+		
+	}
+
+JIT_OP_IABS:
+        [=local, imm] -> {
+		x86_mov_membase_imm(inst, X86_EBP, $1, abs($2), 4);
+	}
+	[=local, local] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+		x86_alu_membase_reg(inst, X86_ADD, X86_EBP, $1, gpreg1);
+		x86_alu_membase_reg(inst, X86_XOR, X86_EBP, $1, gpreg1);
+		
+	}
+	[=local, reg] -> {
+		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+		find_one_gp_reg(inst);
+		if(gpreg1 != $2) x86_mov_reg_reg(inst, gpreg1, $2, 4);
+		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+		x86_alu_membase_reg(inst, X86_ADD, X86_EBP, $1, gpreg1);
+		x86_alu_membase_reg(inst, X86_XOR, X86_EBP, $1, gpreg1);
+		
+	}
+	[=reg, imm] -> {
+		x86_mov_reg_imm(inst, $1, abs($2));
+	}
+	[=reg, local] -> {
+		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+		find_one_gp_reg(inst);
+		x86_mov_reg_reg(inst, gpreg1, $1, 4);
+		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+		x86_alu_reg_reg(inst, X86_ADD, $1, gpreg1);
+		x86_alu_reg_reg(inst, X86_XOR, $1, gpreg1);
+		
+	}
+	[=reg, reg] -> {
+		if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
+		find_one_gp_reg(inst);
+		if(gpreg1 != $2) x86_mov_reg_reg(inst, gpreg1, $2, 4);
+		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+		x86_alu_reg_reg(inst, X86_ADD, $1, gpreg1);
+		x86_alu_reg_reg(inst, X86_XOR, $1, gpreg1);
+		
+	}
+
+JIT_OP_LABS:
+	[=local, imm] -> {
+		jit_long value = ((jit_long*)($2))[0];
+		value = labs(value);
+		inst = masm_mov_membase_imm(inst, X86_EBP, $1, (jit_nint)(&value), sourceType);
+	}
+	[=lreg, imm] -> {
+		jit_long value = ((jit_long*)($2))[0];
+		value = labs(value);
+		inst = masm_mov_reg_imm(inst, $1, (jit_nint)(&value), sourceType);
+	}
+	[=local, local] -> {
+		find_one_gp_reg(inst);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 4, 4);
+		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+		x86_alu_membase_reg(inst, X86_XOR, X86_EBP, $1, gpreg1);
+		x86_alu_membase_reg(inst, X86_XOR, X86_EBP, $1 + 4, gpreg1);
+		x86_alu_membase_reg(inst, X86_SUB, X86_EBP, $1, gpreg1);
+		x86_alu_membase_reg(inst, X86_SBB, X86_EBP, $1 + 4, gpreg1);
+		
+	}
+	[=local, lreg] -> {
+		find_one_gp_reg(inst);
+		inst = masm_mov_membase_reg(inst, X86_EBP, $1, $2, sourceType);
+		x86_mov_reg_reg(inst, gpreg1, lir_register_pair($2), 4);
+		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+		x86_alu_membase_reg(inst, X86_XOR, X86_EBP, $1, gpreg1);
+		x86_alu_membase_reg(inst, X86_XOR, X86_EBP, $1 + 4, gpreg1);
+		x86_alu_membase_reg(inst, X86_SUB, X86_EBP, $1, gpreg1);
+		x86_alu_membase_reg(inst, X86_SBB, X86_EBP, $1 + 4, gpreg1);
+		
+	}
+	[=lreg, local] -> {
+		find_one_gp_reg_cond2(inst, $1, lir_register_pair($1));
+		inst = masm_mov_reg_membase(inst, $1, X86_EBP, $2, sourceType);
+		x86_mov_reg_reg(inst, gpreg1, lir_register_pair($2), 4);
+		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+		x86_alu_reg_reg(inst, X86_XOR, $1, gpreg1);
+		x86_alu_reg_reg(inst, X86_XOR, lir_register_pair($1), gpreg1);
+		x86_alu_reg_reg(inst, X86_SUB, $1, gpreg1);
+		x86_alu_reg_reg(inst, X86_SBB, lir_register_pair($1), gpreg1);
+		
+	}
+	[=lreg, lreg] -> {
+		find_one_gp_reg_cond2(inst, $1, lir_register_pair($1));
+		inst = masm_mov_reg_reg(inst, $1, $2, sourceType);
+		x86_mov_reg_reg(inst, gpreg1, lir_register_pair($2), 4);
+		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+		x86_alu_reg_reg(inst, X86_XOR, $1, gpreg1);
+		x86_alu_reg_reg(inst, X86_XOR, lir_register_pair($1), gpreg1);
+		x86_alu_reg_reg(inst, X86_SUB, $1, gpreg1);
+		x86_alu_reg_reg(inst, X86_SBB, lir_register_pair($1), gpreg1);
+		
+	}
