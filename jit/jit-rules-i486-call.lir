@@ -1,0 +1,678 @@
+
+JIT_OP_RETURN:
+	[] -> {
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+
+JIT_OP_RETURN_INT, JIT_OP_RETURN_LONG:
+	[imm] -> {
+		inst = masm_mov_reg_imm(inst, X86_EAX, $1, sourceType);
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+	[local] -> {
+		inst = masm_mov_reg_membase(inst, X86_EAX, X86_EBP, $1, sourceType);
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+	[lreg] -> {
+		inst = masm_mov_reg_reg(inst, X86_EAX, $1, sourceType);
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+
+
+JIT_OP_RETURN_FLOAT32:
+	[imm] -> {
+		jit_abi_t abi = jit_function_get_abi(func);
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{
+		    		x86_mov_reg_imm(inst, X86_EAX, ((jit_uint *)($1))[0]);
+				sse2_movd_xmreg_reg(inst, XMM0, X86_EAX);
+			}
+			break;
+			default:
+			{
+				x86_mov_membase_imm(inst, X86_ESP, -8, ((jit_uint *)($1))[0], 4);
+				x86_fld_membase(inst, X86_ESP, -8, 0);
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+	[local] -> {
+		jit_abi_t abi = jit_function_get_abi(func);
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{
+				sse_movss_xmreg_membase(inst, XMM0, X86_EBP, $1);
+			}
+			break;
+			default:
+			{
+				x86_fld_membase(inst, X86_EBP, $1, 0);
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+	[freg] -> {
+		jit_abi_t abi = jit_function_get_abi(func);
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{
+				if($1 != XMM0) sse_movss_xmreg_xmreg(inst, XMM0, $1);
+			}
+			break;
+			default:
+			{
+				sse_movss_membase_xmreg(inst, X86_ESP, -8, XMM0);
+				x86_fld_membase(inst, X86_ESP, -8, 0);
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+
+JIT_OP_RETURN_FLOAT64:
+	[imm] -> {
+		jit_abi_t abi = jit_function_get_abi(func);
+		jit_nint *ptr = (jit_nint *)$1;
+		jit_nint low_dword = ptr[0];
+		jit_nint high_dword = ptr[1];
+		x86_mov_membase_imm(inst, X86_ESP, -8, low_dword, 4);
+		x86_mov_membase_imm(inst, X86_ESP, -4, high_dword, 4);
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{
+				sse2_movsd_xmreg_membase(inst, XMM0, X86_ESP, -8);
+			}
+			break;
+			default:
+			{
+				x86_fld_membase(inst, X86_ESP, -8, 1);
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+	[local] -> {
+		jit_abi_t abi = jit_function_get_abi(func);
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{
+				sse2_movsd_xmreg_membase(inst, XMM0, X86_EBP, $1);
+			}
+			break;
+			default:
+			{
+				x86_fld_membase(inst, X86_EBP, $1, 1);
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+	[freg] -> {
+		jit_abi_t abi = jit_function_get_abi(func);
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{
+				if($1 != XMM0) sse2_movsd_xmreg_xmreg(inst, XMM0, $1);
+			}
+			break;
+			default:
+			{
+				sse2_movsd_membase_xmreg(inst, X86_ESP, -8, XMM0);
+				x86_fld_membase(inst, X86_ESP, -8, 1);
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+
+JIT_OP_RETURN_NFLOAT:
+	[imm] -> {
+		jit_abi_t abi = jit_function_get_abi(func);
+		jit_nint *ptr = (jit_nint *)$1;
+		x86_mov_membase_imm(inst, X86_ESP, -16, ptr[0], 4);
+		x86_mov_membase_imm(inst, X86_ESP, -12, ptr[1], 4);
+		if(sizeof(jit_nfloat) != sizeof(jit_float64))
+		{
+			x86_mov_membase_imm(inst, X86_ESP, -8, ptr[2], 4);
+		}
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{
+				if(sizeof(jit_nfloat) != sizeof(jit_float64))
+				{
+					x86_fld80_membase(inst, X86_ESP, -16);
+				}
+				else
+				{	
+					sse2_movsd_xmreg_membase(inst, XMM0, X86_ESP, -16);
+				}
+			}
+			break;
+			default:
+			{
+				if(sizeof(jit_nfloat) != sizeof(jit_float64))
+				{
+					x86_fld80_membase(inst, X86_ESP, -16);
+				}
+				else
+				{
+					x86_fld_membase(inst, X86_ESP, -16, 1);
+				}
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+	[local] -> {
+		jit_abi_t abi = jit_function_get_abi(func);
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{
+				if(sizeof(jit_nfloat) != sizeof(jit_float64))
+				{
+					x86_fld80_membase(inst, X86_EBP, $1);
+				}
+				else
+				{
+					sse2_movsd_xmreg_membase(inst, XMM0, X86_EBP, $1);
+				}
+			}
+			break;
+			default:
+			{
+				if(sizeof(jit_nfloat) != sizeof(jit_float64))
+				{
+					x86_fld80_membase(inst, X86_EBP, $1);
+				}
+				else
+				{
+					x86_fld_membase(inst, X86_EBP, $1, 1);
+				}
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+	[freg] -> {
+		// If this case is reached then sizeof(jit_nfloat) == sizeof(jit_float64)
+		// and we use xmm registers for both jit_float64 and jit_nfloat values.
+		jit_abi_t abi = jit_function_get_abi(func);
+		switch(abi)
+		{
+			case jit_abi_internal:
+			{	
+				if($1 != XMM0)
+				{
+					sse2_movsd_xmreg_xmreg(inst, XMM0, $1);
+				}
+			}
+			break;
+			default:
+			{
+				sse2_movsd_membase_xmreg(inst, X86_ESP, -8, XMM0);
+				x86_fld_membase(inst, X86_ESP, -8, 1);
+			}
+			break;
+		}
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+
+JIT_OP_RETURN_SMALL_STRUCT:
+	[reg, imm] -> {
+		switch($2)
+		{
+		case 1:
+			x86_widen_membase(inst, X86_EAX, $1, 0, 0, 0);
+			break;
+
+		case 2:
+			x86_widen_membase(inst, X86_EAX, $1, 0, 0, 1);
+			break;
+
+		case 3:
+			if(X86_EAX == $1)
+			{
+				x86_widen_membase(inst, X86_EDX, $1, 0, 0, 1);
+				x86_widen_membase(inst, X86_EAX, $1, 2, 0, 0);
+			}
+			else
+			{
+				x86_widen_membase(inst, X86_EAX, $1, 2, 0, 0);
+				x86_widen_membase(inst, X86_EDX, $1, 0, 0, 1);
+			}
+			x86_shift_reg_imm(inst, X86_SHL, X86_EAX, 16);
+			x86_alu_reg_reg(inst, X86_OR, X86_EAX, X86_EDX);
+			break;
+
+		case 4:
+			x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+			break;
+
+		case 5:
+			if(X86_EAX == $1)
+			{
+				x86_widen_membase(inst, X86_EDX, $1, 4, 0, 0);
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+			}
+			else
+			{
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+				x86_widen_membase(inst, X86_EDX, $1, 4, 0, 0);
+			}
+			break;
+
+		case 6:
+			if(X86_EAX == $1)
+			{
+				x86_widen_membase(inst, X86_EDX, $1, 4, 0, 1);
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+			}
+			else
+			{
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+				x86_widen_membase(inst, X86_EDX, $1, 4, 0, 1);
+			}
+			break;
+
+		case 7:
+			if(X86_EAX == $1)
+			{
+				x86_widen_membase(inst, X86_ECX, $1, 4, 0, 1);
+				x86_widen_membase(inst, X86_EDX, $1, 6, 0, 0);
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+			}
+			else if(X86_ECX == $1)
+			{
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+				x86_widen_membase(inst, X86_EDX, $1, 6, 0, 0);
+				x86_widen_membase(inst, X86_ECX, $1, 4, 0, 1);
+			}
+			else
+			{
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+				x86_widen_membase(inst, X86_ECX, $1, 4, 0, 1);
+				x86_widen_membase(inst, X86_EDX, $1, 6, 0, 0);
+			}
+			x86_shift_reg_imm(inst, X86_SHL, X86_EDX, 16);
+			x86_alu_reg_reg(inst, X86_OR, X86_EDX, X86_ECX);
+			break;
+
+		case 8:
+			if(X86_EAX == $1)
+			{
+				x86_mov_reg_membase(inst, X86_EDX, $1, 4, 4);
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+			}
+			else
+			{
+				x86_mov_reg_membase(inst, X86_EAX, $1, 0, 4);
+				x86_mov_reg_membase(inst, X86_EDX, $1, 4, 4);
+			}
+			break;
+		}
+
+		inst = ejit_jump_to_epilog(gen, inst, block);
+	}
+
+
+JIT_OP_RETURN_REG:
+	[reg, imm] -> {
+		int sourceX86Reg = (int)jit_value_get_nint_constant(insn->value2);
+		int sourceReg = ejit_x86reg_to_reg(sourceX86Reg);
+		if(sourceX86Reg >= X86_REG_EAX && sourceX86Reg <= X86_REG_ESP)
+		{
+			inst = masm_mov_reg_reg(inst, $1, sourceReg, sourceType);
+		}
+		else if(sourceX86Reg >= X86_REG_ST0 && sourceX86Reg <= X86_REG_ST7)
+		{
+			inst = masm_mov_value_st0(inst, insn->value1);
+		}
+		else if(sourceX86Reg >= X86_REG_XMM0 && sourceX86Reg <= X86_REG_XMM7)
+		{
+			inst = masm_mov_reg_reg(inst, $1, sourceReg, sourceType);
+		}
+	}
+	[local, imm] -> {
+		int sourceX86Reg = (int)jit_value_get_nint_constant(insn->value2);
+		int sourceReg = ejit_x86reg_to_reg(sourceX86Reg);
+		if(sourceX86Reg >= X86_REG_EAX && sourceX86Reg <= X86_REG_ESP)
+		{
+			inst = masm_mov_membase_reg(inst, X86_EBP, $1, sourceReg, sourceType);
+		}
+		else if(sourceX86Reg >= X86_REG_ST0 && sourceX86Reg <= X86_REG_ST7)
+		{
+			inst = masm_mov_value_st0(inst, insn->value1);
+		}
+		else if(sourceX86Reg >= X86_REG_XMM0 && sourceX86Reg <= X86_REG_XMM7)
+		{
+			inst = masm_mov_membase_reg(inst, X86_EBP, $1, sourceReg, sourceType);
+		}
+	}
+
+JIT_OP_TAIL_CALL:
+	[] -> {
+	    unsigned int size = lir_stack_depth_used(func);
+	    // Add two extra dwords for the return address after call and EBP in stack.
+	    size += 8;
+	    x86_lea_membase(inst, X86_ESP, X86_EBP, size);
+	}
+
+JIT_OP_PUSH_INT:
+	[imm] -> {
+	    if(func->lir->relative_sp_offset)
+	    {
+		    x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+	    }
+	    x86_push_imm(inst, $1);
+	    func->lir->relative_sp_offset = 0;
+	    gen->stack_changed = 1;
+	}
+	[local] -> {
+	    if(func->lir->relative_sp_offset)
+	    {
+		    x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+	    }
+	    x86_push_membase(inst, X86_EBP, $1);
+	    func->lir->relative_sp_offset = 0;
+	    gen->stack_changed = 1;
+	}
+	[reg] -> {
+	    if(func->lir->relative_sp_offset)
+	    {
+		    x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+	    }
+	    x86_push_reg(inst, $1);
+	    func->lir->relative_sp_offset = 0;
+	    gen->stack_changed = 1;
+	}
+
+JIT_OP_PUSH_LONG:
+	[lreg] -> {
+	    func->lir->relative_sp_offset -= 8;
+	    x86_mov_membase_reg(inst, X86_ESP, func->lir->relative_sp_offset + 4, lir_register_pair($1), 4);
+	    x86_mov_membase_reg(inst, X86_ESP, func->lir->relative_sp_offset, $1, 4);
+	    gen->stack_changed = 1;
+	}
+	[local] -> {
+	    if(func->lir->relative_sp_offset)
+	    {
+		    x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+	    }
+	    x86_push_membase(inst, X86_EBP, $1 + 4);
+	    x86_push_membase(inst, X86_EBP, $1);
+	    func->lir->relative_sp_offset = 0;
+	    gen->stack_changed = 1;
+	}
+	[imm] -> {
+	    func->lir->relative_sp_offset -= 8;
+	    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset + 4, ((jit_uint *)(insn->value1->address))[1], 4);
+	    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset, ((jit_uint *)(insn->value1->address))[0], 4);
+	    gen->stack_changed = 1;
+	}
+
+JIT_OP_PUSH_FLOAT32:
+	[freg] -> {
+	    func->lir->relative_sp_offset -= 4;
+	    sse_movss_membase_xmreg(inst, X86_ESP, func->lir->relative_sp_offset, $1);
+	    gen->stack_changed = 1;
+	}
+	[local] -> {
+	    if(func->lir->relative_sp_offset)
+	    {
+		    x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+	    }
+	    x86_push_membase(inst, X86_EBP, $1);
+	    func->lir->relative_sp_offset = 0;
+	    gen->stack_changed = 1;
+	}
+	[imm] -> {
+	    func->lir->relative_sp_offset -= 4;
+	    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset, ((jit_uint *)(insn->value1->address))[0], 4);
+	    gen->stack_changed = 1;
+	}
+
+
+JIT_OP_PUSH_FLOAT64:
+	[lreg] -> {
+	    func->lir->relative_sp_offset -= 8;
+	    sse2_movsd_membase_xmreg(inst, X86_ESP, func->lir->relative_sp_offset, $1);
+	    gen->stack_changed = 1;
+	}
+	[local] -> {
+	    if(func->lir->relative_sp_offset)
+	    {
+		    x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+	    }
+	    x86_push_membase(inst, X86_EBP, $1 + 4);
+	    x86_push_membase(inst, X86_EBP, $1);
+	    func->lir->relative_sp_offset = 0;
+	    gen->stack_changed = 1;
+	}
+	[imm] -> {
+	    func->lir->relative_sp_offset -= 8;
+	    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset + 4, ((jit_uint *)(insn->value1->address))[1], 4);
+	    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset, ((jit_uint *)(insn->value1->address))[0], 4);
+	    gen->stack_changed = 1;
+	}
+
+
+JIT_OP_PUSH_NFLOAT:
+	[lreg] -> {
+	    func->lir->relative_sp_offset -= 8;
+	    sse2_movsd_membase_xmreg(inst, X86_ESP, func->lir->relative_sp_offset, $1);
+	    gen->stack_changed = 1;
+	}
+	[local] -> {
+	    if(func->lir->relative_sp_offset)
+	    {
+		    x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+	    }
+
+	    if(sizeof(jit_nfloat) != sizeof(jit_float64))
+	    {
+		    x86_push_membase(inst, X86_EBP, $1 + 8);
+	    }
+	    x86_push_membase(inst, X86_EBP, $1 + 4);
+	    x86_push_membase(inst, X86_EBP, $1);
+	    func->lir->relative_sp_offset = 0;
+	    gen->stack_changed = 1;
+	}
+	[imm] -> {
+	    if(sizeof(jit_nfloat) != sizeof(jit_float64))
+	    {
+		    func->lir->relative_sp_offset -= 12;
+		    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset + 8, ((jit_uint *)(insn->value1->address))[2], 4);
+		    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset + 4, ((jit_uint *)(insn->value1->address))[1], 4);
+		    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset,     ((jit_uint *)(insn->value1->address))[0], 4);
+	    }
+	    else
+	    {
+		    func->lir->relative_sp_offset -= 8;
+		    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset + 4, ((jit_uint *)(insn->value1->address))[1], 4);
+		    x86_mov_membase_imm(inst, X86_ESP, func->lir->relative_sp_offset,     ((jit_uint *)(insn->value1->address))[0], 4);
+	    }
+	    gen->stack_changed = 1;
+	}
+
+
+JIT_OP_PUSH_STRUCT:
+	[] -> {
+	    unsigned int size = lir_type_get_size(sourceType);
+	    func->lir->relative_sp_offset -= size;
+	    find_one_gp_reg(inst);
+//	    x86_alu_reg_imm(inst, X86_SUB, X86_ESP, size);
+	    inst = lir_memory_copy_with_reg(inst, X86_ESP, func->lir->relative_sp_offset, X86_EBP, insn->value1->vreg->frame->frame_offset, size, gpreg1);
+	    gen->stack_changed = 1;
+	}
+
+JIT_OP_OUTGOING_REG:
+	[reg, imm] -> {
+	    inst = masm_mov_reg_reg(inst, $2, $1, sourceType);
+	}
+	[local, imm] -> {
+	    inst = masm_mov_reg_membase(inst, $2, X86_EBP, $1, sourceType);
+	}
+	[imm, imm] -> {
+	    inst = masm_mov_reg_imm(inst, $2, $1, sourceType);
+	}
+
+JIT_OP_POP_STACK:
+	[] -> {
+	    x86_alu_reg_imm(inst, X86_ADD, X86_ESP, insn->value1->address);
+//	    func->lir->sp_offset = 0;
+	}
+
+JIT_OP_FLUSH_SMALL_STRUCT:
+	[] -> {
+	}
+
+JIT_OP_CALL:
+	[] -> {
+		jit_function_t called_func = (jit_function_t)(insn->dest);
+		unsigned int num = (*insn->call_params)->num;
+		jit_value_t *args = (*insn->call_params)->args;
+
+		if(func->lir->relative_sp_offset)
+		{
+			x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+		}
+		func->lir->relative_sp_offset = 0;
+
+		inst = ejit_emit_function_call(gen, inst, func, num,
+						    jit_function_to_closure(called_func),
+						    0,
+						    args,
+						    insn->value2,
+						    NORMAL_CALL);
+	}
+
+JIT_OP_CALL_TAIL:
+	[] -> {
+		jit_function_t called_func = (jit_function_t)(insn->dest);
+		jit_abi_t abi = (*insn->call_params)->abi;
+		unsigned int num = (*insn->call_params)->num;
+		jit_value_t *args = (*insn->call_params)->args;
+		int callType = NORMAL_CALL;
+		
+		if(abi == jit_function_get_abi(func))
+		{
+			callType = TAIL_CALL;
+		}
+		
+		if(func->lir->relative_sp_offset)
+		{
+			x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+		}
+		func->lir->relative_sp_offset = 0;
+
+		inst = ejit_emit_function_call(gen, inst, func, num,
+						    jit_function_to_closure(called_func),
+						    0,
+						    args,
+						    insn->value2,
+						    callType);
+	}
+
+JIT_OP_CALL_EXTERNAL:
+	[] -> {
+		void *called_func = (void*)(insn->dest);
+		unsigned int num = (*insn->call_params)->num;
+		jit_value_t *args = (*insn->call_params)->args;
+	
+		if(func->lir->relative_sp_offset)
+		{
+			x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+		}
+		func->lir->relative_sp_offset = 0;
+
+		inst = ejit_emit_function_call(gen, inst, func, num,
+						    called_func,
+						    0,
+						    args,
+						    insn->value2,
+						    NORMAL_CALL);
+	}
+	
+JIT_OP_CALL_EXTERNAL_TAIL:
+	[] -> {
+		void *called_func = (void*)(insn->dest);
+		jit_abi_t abi = (*insn->call_params)->abi;
+		unsigned int num = (*insn->call_params)->num;
+		jit_value_t *args = (*insn->call_params)->args;
+		int callType = NORMAL_CALL;
+		if(abi == jit_function_get_abi(func))
+		{
+			callType = TAIL_CALL;
+		}
+		
+		if(func->lir->relative_sp_offset)
+		{
+			x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+		}
+		func->lir->relative_sp_offset = 0;
+		
+		inst = ejit_emit_function_call(gen, inst, func, num,
+						    called_func,
+						    0,
+						    args,
+						    insn->value2,
+						    callType);
+	}
+
+JIT_OP_CALL_INDIRECT, JIT_OP_CALL_VTABLE_PTR:
+	[] -> {	
+		jit_value_t indirect_ptr = insn->value1;
+		unsigned int num = (*insn->call_params)->num;
+		jit_value_t *args = (*insn->call_params)->args;
+
+		if(func->lir->relative_sp_offset)
+		{
+			x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+		}
+		func->lir->relative_sp_offset = 0;
+
+		inst = ejit_emit_function_call(gen, inst, func, num,
+						    0,
+						    indirect_ptr,
+						    args,
+						    insn->value2,
+						    INDIRECT_CALL);
+	}
+
+JIT_OP_CALL_INDIRECT_TAIL, JIT_OP_CALL_VTABLE_PTR_TAIL:
+	[] -> {
+		jit_value_t indirect_ptr = insn->value1;
+		jit_abi_t abi = (*insn->call_params)->abi;
+		unsigned int num = (*insn->call_params)->num;
+		jit_value_t *args = (*insn->call_params)->args;
+		int callType = INDIRECT_CALL;
+		if(abi == jit_function_get_abi(func))
+		{
+			callType = INDIRECT_TAIL_CALL;
+		}
+		
+		if(func->lir->relative_sp_offset)
+		{
+			x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->lir->relative_sp_offset);
+		}
+		func->lir->relative_sp_offset  = 0;
+
+		inst = ejit_emit_function_call(gen, inst, func, num,
+						    0,
+						    indirect_ptr,
+						    args,
+						    insn->value2,
+						    callType);
+	}
+
