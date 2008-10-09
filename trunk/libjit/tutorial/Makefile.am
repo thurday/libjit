@@ -1,5 +1,5 @@
 
-noinst_PROGRAMS = t1 t2 t3 t4 t5 t6
+noinst_PROGRAMS = t1 t2 t3 t4 t5
 
 t1_SOURCES = t1.c
 t1_LDADD = $(top_builddir)/jit/libjit.la
@@ -21,10 +21,6 @@ t4_DEPENDENCIES = $(top_builddir)/jitplus/libjitplus.la \
 t5_SOURCES = t5.c
 t5_LDADD = $(top_builddir)/jit/libjit.la
 t5_DEPENDENCIES = $(top_builddir)/jit/libjit.la
-
-t6_SOURCES = t6.c
-t6_LDADD = $(top_builddir)/jit/libjit.la
-t6_DEPENDENCIES = $(top_builddir)/jit/libjit.la
 
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include -I. -I$(srcdir)
 AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include -I. -I$(srcdir)
