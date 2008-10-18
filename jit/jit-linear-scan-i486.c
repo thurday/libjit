@@ -218,28 +218,6 @@ int lir_regIndex2reg(jit_function_t func, int regIndex, jit_type_t type)
 	return -1;
 }
 
-/*
-int lir_reg2regIndex(jit_function_t func, int reg, jit_type_t type)
-{
-	type = jit_type_remove_tags(type);
-	int typeKind = jit_type_get_kind(type);
-	switch(typeKind)
-	{
-		CASE_USE_WORD
-		{
-			return gp_reg_map[reg];
-		}
-		break;
-		CASE_USE_FLOAT
-		{
-			return reg;
-		}
-		break;
-	}
-	return -1;
-}
-*/
-
 unsigned int lir_type_get_size(jit_type_t type)
 {
 	return ROUND_STACK(jit_type_get_size(type));
