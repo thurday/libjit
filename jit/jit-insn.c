@@ -5759,7 +5759,7 @@ jit_value_t jit_insn_call_indirect
 			return 0;
 		}
 
-		// with the extended compiler we do not need to make a new block
+		/* With the extended compiler we do not need to make a new block */
 		if(!jit_insn_new_block(func))
 		{
 			return 0;
@@ -5919,7 +5919,7 @@ jit_value_t jit_insn_call_indirect_vtable
 
 	/* Start a new block and output the "call_vtable_ptr" instruction */
 	if(!jit_function_extended_compiler_is_enabled(func))
-	{ // with the extended compiler we do not need to make a new block
+	{ 
 	
 		/* Move the indirect pointer value into an appropriate register */
 		if(!_jit_setup_indirect_pointer(func, value))
@@ -5927,6 +5927,7 @@ jit_value_t jit_insn_call_indirect_vtable
 			return 0;
 		}
 
+	        /* With the extended compiler we do not need to make a new block */
 		if(!jit_insn_new_block(func))
 		{
 			return 0;
@@ -6084,7 +6085,8 @@ jit_value_t jit_insn_call_native
 
 	/* Start a new block and output the "call_external" instruction */
 	if(!jit_function_extended_compiler_is_enabled(func))
-	{ // with the extended compiler we do not need to make a new block
+	{
+	        /* With the extended compiler we do not need to make a new block */
 		if(!jit_insn_new_block(func))
 		{
 			return 0;
