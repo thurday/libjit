@@ -38,7 +38,7 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 noinst_PROGRAMS = t1$(EXEEXT) t2$(EXEEXT) t3$(EXEEXT) t4$(EXEEXT) \
-	t5$(EXEEXT) t6$(EXEEXT)
+	t5$(EXEEXT)
 subdir = tutorial
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -59,8 +59,6 @@ am_t4_OBJECTS = t4.$(OBJEXT)
 t4_OBJECTS = $(am_t4_OBJECTS)
 am_t5_OBJECTS = t5.$(OBJEXT)
 t5_OBJECTS = $(am_t5_OBJECTS)
-am_t6_OBJECTS = t6.$(OBJEXT)
-t6_OBJECTS = $(am_t6_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp =
 am__depfiles_maybe =
@@ -81,9 +79,9 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(t1_SOURCES) $(t2_SOURCES) $(t3_SOURCES) $(t4_SOURCES) \
-	$(t5_SOURCES) $(t6_SOURCES)
+	$(t5_SOURCES)
 DIST_SOURCES = $(t1_SOURCES) $(t2_SOURCES) $(t3_SOURCES) $(t4_SOURCES) \
-	$(t5_SOURCES) $(t6_SOURCES)
+	$(t5_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -235,9 +233,6 @@ t4_DEPENDENCIES = $(top_builddir)/jitplus/libjitplus.la \
 t5_SOURCES = t5.c
 t5_LDADD = $(top_builddir)/jit/libjit.la
 t5_DEPENDENCIES = $(top_builddir)/jit/libjit.la
-t6_SOURCES = t6.c
-t6_LDADD = $(top_builddir)/jit/libjit.la
-t6_DEPENDENCIES = $(top_builddir)/jit/libjit.la
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include -I. -I$(srcdir)
 AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include -I. -I$(srcdir)
 all: all-am
@@ -295,9 +290,6 @@ t4$(EXEEXT): $(t4_OBJECTS) $(t4_DEPENDENCIES)
 t5$(EXEEXT): $(t5_OBJECTS) $(t5_DEPENDENCIES) 
 	@rm -f t5$(EXEEXT)
 	$(LINK) $(t5_LDFLAGS) $(t5_OBJECTS) $(t5_LDADD) $(LIBS)
-t6$(EXEEXT): $(t6_OBJECTS) $(t6_DEPENDENCIES) 
-	@rm -f t6$(EXEEXT)
-	$(LINK) $(t6_LDFLAGS) $(t6_OBJECTS) $(t6_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
