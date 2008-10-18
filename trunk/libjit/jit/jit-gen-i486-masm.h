@@ -1723,60 +1723,6 @@ unsigned char *masm_push_qword(unsigned char *inst, jit_value_t value)
 	return inst;
 }
 
-/*
-unsigned char *masm_push_value(unsigned char *inst, jit_value_t value)
-{
-	jit_type_t type = jit_value_get_type(value);
-	type = jit_type_remove_tags(type);
-	int typeKind = jit_type_get_kind(type);
-	switch(typeKind)
-	{
-		case JIT_TYPE_SBYTE:
-		case JIT_TYPE_UBYTE:
-		case JIT_TYPE_SHORT:
-		case JIT_TYPE_USHORT:
-		case JIT_TYPE_INT:
-		case JIT_TYPE_UINT:
-		case JIT_TYPE_NINT:
-		case JIT_TYPE_NUINT:
-		case JIT_TYPE_PTR:
-		{
-			inst = masm_push_dword(inst, value);
-		}
-		break;
-		case JIT_TYPE_LONG:
-		case JIT_TYPE_ULONG:
-		{
-			inst = masm_push_qword(inst, value);
-		}
-		break;
-		case JIT_TYPE_FLOAT32:
-		{
-			inst = masm_push_float32(inst, value);
-		}
-		break;
-		case JIT_TYPE_FLOAT64:
-		{
-			inst = masm_push_float64(inst, value);
-		}
-		break;
-		case JIT_TYPE_NFLOAT:
-		{
-			inst = masm_push_nfloat(inst, value);
-		}
-		break;
-		default:
-		{
-			unsigned int size = jit_type_get_size(type);
-			x86_alu_reg_imm(inst, X86_SUB, X86_ESP, size);
-			inst = lir_memory_copy_w_eax(inst, X86_ESP, 0, X86_EBP, value->vreg->frame->frame_offset, size);
-		}
-		break;
-	}
-	return inst;
-}
-*/
-
 /* TODO: Build a more generic algorithm */
 unsigned char *masm_imul_reg_reg_imm(unsigned char *inst, unsigned int dreg, unsigned int sreg, jit_uint imm)
 {
