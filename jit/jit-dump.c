@@ -492,7 +492,7 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 
 	if(insn->call_params)
 	{
-		lir_call_params_t params = *(insn->call_params);
+		ejit_call_params_t params = *(insn->call_params);
 		unsigned int num = params->num;
 		int index;
 		jit_value_t *args = (jit_value_t*)(params->args);
