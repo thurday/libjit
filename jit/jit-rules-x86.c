@@ -213,14 +213,14 @@ int _jit_opcode_is_supported(jit_function_t func, int opcode)
 		switch(opcode)
 		{
 		#define JIT_INCLUDE_SUPPORTED
-		#include "jit-rules-i486-arith.inc"
-		#include "jit-rules-i486-branch.inc"
-		#include "jit-rules-i486-call.inc"
-		#include "jit-rules-i486-math.inc"
-		#include "jit-rules-i486-conv.inc"
-		#include "jit-rules-i486-except.inc"
-		#include "jit-rules-i486-obj.inc"
-		#include "jit-rules-i486-logic.inc"
+		#include "ejit-rules-i486-arith.inc"
+		#include "ejit-rules-i486-branch.inc"
+		#include "ejit-rules-i486-call.inc"
+		#include "ejit-rules-i486-math.inc"
+		#include "ejit-rules-i486-conv.inc"
+		#include "ejit-rules-i486-except.inc"
+		#include "ejit-rules-i486-obj.inc"
+		#include "ejit-rules-i486-logic.inc"
 		#undef JIT_INCLUDE_SUPPORTED
 		}
 	}

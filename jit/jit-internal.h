@@ -24,7 +24,7 @@
 #include <jit/jit.h>
 
 #if defined(__i386) || defined(__i386__) || defined(_M_IX86)
-#include "jit-linear-scan.h"
+#include "ejit-linear-scan.h"
 #endif
 
 #ifdef    __cplusplus
