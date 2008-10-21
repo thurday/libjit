@@ -42,10 +42,10 @@ libjit_la_SOURCES = \
 		jit-interp.c \
 		jit-intrinsic.c \
 		jit-live.c \
-		jit-linear-scan.c \
-		jit-linear-scan.h \
-		jit-linear-scan-i486.c \
-		jit-linear-scan-i486.h \
+		ejit-linear-scan.c \
+		ejit-linear-scan.h \
+		ejit-linear-scan-i486.c \
+		ejit-linear-scan-i486.h \
 		jit-memory.c \
 		jit-memory.h \
 		jit-meta.c \
@@ -80,13 +80,13 @@ EXTRA_DIST = \
 		jit-rules-alpha.ins \
 		jit-rules-arm.sel \
 		jit-rules-x86.ins \
-		jit-rules-i486-arith.lir \
-		jit-rules-i486-conv.lir \
-		jit-rules-i486-obj.lir \
-		jit-rules-i486-call.lir \
-		jit-rules-i486-math.lir \
-		jit-rules-i486-branch.lir \
-		jit-rules-i486-except.lir
+		ejit-rules-i486-arith.lir \
+		ejit-rules-i486-conv.lir \
+		ejit-rules-i486-obj.lir \
+		ejit-rules-i486-call.lir \
+		ejit-rules-i486-math.lir \
+		ejit-rules-i486-branch.lir \
+		ejit-rules-i486-except.lir
 
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include -I. -I$(srcdir)
 
@@ -100,9 +100,9 @@ jit-interp-labels.h: $(top_srcdir)/include/jit/jit-opcode.h \
 		$(top_srcdir)/include/jit/jit-opcode.h \
 		$(top_srcdir)/jit/jit-interp.h >jit-interp-labels.h
 
-jit-linear-scan-i486.lo: jit-rules-i486-arith.inc jit-rules-i486-conv.inc jit-rules-i486-obj.inc jit-rules-i486-call.inc jit-rules-i486-math.inc jit-rules-i486-branch.inc jit-rules-i486-except.inc jit-rules-i486-logic.inc
+ejit-linear-scan-i486.lo: ejit-rules-i486-arith.inc ejit-rules-i486-conv.inc ejit-rules-i486-obj.inc ejit-rules-i486-call.inc ejit-rules-i486-math.inc ejit-rules-i486-branch.inc ejit-rules-i486-except.inc ejit-rules-i486-logic.inc
 
-jit-linear-scan.lo: jit-linear-scan-i486.lo
+ejit-linear-scan.lo: ejit-linear-scan-i486.lo
 
 jit-rules-x86.lo: jit-rules-x86.inc
 
@@ -110,37 +110,37 @@ jit-rules-x86.inc: jit-rules-x86.ins $(top_builddir)/tools/gen-rules$(EXEEXT)
 	$(top_builddir)/tools/gen-rules$(EXEEXT) $(srcdir)/jit-rules-x86.ins \
 			>jit-rules-x86.inc
 
-jit-rules-i486-arith.inc: jit-rules-i486-arith.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-arith.lir \
-			>jit-rules-i486-arith.inc
+ejit-rules-i486-arith.inc: ejit-rules-i486-arith.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-arith.lir \
+			>ejit-rules-i486-arith.inc
 
-jit-rules-i486-conv.inc: jit-rules-i486-conv.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-conv.lir \
-			>jit-rules-i486-conv.inc
+ejit-rules-i486-conv.inc: ejit-rules-i486-conv.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-conv.lir \
+			>ejit-rules-i486-conv.inc
 
-jit-rules-i486-obj.inc: jit-rules-i486-obj.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-obj.lir \
-			>jit-rules-i486-obj.inc
+ejit-rules-i486-obj.inc: ejit-rules-i486-obj.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-obj.lir \
+			>ejit-rules-i486-obj.inc
 
-jit-rules-i486-call.inc: jit-rules-i486-call.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-call.lir \
-			>jit-rules-i486-call.inc
+ejit-rules-i486-call.inc: ejit-rules-i486-call.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-call.lir \
+			>ejit-rules-i486-call.inc
 
-jit-rules-i486-math.inc: jit-rules-i486-math.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-math.lir \
-			>jit-rules-i486-math.inc
+ejit-rules-i486-math.inc: ejit-rules-i486-math.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-math.lir \
+			>ejit-rules-i486-math.inc
 
-jit-rules-i486-branch.inc: jit-rules-i486-branch.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-branch.lir \
-			>jit-rules-i486-branch.inc
+ejit-rules-i486-branch.inc: ejit-rules-i486-branch.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-branch.lir \
+			>ejit-rules-i486-branch.inc
 
-jit-rules-i486-except.inc: jit-rules-i486-except.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-except.lir \
-			>jit-rules-i486-except.inc
+ejit-rules-i486-except.inc: ejit-rules-i486-except.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-except.lir \
+			>ejit-rules-i486-except.inc
 
-jit-rules-i486-logic.inc: jit-rules-i486-logic.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-logic.lir \
-			>jit-rules-i486-logic.inc
+ejit-rules-i486-logic.inc: ejit-rules-i486-logic.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-logic.lir \
+			>ejit-rules-i486-logic.inc
 
 
 jit-rules-arm.lo: jit-rules-arm.slc
@@ -160,11 +160,11 @@ CLEANFILES = \
 	jit-rules-alpha.inc \
 	jit-rules-arm.slc \
 	jit-rules-x86.inc \
-	jit-rules-i486-arith.inc \
-	jit-rules-i486-conv.inc \
-	jit-rules-i486-obj.inc \
-	jit-rules-i486-call.inc \
-	jit-rules-i486-math.inc \
-	jit-rules-i486-branch.inc \
-	jit-rules-i486-except.inc \
-	jit-rules-i486-logic.inc
+	ejit-rules-i486-arith.inc \
+	ejit-rules-i486-conv.inc \
+	ejit-rules-i486-obj.inc \
+	ejit-rules-i486-call.inc \
+	ejit-rules-i486-math.inc \
+	ejit-rules-i486-branch.inc \
+	ejit-rules-i486-except.inc \
+	ejit-rules-i486-logic.inc

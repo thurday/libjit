@@ -62,7 +62,7 @@ am_libjit_la_OBJECTS = jit-alloc.lo jit-apply.lo jit-apply-alpha.lo \
 	jit-debugger.lo jit-dump.lo jit-elf-read.lo jit-elf-write.lo \
 	jit-except.lo jit-function.lo jit-gen-arm.lo jit-insn.lo \
 	jit-init.lo jit-interp.lo jit-intrinsic.lo jit-live.lo \
-	jit-linear-scan.lo jit-linear-scan-i486.lo jit-memory.lo \
+	ejit-linear-scan.lo ejit-linear-scan-i486.lo jit-memory.lo \
 	jit-meta.lo jit-objmodel.lo jit-opcode.lo jit-pool.lo \
 	jit-reg-alloc.lo jit-reg-class.lo jit-rules.lo \
 	jit-rules-interp.lo jit-rules-alpha.lo jit-rules-arm.lo \
@@ -85,16 +85,16 @@ DIST_SOURCES = $(libjit_la_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/krokas/pnet_2008_07_08/libjit/missing --run aclocal-1.9
+ACLOCAL = ${SHELL} /home/krokas/svn/libjit-linear-scan-register-allocator/libjit/missing --run aclocal-1.9
 ALLOCA = 
 AMDEP_FALSE = #
 AMDEP_TRUE = 
-AMTAR = ${SHELL} /home/krokas/pnet_2008_07_08/libjit/missing --run tar
+AMTAR = ${SHELL} /home/krokas/svn/libjit-linear-scan-register-allocator/libjit/missing --run tar
 AR = ar
 AS = as
-AUTOCONF = ${SHELL} /home/krokas/pnet_2008_07_08/libjit/missing --run autoconf
-AUTOHEADER = ${SHELL} /home/krokas/pnet_2008_07_08/libjit/missing --run autoheader
-AUTOMAKE = ${SHELL} /home/krokas/pnet_2008_07_08/libjit/missing --run automake-1.9
+AUTOCONF = ${SHELL} /home/krokas/svn/libjit-linear-scan-register-allocator/libjit/missing --run autoconf
+AUTOHEADER = ${SHELL} /home/krokas/svn/libjit-linear-scan-register-allocator/libjit/missing --run autoheader
+AUTOMAKE = ${SHELL} /home/krokas/svn/libjit-linear-scan-register-allocator/libjit/missing --run automake-1.9
 AWK = mawk
 CC = gcc
 CCDEPMODE = depmode=none
@@ -148,7 +148,7 @@ LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIB_STDCPP = -lstdc++
 LN_S = ln -s
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} /home/krokas/pnet_2008_07_08/libjit/missing --run makeinfo
+MAKEINFO = ${SHELL} /home/krokas/svn/libjit-linear-scan-register-allocator/libjit/missing --run makeinfo
 OBJDUMP = objdump
 OBJEXT = o
 PACKAGE = libjit
@@ -196,7 +196,7 @@ host_vendor = pc
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = /home/krokas/pnet_2008_07_08/libjit/install-sh
+install_sh = /home/krokas/svn/libjit-linear-scan-register-allocator/libjit/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -258,10 +258,10 @@ libjit_la_SOURCES = \
 		jit-interp.c \
 		jit-intrinsic.c \
 		jit-live.c \
-		jit-linear-scan.c \
-		jit-linear-scan.h \
-		jit-linear-scan-i486.c \
-		jit-linear-scan-i486.h \
+		ejit-linear-scan.c \
+		ejit-linear-scan.h \
+		ejit-linear-scan-i486.c \
+		ejit-linear-scan-i486.h \
 		jit-memory.c \
 		jit-memory.h \
 		jit-meta.c \
@@ -296,13 +296,13 @@ EXTRA_DIST = \
 		jit-rules-alpha.ins \
 		jit-rules-arm.sel \
 		jit-rules-x86.ins \
-		jit-rules-i486-arith.lir \
-		jit-rules-i486-conv.lir \
-		jit-rules-i486-obj.lir \
-		jit-rules-i486-call.lir \
-		jit-rules-i486-math.lir \
-		jit-rules-i486-branch.lir \
-		jit-rules-i486-except.lir
+		ejit-rules-i486-arith.lir \
+		ejit-rules-i486-conv.lir \
+		ejit-rules-i486-obj.lir \
+		ejit-rules-i486-call.lir \
+		ejit-rules-i486-math.lir \
+		ejit-rules-i486-branch.lir \
+		ejit-rules-i486-except.lir
 
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include -I. -I$(srcdir)
 libjit_la_LDFLAGS = -version-info $(LIBJIT_VERSION) -no-undefined
@@ -311,14 +311,14 @@ CLEANFILES = \
 	jit-rules-alpha.inc \
 	jit-rules-arm.slc \
 	jit-rules-x86.inc \
-	jit-rules-i486-arith.inc \
-	jit-rules-i486-conv.inc \
-	jit-rules-i486-obj.inc \
-	jit-rules-i486-call.inc \
-	jit-rules-i486-math.inc \
-	jit-rules-i486-branch.inc \
-	jit-rules-i486-except.inc \
-	jit-rules-i486-logic.inc
+	ejit-rules-i486-arith.inc \
+	ejit-rules-i486-conv.inc \
+	ejit-rules-i486-obj.inc \
+	ejit-rules-i486-call.inc \
+	ejit-rules-i486-math.inc \
+	ejit-rules-i486-branch.inc \
+	ejit-rules-i486-except.inc \
+	ejit-rules-i486-logic.inc
 
 all: all-am
 
@@ -586,9 +586,9 @@ jit-interp-labels.h: $(top_srcdir)/include/jit/jit-opcode.h \
 		$(top_srcdir)/include/jit/jit-opcode.h \
 		$(top_srcdir)/jit/jit-interp.h >jit-interp-labels.h
 
-jit-linear-scan-i486.lo: jit-rules-i486-arith.inc jit-rules-i486-conv.inc jit-rules-i486-obj.inc jit-rules-i486-call.inc jit-rules-i486-math.inc jit-rules-i486-branch.inc jit-rules-i486-except.inc jit-rules-i486-logic.inc
+ejit-linear-scan-i486.lo: ejit-rules-i486-arith.inc ejit-rules-i486-conv.inc ejit-rules-i486-obj.inc ejit-rules-i486-call.inc ejit-rules-i486-math.inc ejit-rules-i486-branch.inc ejit-rules-i486-except.inc ejit-rules-i486-logic.inc
 
-jit-linear-scan.lo: jit-linear-scan-i486.lo
+ejit-linear-scan.lo: ejit-linear-scan-i486.lo
 
 jit-rules-x86.lo: jit-rules-x86.inc
 
@@ -596,37 +596,37 @@ jit-rules-x86.inc: jit-rules-x86.ins $(top_builddir)/tools/gen-rules$(EXEEXT)
 	$(top_builddir)/tools/gen-rules$(EXEEXT) $(srcdir)/jit-rules-x86.ins \
 			>jit-rules-x86.inc
 
-jit-rules-i486-arith.inc: jit-rules-i486-arith.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-arith.lir \
-			>jit-rules-i486-arith.inc
+ejit-rules-i486-arith.inc: ejit-rules-i486-arith.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-arith.lir \
+			>ejit-rules-i486-arith.inc
 
-jit-rules-i486-conv.inc: jit-rules-i486-conv.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-conv.lir \
-			>jit-rules-i486-conv.inc
+ejit-rules-i486-conv.inc: ejit-rules-i486-conv.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-conv.lir \
+			>ejit-rules-i486-conv.inc
 
-jit-rules-i486-obj.inc: jit-rules-i486-obj.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-obj.lir \
-			>jit-rules-i486-obj.inc
+ejit-rules-i486-obj.inc: ejit-rules-i486-obj.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-obj.lir \
+			>ejit-rules-i486-obj.inc
 
-jit-rules-i486-call.inc: jit-rules-i486-call.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-call.lir \
-			>jit-rules-i486-call.inc
+ejit-rules-i486-call.inc: ejit-rules-i486-call.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-call.lir \
+			>ejit-rules-i486-call.inc
 
-jit-rules-i486-math.inc: jit-rules-i486-math.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-math.lir \
-			>jit-rules-i486-math.inc
+ejit-rules-i486-math.inc: ejit-rules-i486-math.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-math.lir \
+			>ejit-rules-i486-math.inc
 
-jit-rules-i486-branch.inc: jit-rules-i486-branch.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-branch.lir \
-			>jit-rules-i486-branch.inc
+ejit-rules-i486-branch.inc: ejit-rules-i486-branch.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-branch.lir \
+			>ejit-rules-i486-branch.inc
 
-jit-rules-i486-except.inc: jit-rules-i486-except.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-except.lir \
-			>jit-rules-i486-except.inc
+ejit-rules-i486-except.inc: ejit-rules-i486-except.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-except.lir \
+			>ejit-rules-i486-except.inc
 
-jit-rules-i486-logic.inc: jit-rules-i486-logic.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
-	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/jit-rules-i486-logic.lir \
-			>jit-rules-i486-logic.inc
+ejit-rules-i486-logic.inc: ejit-rules-i486-logic.lir $(top_builddir)/tools/gen-lir$(EXEEXT)
+	$(top_builddir)/tools/gen-lir$(EXEEXT) $(srcdir)/ejit-rules-i486-logic.lir \
+			>ejit-rules-i486-logic.inc
 
 jit-rules-arm.lo: jit-rules-arm.slc
 
