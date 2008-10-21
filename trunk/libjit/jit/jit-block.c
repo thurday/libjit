@@ -288,17 +288,17 @@ jit_insn_t _jit_block_add_insn(jit_block_t block)
 	insns[builder->num_insns] = insn;
 	insn->insn_num = builder->num_insns;
 	block->last_insn = (builder->num_insns)++;
-	insn->used = jit_memory_pool_alloc(&(builder->lir_linked_list_pool), 
-							struct _lir_linked_list);
-	insn->in = jit_memory_pool_alloc(&(builder->lir_linked_list_pool), 
-							struct _lir_linked_list);
+	insn->used = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
+							struct _ejit_linked_list);
+	insn->in = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
+							struct _ejit_linked_list);
 
-	insn->out = jit_memory_pool_alloc(&(builder->lir_linked_list_pool), 
-							struct _lir_linked_list);
-	insn->def = jit_memory_pool_alloc(&(builder->lir_linked_list_pool), 
-							struct _lir_linked_list);
-	insn->prev_insn = jit_memory_pool_alloc(&(builder->lir_linked_list_pool), 
-							struct _lir_linked_list);
+	insn->out = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
+							struct _ejit_linked_list);
+	insn->def = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
+							struct _ejit_linked_list);
+	insn->prev_insn = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
+							struct _ejit_linked_list);
 
 	/* Return the instruction, which is now ready to fill in */
 	return insn;

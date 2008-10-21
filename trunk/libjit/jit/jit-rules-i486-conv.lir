@@ -1,1214 +1,1214 @@
 JIT_OP_TRUNC_SBYTE:
-	[=reg, reg] -> {
-		if($2 == X86_EAX || $2 == X86_EDX || $2 == X86_ECX || $2 == X86_EBX)
-		{
-			x86_widen_reg(inst, $1, $2, 1, 0);
-		}
-		else if($1 == X86_EAX || $1 == X86_EDX || $1 == X86_ECX || $1 == X86_EBX)
-		{
-			x86_mov_reg_reg(inst, $1, $2, 4);
-			x86_widen_reg(inst, $1, $1, 1, 0);
-		}
-		else
-		{
-			find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-			x86_mov_reg_reg(inst, gpreg1, $2, 4);
-			x86_widen_reg(inst, $1, gpreg1, 1, 0);
-			
-		}
-	}
-	[=reg, local] -> {
-		x86_widen_membase(inst, $1, X86_EBP, $2, 1, 0);
-	}
-	[=reg, imm] -> {
-		if($1 == X86_EAX || $1 == X86_EDX || $1 == X86_ECX || $1 == X86_EBX)
-		{
-			x86_mov_reg_imm(inst, $1, $2);
-			x86_widen_reg(inst, $1, $1, 1, 0);
-		}
-		else
-		{
-			find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-			x86_mov_reg_imm(inst, gpreg1, $2);
-			x86_widen_reg(inst, $1, gpreg1, 1, 0);
-			
-		}
-	}
-	[=local, reg] -> {
-		if($2 == X86_EAX || $2 == X86_EDX || $2 == X86_ECX || $2 == X86_EBX)
-		{
-			find_one_gp_reg(inst);
-			x86_widen_reg(inst, gpreg1, $2, 1, 0);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-		else
-		{
-			find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-			x86_mov_reg_reg(inst, gpreg1, $2, 4);
-			x86_widen_reg(inst, gpreg1, gpreg1, 1, 0);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-	}
-	[=local, local] -> {
-		find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-		x86_widen_membase(inst, gpreg1, X86_EBP, $2, 1, 0);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
-	[=local, imm] -> {
-		find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-		x86_mov_reg_imm(inst, gpreg1, $2);
-		x86_widen_reg(inst, gpreg1, gpreg1, 1, 0);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
+    [=reg, reg] -> {
+        if($2 == X86_EAX || $2 == X86_EDX || $2 == X86_ECX || $2 == X86_EBX)
+        {
+            x86_widen_reg(inst, $1, $2, 1, 0);
+        }
+        else if($1 == X86_EAX || $1 == X86_EDX || $1 == X86_ECX || $1 == X86_EBX)
+        {
+            x86_mov_reg_reg(inst, $1, $2, 4);
+            x86_widen_reg(inst, $1, $1, 1, 0);
+        }
+        else
+        {
+            find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+            x86_mov_reg_reg(inst, gpreg1, $2, 4);
+            x86_widen_reg(inst, $1, gpreg1, 1, 0);
+            
+        }
+    }
+    [=reg, local] -> {
+        x86_widen_membase(inst, $1, X86_EBP, $2, 1, 0);
+    }
+    [=reg, imm] -> {
+        if($1 == X86_EAX || $1 == X86_EDX || $1 == X86_ECX || $1 == X86_EBX)
+        {
+            x86_mov_reg_imm(inst, $1, $2);
+            x86_widen_reg(inst, $1, $1, 1, 0);
+        }
+        else
+        {
+            find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+            x86_mov_reg_imm(inst, gpreg1, $2);
+            x86_widen_reg(inst, $1, gpreg1, 1, 0);
+            
+        }
+    }
+    [=local, reg] -> {
+        if($2 == X86_EAX || $2 == X86_EDX || $2 == X86_ECX || $2 == X86_EBX)
+        {
+            find_one_gp_reg(inst);
+            x86_widen_reg(inst, gpreg1, $2, 1, 0);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+        else
+        {
+            find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+            x86_mov_reg_reg(inst, gpreg1, $2, 4);
+            x86_widen_reg(inst, gpreg1, gpreg1, 1, 0);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+    }
+    [=local, local] -> {
+        find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+        x86_widen_membase(inst, gpreg1, X86_EBP, $2, 1, 0);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
+    [=local, imm] -> {
+        find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+        x86_mov_reg_imm(inst, gpreg1, $2);
+        x86_widen_reg(inst, gpreg1, gpreg1, 1, 0);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
 
 JIT_OP_TRUNC_UBYTE:
-	[=reg, reg] -> {
-		if($2 == X86_EAX || $2 == X86_EDX || $2 == X86_ECX || $2 == X86_EBX)
-		{
-			x86_widen_reg(inst, $1, $2, 0, 0);
-		}
-		else if($1 == X86_EAX || $1 == X86_EDX || $1 == X86_ECX || $1 == X86_EBX)
-		{
-			x86_mov_reg_reg(inst, $1, $2, 4);
-			x86_widen_reg(inst, $1, $1, 0, 0);
-		}
-		else
-		{
-			find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-			x86_mov_reg_reg(inst, gpreg1, $2, 4);
-			x86_widen_reg(inst, $1, gpreg1, 0, 0);
-			
-		}
-	}
-	[=reg, local] -> {
-		x86_widen_membase(inst, $1, X86_EBP, $2, 0, 0);
-	}
-	[=reg, imm] -> {
-		if($1 == X86_EAX || $1 == X86_EDX || $1 == X86_ECX || $1 == X86_EBX)
-		{
-			x86_mov_reg_imm(inst, $1, $2);
-			x86_widen_reg(inst, $1, $1, 0, 0);
-		}
-		else
-		{
-			find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-			x86_mov_reg_imm(inst, gpreg1, $2);
-			x86_widen_reg(inst, $1, gpreg1, 0, 0);
-			
-		}
-	}
-	[=local, reg] -> {
-		if($2 == X86_EAX || $2 == X86_EDX || $2 == X86_ECX || $2 == X86_EBX)
-		{
-			find_one_gp_reg(inst);
-			x86_widen_reg(inst, gpreg1, $2, 0, 0);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-		else
-		{
-			find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-			x86_mov_reg_reg(inst, gpreg1, $2, 4);
-			x86_widen_reg(inst, gpreg1, gpreg1, 0, 0);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-	}
-	[=local, local] -> {
-		find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-		x86_widen_membase(inst, gpreg1, X86_EBP, $2, 0, 0);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
-	[=local, imm] -> {
-		find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-		x86_mov_reg_imm(inst, gpreg1, $2);
-		x86_widen_reg(inst, gpreg1, gpreg1, 0, 0);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
+    [=reg, reg] -> {
+        if($2 == X86_EAX || $2 == X86_EDX || $2 == X86_ECX || $2 == X86_EBX)
+        {
+            x86_widen_reg(inst, $1, $2, 0, 0);
+        }
+        else if($1 == X86_EAX || $1 == X86_EDX || $1 == X86_ECX || $1 == X86_EBX)
+        {
+            x86_mov_reg_reg(inst, $1, $2, 4);
+            x86_widen_reg(inst, $1, $1, 0, 0);
+        }
+        else
+        {
+            find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+            x86_mov_reg_reg(inst, gpreg1, $2, 4);
+            x86_widen_reg(inst, $1, gpreg1, 0, 0);
+            
+        }
+    }
+    [=reg, local] -> {
+        x86_widen_membase(inst, $1, X86_EBP, $2, 0, 0);
+    }
+    [=reg, imm] -> {
+        if($1 == X86_EAX || $1 == X86_EDX || $1 == X86_ECX || $1 == X86_EBX)
+        {
+            x86_mov_reg_imm(inst, $1, $2);
+            x86_widen_reg(inst, $1, $1, 0, 0);
+        }
+        else
+        {
+            find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+            x86_mov_reg_imm(inst, gpreg1, $2);
+            x86_widen_reg(inst, $1, gpreg1, 0, 0);
+            
+        }
+    }
+    [=local, reg] -> {
+        if($2 == X86_EAX || $2 == X86_EDX || $2 == X86_ECX || $2 == X86_EBX)
+        {
+            find_one_gp_reg(inst);
+            x86_widen_reg(inst, gpreg1, $2, 0, 0);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+        else
+        {
+            find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+            x86_mov_reg_reg(inst, gpreg1, $2, 4);
+            x86_widen_reg(inst, gpreg1, gpreg1, 0, 0);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+    }
+    [=local, local] -> {
+        find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+        x86_widen_membase(inst, gpreg1, X86_EBP, $2, 0, 0);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
+    [=local, imm] -> {
+        find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
+        x86_mov_reg_imm(inst, gpreg1, $2);
+        x86_widen_reg(inst, gpreg1, gpreg1, 0, 0);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
 
 JIT_OP_TRUNC_USHORT:
-	[=reg, reg] -> {
-		x86_widen_reg(inst, $1, $2, 0, 1);
-	}
-	[=reg, local] -> {
-		x86_widen_membase(inst, $1, X86_EBP, $2, 0, 1);
-	}
-	[=reg, imm] -> {
-		x86_mov_reg_imm(inst, $1, $2);
-		x86_widen_reg(inst, $1, $1, 0, 1);
-	}
-	[=local, reg] -> {
-		find_one_gp_reg(inst);
-		x86_widen_reg(inst, gpreg1, $2, 0, 1);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
-	[=local, local] -> {
-		find_one_gp_reg(inst);
-		x86_widen_membase(inst, gpreg1, X86_EBP, $2, 0, 1);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
-	[=local, imm] -> {
-		find_one_gp_reg(inst);
-		x86_mov_reg_imm(inst, gpreg1, $2);
-		x86_widen_reg(inst, gpreg1, gpreg1, 0, 1);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
+    [=reg, reg] -> {
+        x86_widen_reg(inst, $1, $2, 0, 1);
+    }
+    [=reg, local] -> {
+        x86_widen_membase(inst, $1, X86_EBP, $2, 0, 1);
+    }
+    [=reg, imm] -> {
+        x86_mov_reg_imm(inst, $1, $2);
+        x86_widen_reg(inst, $1, $1, 0, 1);
+    }
+    [=local, reg] -> {
+        find_one_gp_reg(inst);
+        x86_widen_reg(inst, gpreg1, $2, 0, 1);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
+    [=local, local] -> {
+        find_one_gp_reg(inst);
+        x86_widen_membase(inst, gpreg1, X86_EBP, $2, 0, 1);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
+    [=local, imm] -> {
+        find_one_gp_reg(inst);
+        x86_mov_reg_imm(inst, gpreg1, $2);
+        x86_widen_reg(inst, gpreg1, gpreg1, 0, 1);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
 
 JIT_OP_TRUNC_SHORT:
-	[=reg, reg] -> {
-		x86_widen_reg(inst, $1, $2, 1, 1);
-	}
-	[=reg, local] -> {
-		x86_widen_membase(inst, $1, X86_EBP, $2, 1, 1);
-	}
-	[=reg, imm] -> {
-		x86_mov_reg_imm(inst, $1, $2);
-		x86_widen_reg(inst, $1, $1, 1, 1);
-	}
-	[=local, reg] -> {
-		find_one_gp_reg(inst);
-		x86_widen_reg(inst, gpreg1, $2, 1, 1);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
-	[=local, local] -> {
-		find_one_gp_reg(inst);
-		x86_widen_membase(inst, gpreg1, X86_EBP, $2, 1, 1);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
-	[=local, imm] -> {
-		find_one_gp_reg(inst);
-		x86_mov_reg_imm(inst, gpreg1, $2);
-		x86_widen_reg(inst, gpreg1, gpreg1, 1, 1);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
+    [=reg, reg] -> {
+        x86_widen_reg(inst, $1, $2, 1, 1);
+    }
+    [=reg, local] -> {
+        x86_widen_membase(inst, $1, X86_EBP, $2, 1, 1);
+    }
+    [=reg, imm] -> {
+        x86_mov_reg_imm(inst, $1, $2);
+        x86_widen_reg(inst, $1, $1, 1, 1);
+    }
+    [=local, reg] -> {
+        find_one_gp_reg(inst);
+        x86_widen_reg(inst, gpreg1, $2, 1, 1);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
+    [=local, local] -> {
+        find_one_gp_reg(inst);
+        x86_widen_membase(inst, gpreg1, X86_EBP, $2, 1, 1);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
+    [=local, imm] -> {
+        find_one_gp_reg(inst);
+        x86_mov_reg_imm(inst, gpreg1, $2);
+        x86_widen_reg(inst, gpreg1, gpreg1, 1, 1);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
 
 JIT_OP_CHECK_SBYTE:
-	[=reg, reg] -> {
-		unsigned char *patch1;
-		unsigned char *patch2;
-		x86_alu_reg_imm(inst, X86_CMP, $2, -128);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 1);
-		x86_alu_reg_imm(inst, X86_CMP, $2, 127);
-		patch2 = inst;
-		x86_branch8(inst, X86_CC_LE, 0, 1);
-		x86_patch(patch1, inst);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch2, inst);
-		if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
-	}
-	[=reg, local] -> {
-		unsigned char *patch1;
-		unsigned char *patch2;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, -128);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 1);
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 127);
-		patch2 = inst;
-		x86_branch8(inst, X86_CC_LE, 0, 1);
-		x86_patch(patch1, inst);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch2, inst);
-		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
-	}
-	[=reg, imm] -> {
-		if($2 < -128 || $2 > 127)
-		{
-			inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_reg_imm(inst, $1, $2);
-	}
-	[=local, reg] -> {
-		unsigned char *patch1;
-		unsigned char *patch2;
-		x86_alu_reg_imm(inst, X86_CMP, $2, -128);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 1);
-		x86_alu_reg_imm(inst, X86_CMP, $2, 127);
-		patch2 = inst;
-		x86_branch8(inst, X86_CC_LE, 0, 1);
-		x86_patch(patch1, inst);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch2, inst);
-		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-	}
-	[=local, local] -> {
-		unsigned char *patch1;
-		unsigned char *patch2;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, -128);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 1);
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 127);
-		patch2 = inst;
-		x86_branch8(inst, X86_CC_LE, 0, 1);
-		x86_patch(patch1, inst);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch2, inst);
-		if($1 != $2)
-		{
-			find_one_gp_reg(inst);
-			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-	}
-	[=local, imm] -> {
-		if($2 < -128 || $2 > 127)
-		{
-			inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
-	}
+    [=reg, reg] -> {
+        unsigned char *patch1;
+        unsigned char *patch2;
+        x86_alu_reg_imm(inst, X86_CMP, $2, -128);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 1);
+        x86_alu_reg_imm(inst, X86_CMP, $2, 127);
+        patch2 = inst;
+        x86_branch8(inst, X86_CC_LE, 0, 1);
+        x86_patch(patch1, inst);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch2, inst);
+        if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
+    }
+    [=reg, local] -> {
+        unsigned char *patch1;
+        unsigned char *patch2;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, -128);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 1);
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 127);
+        patch2 = inst;
+        x86_branch8(inst, X86_CC_LE, 0, 1);
+        x86_patch(patch1, inst);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch2, inst);
+        x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+    }
+    [=reg, imm] -> {
+        if($2 < -128 || $2 > 127)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_reg_imm(inst, $1, $2);
+    }
+    [=local, reg] -> {
+        unsigned char *patch1;
+        unsigned char *patch2;
+        x86_alu_reg_imm(inst, X86_CMP, $2, -128);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 1);
+        x86_alu_reg_imm(inst, X86_CMP, $2, 127);
+        patch2 = inst;
+        x86_branch8(inst, X86_CC_LE, 0, 1);
+        x86_patch(patch1, inst);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch2, inst);
+        x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+    }
+    [=local, local] -> {
+        unsigned char *patch1;
+        unsigned char *patch2;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, -128);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 1);
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 127);
+        patch2 = inst;
+        x86_branch8(inst, X86_CC_LE, 0, 1);
+        x86_patch(patch1, inst);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch2, inst);
+        if($1 != $2)
+        {
+            find_one_gp_reg(inst);
+            x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+    }
+    [=local, imm] -> {
+        if($2 < -128 || $2 > 127)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
+    }
 
 JIT_OP_CHECK_UBYTE:
-	[=reg, reg] -> {
-		unsigned char *patch1;
-		x86_alu_reg_imm(inst, X86_CMP, $2, 256);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 0);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
-	}
-	[=reg, local] -> {
-		unsigned char *patch1;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 256);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 0);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
-	}
-	[=reg, imm] -> {
-		if($2 >= 256)
-		{
-			inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_reg_imm(inst, $1, $2);
-	}
-	[=local, reg] -> {
-		unsigned char *patch1;
-		x86_alu_reg_imm(inst, X86_CMP, $2, 256);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 0);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-	}
-	[=local, local] -> {
-		unsigned char *patch1;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 256);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 0);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		find_one_gp_reg(inst);
-		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
-	[=local, imm] -> {
-		if($2 >= 256)
-		{
-			inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
-	}
+    [=reg, reg] -> {
+        unsigned char *patch1;
+        x86_alu_reg_imm(inst, X86_CMP, $2, 256);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 0);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
+    }
+    [=reg, local] -> {
+        unsigned char *patch1;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 256);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 0);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+    }
+    [=reg, imm] -> {
+        if($2 >= 256)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_reg_imm(inst, $1, $2);
+    }
+    [=local, reg] -> {
+        unsigned char *patch1;
+        x86_alu_reg_imm(inst, X86_CMP, $2, 256);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 0);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+    }
+    [=local, local] -> {
+        unsigned char *patch1;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 256);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 0);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        find_one_gp_reg(inst);
+        x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
+    [=local, imm] -> {
+        if($2 >= 256)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
+    }
 
 JIT_OP_CHECK_SHORT:
-	[=reg, reg] -> {
-		unsigned char *patch1;
-		unsigned char *patch2;
-		x86_alu_reg_imm(inst, X86_CMP, $2, -32768);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 1);
-		x86_alu_reg_imm(inst, X86_CMP, $2, 32767);
-		patch2 = inst;
-		x86_branch8(inst, X86_CC_LE, 0, 1);
-		x86_patch(patch1, inst);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch2, inst);
-		if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
-	}
-	[=reg, local] -> {
-		unsigned char *patch1;
-		unsigned char *patch2;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, -32768);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 1);
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 32767);
-		patch2 = inst;
-		x86_branch8(inst, X86_CC_LE, 0, 1);
-		x86_patch(patch1, inst);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch2, inst);
-		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
-	}
-	[=reg, imm] -> {
-		if($2 < -32768 || $2 > 32767)
-		{
-		    inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_reg_imm(inst, $1, $2);
-	}
-	[=local, reg] -> {
-		unsigned char *patch1;
-		unsigned char *patch2;
-		x86_alu_reg_imm(inst, X86_CMP, $2, -32768);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 1);
-		x86_alu_reg_imm(inst, X86_CMP, $2, 32767);
-		patch2 = inst;
-		x86_branch8(inst, X86_CC_LE, 0, 1);
-		x86_patch(patch1, inst);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch2, inst);
-		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-	}
-	[=local, local] -> {
-		unsigned char *patch1;
-		unsigned char *patch2;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, -32768);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 1);
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 32767);
-		patch2 = inst;
-		x86_branch8(inst, X86_CC_LE, 0, 1);
-		x86_patch(patch1, inst);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch2, inst);
-		if($1 != $2)
-		{
-			find_one_gp_reg(inst);
-			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-	}
-	[=local, imm] -> {
-		if($2 < -32768 || $2 > 32767)
-		{
-		    inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
-	}
+    [=reg, reg] -> {
+        unsigned char *patch1;
+        unsigned char *patch2;
+        x86_alu_reg_imm(inst, X86_CMP, $2, -32768);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 1);
+        x86_alu_reg_imm(inst, X86_CMP, $2, 32767);
+        patch2 = inst;
+        x86_branch8(inst, X86_CC_LE, 0, 1);
+        x86_patch(patch1, inst);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch2, inst);
+        if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
+    }
+    [=reg, local] -> {
+        unsigned char *patch1;
+        unsigned char *patch2;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, -32768);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 1);
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 32767);
+        patch2 = inst;
+        x86_branch8(inst, X86_CC_LE, 0, 1);
+        x86_patch(patch1, inst);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch2, inst);
+        x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+    }
+    [=reg, imm] -> {
+        if($2 < -32768 || $2 > 32767)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_reg_imm(inst, $1, $2);
+    }
+    [=local, reg] -> {
+        unsigned char *patch1;
+        unsigned char *patch2;
+        x86_alu_reg_imm(inst, X86_CMP, $2, -32768);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 1);
+        x86_alu_reg_imm(inst, X86_CMP, $2, 32767);
+        patch2 = inst;
+        x86_branch8(inst, X86_CC_LE, 0, 1);
+        x86_patch(patch1, inst);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch2, inst);
+        x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+    }
+    [=local, local] -> {
+        unsigned char *patch1;
+        unsigned char *patch2;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, -32768);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 1);
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 32767);
+        patch2 = inst;
+        x86_branch8(inst, X86_CC_LE, 0, 1);
+        x86_patch(patch1, inst);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch2, inst);
+        if($1 != $2)
+        {
+            find_one_gp_reg(inst);
+            x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+    }
+    [=local, imm] -> {
+        if($2 < -32768 || $2 > 32767)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
+    }
 
 JIT_OP_CHECK_USHORT:
-	[=reg, reg] -> {
-		unsigned char *patch1;
-		x86_alu_reg_imm(inst, X86_CMP, $2, 65536);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 0);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
-	}
-	[=reg, local] -> {
-		unsigned char *patch1;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 65536);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 0);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
-	}
-	[=reg, imm] -> {
-		if($2 >= 65536)
-		{
-			inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_reg_imm(inst, $1, $2);
-	}
-	[=local, reg] -> {
-		unsigned char *patch1;
-		x86_alu_reg_imm(inst, X86_CMP, $2, 65536);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 0);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-	}
-	[=local, local] -> {
-		unsigned char *patch1;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 65536);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_LT, 0, 0);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		if($1 != $2)
-		{
-			find_one_gp_reg(inst);
-			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-	}
-	[=local, imm] -> {
-		if($2 >= 65536)
-		{
-			inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
-	}
+    [=reg, reg] -> {
+        unsigned char *patch1;
+        x86_alu_reg_imm(inst, X86_CMP, $2, 65536);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 0);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
+    }
+    [=reg, local] -> {
+        unsigned char *patch1;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 65536);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 0);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+    }
+    [=reg, imm] -> {
+        if($2 >= 65536)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_reg_imm(inst, $1, $2);
+    }
+    [=local, reg] -> {
+        unsigned char *patch1;
+        x86_alu_reg_imm(inst, X86_CMP, $2, 65536);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 0);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+    }
+    [=local, local] -> {
+        unsigned char *patch1;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 65536);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_LT, 0, 0);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        if($1 != $2)
+        {
+            find_one_gp_reg(inst);
+            x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+    }
+    [=local, imm] -> {
+        if($2 >= 65536)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
+    }
 
 JIT_OP_CHECK_INT, JIT_OP_CHECK_UINT:
-	[=reg, reg] -> {
-		unsigned char *patch1;
-		x86_alu_reg_imm(inst, X86_CMP, $2, 0);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_GE, 0, 1);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
-	}
-	[=reg, local] -> {
-		unsigned char *patch1;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 0);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_GE, 0, 1);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
-	}
-	[=reg, imm] -> {
-		if($2 < 0)
-		{
-			inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_reg_imm(inst, $1, $2);
-	}
-	[=local, reg] -> {
-		unsigned char *patch1;
-		x86_alu_reg_imm(inst, X86_CMP, $2, 0);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_GE, 0, 1);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-	}
-	[=local, local] -> {
-		unsigned char *patch1;
-		x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 0);
-		patch1 = inst;
-		x86_branch8(inst, X86_CC_GE, 0, 1);
-		inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		x86_patch(patch1, inst);
-		if($1 != $2)
-		{
-			find_one_gp_reg(inst);
-			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-	}
-	[=local, imm] -> {
-		if($2 < 0)
-		{
-			inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
-		}
-		x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
-	}
+    [=reg, reg] -> {
+        unsigned char *patch1;
+        x86_alu_reg_imm(inst, X86_CMP, $2, 0);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_GE, 0, 1);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
+    }
+    [=reg, local] -> {
+        unsigned char *patch1;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 0);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_GE, 0, 1);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+    }
+    [=reg, imm] -> {
+        if($2 < 0)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_reg_imm(inst, $1, $2);
+    }
+    [=local, reg] -> {
+        unsigned char *patch1;
+        x86_alu_reg_imm(inst, X86_CMP, $2, 0);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_GE, 0, 1);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+    }
+    [=local, local] -> {
+        unsigned char *patch1;
+        x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $2, 0);
+        patch1 = inst;
+        x86_branch8(inst, X86_CC_GE, 0, 1);
+        inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        x86_patch(patch1, inst);
+        if($1 != $2)
+        {
+            find_one_gp_reg(inst);
+            x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+    }
+    [=local, imm] -> {
+        if($2 < 0)
+        {
+            inst = ejit_throw_builtin(inst, func, JIT_RESULT_OVERFLOW);
+        }
+        x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
+    }
 
 JIT_OP_LOW_WORD:
-	[=reg, imm] -> {
-		jit_uint value = ((jit_uint *)($2))[0];
-		x86_mov_reg_imm(inst, $1, value);
-	}
-	[=local, imm] -> {
-		jit_uint value = ((jit_uint *)($2))[0];
-		x86_mov_membase_imm(inst, X86_EBP, $1, value, 4);
-	}
-	[=reg, local] -> {
-		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
-	}
-	[=reg, lreg] -> {
-		x86_mov_reg_reg(inst, $1, $2, 4);
-	}
-	[=local, local] -> {
-		if($1 != $2)
-		{
-			find_one_gp_reg(inst);
-			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-	}
-	[=local, lreg] -> {
-		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-	}
+    [=reg, imm] -> {
+        jit_uint value = ((jit_uint *)($2))[0];
+        x86_mov_reg_imm(inst, $1, value);
+    }
+    [=local, imm] -> {
+        jit_uint value = ((jit_uint *)($2))[0];
+        x86_mov_membase_imm(inst, X86_EBP, $1, value, 4);
+    }
+    [=reg, local] -> {
+        x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+    }
+    [=reg, lreg] -> {
+        x86_mov_reg_reg(inst, $1, $2, 4);
+    }
+    [=local, local] -> {
+        if($1 != $2)
+        {
+            find_one_gp_reg(inst);
+            x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+    }
+    [=local, lreg] -> {
+        x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+    }
 
 
 JIT_OP_EXPAND_INT:
-	[=local, imm] -> {
-		jit_int value = (jit_int)($2);
-		x86_mov_membase_imm(inst, X86_EBP, $1, value, 4);
-		x86_mov_membase_imm(inst, X86_EBP, $1 + 4, value, 4);
-		x86_shift_membase_imm(inst, X86_SAR, X86_EBP, $1 + 4, 31);
-	}
-	[=local, reg] -> {
-		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, $2, 4);
-		x86_shift_membase_imm(inst, X86_SAR, X86_EBP, $1 + 4, 31);
-	}
-	[=local, local] -> {
-		find_one_gp_reg(inst);
-		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-		if($1 != $2)
-		{
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		}
-		x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
-		x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
-		
-	}
-	[=lreg, imm] -> {
-		x86_mov_reg_imm(inst, $1, $2);
-		x86_mov_reg_imm(inst, lir_register_pair($1), $2);
-		x86_shift_reg_imm(inst, X86_SAR, lir_register_pair($1), 31);
-	}
-	[=lreg, local] -> {
-		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
-		x86_mov_reg_reg(inst, lir_register_pair($1), $1, 4);
-		x86_shift_reg_imm(inst, X86_SAR, lir_register_pair($1), 31);
-	}
-	[=lreg, reg] -> {
-		x86_mov_reg_reg(inst, $1, $2, 4);
-		x86_mov_reg_reg(inst, lir_register_pair($1), $2, 4);
-		x86_shift_reg_imm(inst, X86_SAR, lir_register_pair($1), 31);
-	}
+    [=local, imm] -> {
+        jit_int value = (jit_int)($2);
+        x86_mov_membase_imm(inst, X86_EBP, $1, value, 4);
+        x86_mov_membase_imm(inst, X86_EBP, $1 + 4, value, 4);
+        x86_shift_membase_imm(inst, X86_SAR, X86_EBP, $1 + 4, 31);
+    }
+    [=local, reg] -> {
+        x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+        x86_mov_membase_reg(inst, X86_EBP, $1 + 4, $2, 4);
+        x86_shift_membase_imm(inst, X86_SAR, X86_EBP, $1 + 4, 31);
+    }
+    [=local, local] -> {
+        find_one_gp_reg(inst);
+        x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+        if($1 != $2)
+        {
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        }
+        x86_shift_reg_imm(inst, X86_SAR, gpreg1, 31);
+        x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
+        
+    }
+    [=lreg, imm] -> {
+        x86_mov_reg_imm(inst, $1, $2);
+        x86_mov_reg_imm(inst, ejit_register_pair($1), $2);
+        x86_shift_reg_imm(inst, X86_SAR, ejit_register_pair($1), 31);
+    }
+    [=lreg, local] -> {
+        x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+        x86_mov_reg_reg(inst, ejit_register_pair($1), $1, 4);
+        x86_shift_reg_imm(inst, X86_SAR, ejit_register_pair($1), 31);
+    }
+    [=lreg, reg] -> {
+        x86_mov_reg_reg(inst, $1, $2, 4);
+        x86_mov_reg_reg(inst, ejit_register_pair($1), $2, 4);
+        x86_shift_reg_imm(inst, X86_SAR, ejit_register_pair($1), 31);
+    }
 
 JIT_OP_EXPAND_UINT:
-	[=local, imm] -> {
-		x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
-		x86_mov_membase_imm(inst, X86_EBP, $1 + 4, 0, 4);
-	}
-	[=local, reg] -> {
-		x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-		x86_mov_membase_imm(inst, X86_EBP, $1 + 4, 0, 4);
-	}
-	[=local, local] -> {
-		if($1 != $2)
-		{
-			find_one_gp_reg(inst);
-			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-		x86_mov_membase_imm(inst, X86_EBP, $1 + 4, 0, 4);
-	}
-	[=lreg, imm] -> {
-		x86_mov_reg_imm(inst, $1, $2);
-		x86_mov_reg_imm(inst, lir_register_pair($1), 0);
-	}
-	[=lreg, local] -> {
-		x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
-		x86_mov_reg_imm(inst, lir_register_pair($1), 0);
-	}
-	[=lreg, reg] -> {
-		if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
-		x86_mov_reg_imm(inst, lir_register_pair($1), 0);
-	}
+    [=local, imm] -> {
+        x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
+        x86_mov_membase_imm(inst, X86_EBP, $1 + 4, 0, 4);
+    }
+    [=local, reg] -> {
+        x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+        x86_mov_membase_imm(inst, X86_EBP, $1 + 4, 0, 4);
+    }
+    [=local, local] -> {
+        if($1 != $2)
+        {
+            find_one_gp_reg(inst);
+            x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+        x86_mov_membase_imm(inst, X86_EBP, $1 + 4, 0, 4);
+    }
+    [=lreg, imm] -> {
+        x86_mov_reg_imm(inst, $1, $2);
+        x86_mov_reg_imm(inst, ejit_register_pair($1), 0);
+    }
+    [=lreg, local] -> {
+        x86_mov_reg_membase(inst, $1, X86_EBP, $2, 4);
+        x86_mov_reg_imm(inst, ejit_register_pair($1), 0);
+    }
+    [=lreg, reg] -> {
+        if($1 != $2) x86_mov_reg_reg(inst, $1, $2, 4);
+        x86_mov_reg_imm(inst, ejit_register_pair($1), 0);
+    }
 
 JIT_OP_NFLOAT_TO_FLOAT32:
-	[=freg, imm] -> {
-		jit_float32 value = (jit_float32)((jit_nfloat *)($2))[0];
-		jit_float32 *value_ptr = &value;
-		jit_uint *ptr = (jit_uint*)value_ptr;
-		x86_mov_membase_imm(inst, X86_ESP, -8, ptr[0], 4);
-		sse_movss_xmreg_membase(inst, $1, X86_ESP, -8);
-	}
-	[=freg, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld80_membase(inst, X86_EBP, $2);
-			x86_fst_membase(inst, X86_ESP, -8, 0, 1);
-			sse_movss_xmreg_membase(inst, $1, X86_ESP, -8);
-		}
-		else
-		{
-			sse_cvtsd2ss_xmreg_membase(inst, $1, X86_EBP, $2);
-		}
-	}
-	[=freg, freg] -> {
-		sse_cvtsd2ss_xmreg_xmreg(inst, $1, $2);
-	}
-	[=local, imm] -> {
-		jit_float32 value = (jit_float32)((jit_nfloat *)($2))[0];
-		jit_float32 *value_ptr = &value;
-		jit_uint *ptr = (jit_uint*)value_ptr;
-		x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
-	}
-	[=local, local] -> {
-	    if(sizeof(jit_nfloat) != sizeof(jit_float64))
-	    {
-		    x86_fld80_membase(inst, X86_EBP, $2);
-		    x86_fst_membase(inst, X86_EBP, $1, 0, 1);
-	    }
-	    else
-	    {
-	    	    find_one_xmm_reg(inst);
-        	    sse_cvtsd2ss_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-    	    	    sse_movss_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-		    
-	    }
-	}
-	[=local, freg] -> {
-		find_one_xmm_reg(inst);
-		sse_cvtsd2ss_xmreg_xmreg(inst, xmmreg1, $2);
-    		sse_movss_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-		
-	}
+    [=freg, imm] -> {
+        jit_float32 value = (jit_float32)((jit_nfloat *)($2))[0];
+        jit_float32 *value_ptr = &value;
+        jit_uint *ptr = (jit_uint*)value_ptr;
+        x86_mov_membase_imm(inst, X86_ESP, -8, ptr[0], 4);
+        sse_movss_xmreg_membase(inst, $1, X86_ESP, -8);
+    }
+    [=freg, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+            x86_fst_membase(inst, X86_ESP, -8, 0, 1);
+            sse_movss_xmreg_membase(inst, $1, X86_ESP, -8);
+        }
+        else
+        {
+            sse_cvtsd2ss_xmreg_membase(inst, $1, X86_EBP, $2);
+        }
+    }
+    [=freg, freg] -> {
+        sse_cvtsd2ss_xmreg_xmreg(inst, $1, $2);
+    }
+    [=local, imm] -> {
+        jit_float32 value = (jit_float32)((jit_nfloat *)($2))[0];
+        jit_float32 *value_ptr = &value;
+        jit_uint *ptr = (jit_uint*)value_ptr;
+        x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
+    }
+    [=local, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+            x86_fst_membase(inst, X86_EBP, $1, 0, 1);
+        }
+        else
+        {
+                find_one_xmm_reg(inst);
+                sse_cvtsd2ss_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
+                    sse_movss_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
+    [=local, freg] -> {
+        find_one_xmm_reg(inst);
+        sse_cvtsd2ss_xmreg_xmreg(inst, xmmreg1, $2);
+            sse_movss_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+        
+    }
 
 
 JIT_OP_NFLOAT_TO_FLOAT64:
-	[=freg, imm] -> {
-		jit_float64 value = (jit_float64)((jit_nfloat *)($2))[0];
-		jit_float64 *value_ptr = &value;
-		jit_uint *ptr = (jit_uint*)value_ptr;
-		x86_mov_membase_imm(inst, X86_ESP, -8, ptr[0], 4);
-		x86_mov_membase_imm(inst, X86_ESP, -4, ptr[1], 4);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
-	}
-	[=freg, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld80_membase(inst, X86_EBP, $2);
-			x86_fst_membase(inst, X86_ESP, -8, 1, 1);
-			sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
-		}
-		else
-		{
-			sse2_movsd_xmreg_membase(inst, $1, X86_EBP, $2);
-		}
-	}
-	[=freg, freg] -> {
-		if($1 != $2) sse2_movsd_xmreg_xmreg(inst, $1, $2);
-	}
-	[=local, imm] -> {
-		jit_float64 value = (jit_float64)((jit_nfloat *)($2))[0];
-		jit_float64 *value_ptr = &value;
-		jit_uint *ptr = (jit_uint*)value_ptr;
-		x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
-		x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
-	}
-	[=local, local] -> {
-	        if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld80_membase(inst, X86_EBP, $2);
-			x86_fst_membase(inst, X86_EBP, $1, 1, 1);
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-		}
-	}
-	[=local, freg] -> {
-		sse2_movsd_membase_xmreg(inst, X86_EBP, $1, $2);
-	}
+    [=freg, imm] -> {
+        jit_float64 value = (jit_float64)((jit_nfloat *)($2))[0];
+        jit_float64 *value_ptr = &value;
+        jit_uint *ptr = (jit_uint*)value_ptr;
+        x86_mov_membase_imm(inst, X86_ESP, -8, ptr[0], 4);
+        x86_mov_membase_imm(inst, X86_ESP, -4, ptr[1], 4);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
+    }
+    [=freg, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+            x86_fst_membase(inst, X86_ESP, -8, 1, 1);
+            sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
+        }
+        else
+        {
+            sse2_movsd_xmreg_membase(inst, $1, X86_EBP, $2);
+        }
+    }
+    [=freg, freg] -> {
+        if($1 != $2) sse2_movsd_xmreg_xmreg(inst, $1, $2);
+    }
+    [=local, imm] -> {
+        jit_float64 value = (jit_float64)((jit_nfloat *)($2))[0];
+        jit_float64 *value_ptr = &value;
+        jit_uint *ptr = (jit_uint*)value_ptr;
+        x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
+        x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
+    }
+    [=local, local] -> {
+            if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+            x86_fst_membase(inst, X86_EBP, $1, 1, 1);
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
+    [=local, freg] -> {
+        sse2_movsd_membase_xmreg(inst, X86_EBP, $1, $2);
+    }
 
 
 JIT_OP_FLOAT32_TO_NFLOAT:
-	[=freg, imm] -> {
-		jit_float64 value = (jit_float64)((jit_float32 *)($2))[0];
-		jit_float64 *value_ptr = &value;
-		jit_uint *ptr = (jit_uint*)value_ptr;
-		x86_mov_membase_imm(inst, X86_ESP, -8, ptr[0], 4);
-		x86_mov_membase_imm(inst, X86_ESP, -4, ptr[1], 4);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
-	}
-	[=freg, local] -> {
-	    sse2_cvtss2sd_xmreg_membase(inst, $1, X86_EBP, $2);
-	}
-	[=freg, freg] -> {
-	    sse2_cvtss2sd_xmreg_xmreg(inst, $1, $2);
-	}
-	[=local, imm] -> {
-		jit_nfloat value = (jit_nfloat)((jit_float32 *)($2))[0];
-		jit_nfloat *value_ptr = &value;
-		jit_uint *ptr = (jit_uint*)value_ptr;
-		x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
-		x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[2], 4);
-		}
-	}
-	[=local, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld_membase(inst, X86_EBP, $2, 0);
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			sse2_cvtss2sd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-		}
-	}
-	[=local, freg] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			sse_movss_membase_xmreg(inst, X86_ESP, -8, $2);
-			x86_fld_membase(inst, X86_ESP, -8, 0);
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			sse2_cvtss2sd_xmreg_xmreg(inst, xmmreg1, $2);
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-		}
-	}
+    [=freg, imm] -> {
+        jit_float64 value = (jit_float64)((jit_float32 *)($2))[0];
+        jit_float64 *value_ptr = &value;
+        jit_uint *ptr = (jit_uint*)value_ptr;
+        x86_mov_membase_imm(inst, X86_ESP, -8, ptr[0], 4);
+        x86_mov_membase_imm(inst, X86_ESP, -4, ptr[1], 4);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
+    }
+    [=freg, local] -> {
+        sse2_cvtss2sd_xmreg_membase(inst, $1, X86_EBP, $2);
+    }
+    [=freg, freg] -> {
+        sse2_cvtss2sd_xmreg_xmreg(inst, $1, $2);
+    }
+    [=local, imm] -> {
+        jit_nfloat value = (jit_nfloat)((jit_float32 *)($2))[0];
+        jit_nfloat *value_ptr = &value;
+        jit_uint *ptr = (jit_uint*)value_ptr;
+        x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
+        x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[2], 4);
+        }
+    }
+    [=local, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld_membase(inst, X86_EBP, $2, 0);
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            sse2_cvtss2sd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
+    [=local, freg] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            sse_movss_membase_xmreg(inst, X86_ESP, -8, $2);
+            x86_fld_membase(inst, X86_ESP, -8, 0);
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            sse2_cvtss2sd_xmreg_xmreg(inst, xmmreg1, $2);
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
 
 
 JIT_OP_FLOAT64_TO_NFLOAT:
-	[=freg, imm] -> {
-		jit_nfloat value = (jit_nfloat)((jit_float64 *)($2))[0];
-		jit_nfloat *value_ptr = &value;
-		jit_uint *ptr = (jit_uint*)value_ptr;
-		x86_mov_membase_imm(inst, X86_ESP, -8, ptr[0], 4);
-		x86_mov_membase_imm(inst, X86_ESP, -4, ptr[1], 4);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
-	}
-	[=freg, local] -> {
-		sse2_movsd_xmreg_membase(inst, $1, X86_EBP, $2);
-	}
-	[=freg, freg] -> {
-		if($1 != $2) sse2_movsd_xmreg_xmreg(inst, $1, $2);
-	}
-	[=local, imm] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			jit_nfloat value = (jit_nfloat)((jit_float64 *)($2))[0];
-			jit_nfloat *value_ptr = &value;
-			jit_uint *ptr = (jit_uint*)value_ptr;
-			x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
-			x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
-			x86_mov_membase_imm(inst, X86_EBP, $1 + 8, ptr[2], 4);
-		}
-		else
-		{
-			jit_float64 value = (jit_float64)((jit_float64 *)($2))[0];
-			jit_float64 *value_ptr = &value;
-			jit_uint *ptr = (jit_uint*)value_ptr;
-			x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
-			x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
-		}
+    [=freg, imm] -> {
+        jit_nfloat value = (jit_nfloat)((jit_float64 *)($2))[0];
+        jit_nfloat *value_ptr = &value;
+        jit_uint *ptr = (jit_uint*)value_ptr;
+        x86_mov_membase_imm(inst, X86_ESP, -8, ptr[0], 4);
+        x86_mov_membase_imm(inst, X86_ESP, -4, ptr[1], 4);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
+    }
+    [=freg, local] -> {
+        sse2_movsd_xmreg_membase(inst, $1, X86_EBP, $2);
+    }
+    [=freg, freg] -> {
+        if($1 != $2) sse2_movsd_xmreg_xmreg(inst, $1, $2);
+    }
+    [=local, imm] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            jit_nfloat value = (jit_nfloat)((jit_float64 *)($2))[0];
+            jit_nfloat *value_ptr = &value;
+            jit_uint *ptr = (jit_uint*)value_ptr;
+            x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
+            x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
+            x86_mov_membase_imm(inst, X86_EBP, $1 + 8, ptr[2], 4);
+        }
+        else
+        {
+            jit_float64 value = (jit_float64)((jit_float64 *)($2))[0];
+            jit_float64 *value_ptr = &value;
+            jit_uint *ptr = (jit_uint*)value_ptr;
+            x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
+            x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
+        }
 
-	}
-	[=local, local] -> {
-	        if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld_membase(inst, X86_EBP, $2, 1);
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-		}
-	}
-	[=local, freg] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			sse2_movsd_membase_xmreg(inst, X86_ESP, -8, $2);
-			x86_fld_membase(inst, X86_ESP, -8, 1);
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, $2);
-		}
-	}
+    }
+    [=local, local] -> {
+            if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld_membase(inst, X86_EBP, $2, 1);
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
+    [=local, freg] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            sse2_movsd_membase_xmreg(inst, X86_ESP, -8, $2);
+            x86_fld_membase(inst, X86_ESP, -8, 1);
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, $2);
+        }
+    }
 
 JIT_OP_INT_TO_NFLOAT:
-	[=freg, imm] -> {
-		jit_nfloat float_value = (jit_nfloat)((jit_int)$2);
-		void *ptr = &float_value;
-		jit_uint *ptr_u = (jit_uint*)ptr;
-		x86_mov_membase_imm(inst, X86_ESP, -8, ptr_u[0], 4);
-		x86_mov_membase_imm(inst, X86_ESP, -4, ptr_u[1], 4);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
-	}
-	[=freg, local] -> {
-		sse2_cvtsi2sd_xmreg_membase(inst, $1, X86_EBP, $2);
-	}
-	[=freg, reg] -> {
-		sse2_cvtsi2sd_xmreg_reg(inst, $1, $2);
-	}
-	[=local, imm] -> {
-		jit_nfloat float_value = (jit_nfloat)((jit_int)$2);
-		void *ptr = &float_value;
-		jit_uint *ptr_u = (jit_uint*)ptr;
-		x86_mov_membase_imm(inst, X86_EBP, $1, ptr_u[0], 4);
-		x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr_u[1], 4);
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_mov_membase_imm(inst, X86_EBP, $1 + 8, ptr_u[2], 4);
-		}
-	}
-	[=local, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fild_membase(inst, X86_EBP, $2, 0);
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			sse2_cvtsi2sd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-		}
-	}
-	[=local, reg] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_mov_membase_reg(inst, X86_ESP, -8, $2, 4);
-			x86_fild_membase(inst, X86_ESP, -8, 0);
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			sse2_cvtsi2sd_xmreg_reg(inst, xmmreg1, $2);
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-		}
-	}
+    [=freg, imm] -> {
+        jit_nfloat float_value = (jit_nfloat)((jit_int)$2);
+        void *ptr = &float_value;
+        jit_uint *ptr_u = (jit_uint*)ptr;
+        x86_mov_membase_imm(inst, X86_ESP, -8, ptr_u[0], 4);
+        x86_mov_membase_imm(inst, X86_ESP, -4, ptr_u[1], 4);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
+    }
+    [=freg, local] -> {
+        sse2_cvtsi2sd_xmreg_membase(inst, $1, X86_EBP, $2);
+    }
+    [=freg, reg] -> {
+        sse2_cvtsi2sd_xmreg_reg(inst, $1, $2);
+    }
+    [=local, imm] -> {
+        jit_nfloat float_value = (jit_nfloat)((jit_int)$2);
+        void *ptr = &float_value;
+        jit_uint *ptr_u = (jit_uint*)ptr;
+        x86_mov_membase_imm(inst, X86_EBP, $1, ptr_u[0], 4);
+        x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr_u[1], 4);
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_mov_membase_imm(inst, X86_EBP, $1 + 8, ptr_u[2], 4);
+        }
+    }
+    [=local, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fild_membase(inst, X86_EBP, $2, 0);
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            sse2_cvtsi2sd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
+    [=local, reg] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_mov_membase_reg(inst, X86_ESP, -8, $2, 4);
+            x86_fild_membase(inst, X86_ESP, -8, 0);
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            sse2_cvtsi2sd_xmreg_reg(inst, xmmreg1, $2);
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
 
 JIT_OP_NFLOAT_TO_INT:
-	[=reg, imm] -> {
-		jit_nfloat float_value = ((jit_nfloat *)($2))[0];
-		jit_int int_value = (jit_int)(float_value);
-		x86_mov_reg_imm(inst, $1, int_value);
-	}
-	[=reg, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld80_membase(inst, X86_EBP, $2);
-			x86_fst_membase(inst, X86_ESP, -8, 1, 1);
-			sse2_cvttsd2si_reg_membase(inst, $1, X86_ESP, -8);
-		}
-		else
-		{
-			sse2_cvttsd2si_reg_membase(inst, $1, X86_EBP, $2);
-		}
-	}
-	[=reg, freg] -> {
-		sse2_cvttsd2si_reg_xmreg(inst, $1, $2);
-	}
-	[=local, imm] -> {
-		jit_nfloat float_value = ((jit_nfloat *)($2))[0];
-		jit_int int_value = (jit_int)(float_value);
-		x86_mov_membase_imm(inst, X86_EBP, $1, int_value, 4);
-	}
-	[=local, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld80_membase(inst, X86_EBP, $2);
-			x86_fst_membase(inst, X86_ESP, -32, 1, 1);
-			find_one_gp_reg(inst);
-			sse2_cvttsd2si_reg_membase(inst, gpreg1, X86_ESP, -32);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-		else
-		{
-			find_one_gp_reg(inst);
-			sse2_cvttsd2si_reg_membase(inst, gpreg1, X86_EBP, $2);
-			x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-			
-		}
-	}
-	[=local, freg] -> {
-	        find_one_gp_reg(inst);
-		sse2_cvttsd2si_reg_xmreg(inst, gpreg1, $2);
-		x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-		
-	}
+    [=reg, imm] -> {
+        jit_nfloat float_value = ((jit_nfloat *)($2))[0];
+        jit_int int_value = (jit_int)(float_value);
+        x86_mov_reg_imm(inst, $1, int_value);
+    }
+    [=reg, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+            x86_fst_membase(inst, X86_ESP, -8, 1, 1);
+            sse2_cvttsd2si_reg_membase(inst, $1, X86_ESP, -8);
+        }
+        else
+        {
+            sse2_cvttsd2si_reg_membase(inst, $1, X86_EBP, $2);
+        }
+    }
+    [=reg, freg] -> {
+        sse2_cvttsd2si_reg_xmreg(inst, $1, $2);
+    }
+    [=local, imm] -> {
+        jit_nfloat float_value = ((jit_nfloat *)($2))[0];
+        jit_int int_value = (jit_int)(float_value);
+        x86_mov_membase_imm(inst, X86_EBP, $1, int_value, 4);
+    }
+    [=local, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+            x86_fst_membase(inst, X86_ESP, -32, 1, 1);
+            find_one_gp_reg(inst);
+            sse2_cvttsd2si_reg_membase(inst, gpreg1, X86_ESP, -32);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+        else
+        {
+            find_one_gp_reg(inst);
+            sse2_cvttsd2si_reg_membase(inst, gpreg1, X86_EBP, $2);
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+            
+        }
+    }
+    [=local, freg] -> {
+            find_one_gp_reg(inst);
+        sse2_cvttsd2si_reg_xmreg(inst, gpreg1, $2);
+        x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
+        
+    }
 
 JIT_OP_UINT_TO_NFLOAT:
-	[=freg, imm] -> {
-		jit_float64 float_value = (jit_float64)((jit_uint)$2);
-		void *ptr = &float_value;
-		jit_uint *ptr_u = (jit_uint*)ptr;
-		x86_mov_membase_imm(inst, X86_ESP, -8, ptr_u[0], 4);
-		x86_mov_membase_imm(inst, X86_ESP, -4, ptr_u[1], 4);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
-	}
-	[=freg, local] -> {
-		unsigned int value = 0x43300000;
-		find_one_gp_reg(inst);
-		x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-		x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
-		x86_mov_membase_reg(inst, X86_ESP, -32, gpreg1, 4);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -32);
-		x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
-		sse2_subsd_xmreg_membase(inst, $1, X86_ESP, -32);
-		
-	}
-	[=freg, reg] -> {
-		unsigned int value = 0x43300000;
-		x86_mov_membase_imm(inst, X86_ESP, -4, value, 4);
-		x86_mov_membase_reg(inst, X86_ESP, -8, $2, 4);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
-		x86_mov_membase_imm(inst, X86_ESP, -8, 0, 4);
-		sse2_subsd_xmreg_membase(inst, $1, X86_ESP, -8);
-	}
-	[=local, imm] -> {
-		jit_nfloat float_value = (jit_nfloat)((jit_uint)$2);
-		void *ptr = &float_value;
-		jit_uint *ptr_u = (jit_uint*)ptr;
-		x86_mov_membase_imm(inst, X86_EBP, $1, ptr_u[0], 4);
-		x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr_u[1], 4);
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_mov_membase_imm(inst, X86_EBP, $1 + 8, ptr_u[2], 4);
-		}
-	}
-	[=local, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_push_imm(inst, 0);
-			x86_push_membase(inst, X86_EBP, $2);
-			x86_fild_membase(inst, X86_ESP, 0, 1);
-			x86_alu_reg_imm(inst, X86_ADD, X86_ESP, sizeof(jit_long));
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			unsigned int value = 0x43300000;
-        		find_one_gp_reg(inst);
-	    		find_one_xmm_reg(inst);
-			x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-			x86_mov_membase_imm(inst, X86_ESP, -44, value, 4);
-			x86_mov_membase_reg(inst, X86_ESP, -48, gpreg1, 4);
-			sse2_movsd_xmreg_membase(inst, xmmreg1, X86_ESP, -48);
-			x86_mov_membase_imm(inst, X86_ESP, -48, 0, 4);
-			sse2_subsd_xmreg_membase(inst, xmmreg1, X86_ESP, -48);
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-			
-		}
-	}
-	[=local, reg] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_push_imm(inst, 0);
-			x86_push_reg(inst, $2);
-			x86_fild_membase(inst, X86_ESP, 0, 1);
-			x86_alu_reg_imm(inst, X86_ADD, X86_ESP, sizeof(jit_long));
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			unsigned int value = 0x43300000;
-			x86_mov_membase_imm(inst, X86_EBP, $1 + 4, value, 4);
-			x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
-			sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
-			x86_mov_membase_imm(inst, X86_EBP, $1, 0, 4);
-			sse2_subsd_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
-			sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-		}
-	}
+    [=freg, imm] -> {
+        jit_float64 float_value = (jit_float64)((jit_uint)$2);
+        void *ptr = &float_value;
+        jit_uint *ptr_u = (jit_uint*)ptr;
+        x86_mov_membase_imm(inst, X86_ESP, -8, ptr_u[0], 4);
+        x86_mov_membase_imm(inst, X86_ESP, -4, ptr_u[1], 4);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
+    }
+    [=freg, local] -> {
+        unsigned int value = 0x43300000;
+        find_one_gp_reg(inst);
+        x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+        x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
+        x86_mov_membase_reg(inst, X86_ESP, -32, gpreg1, 4);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -32);
+        x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
+        sse2_subsd_xmreg_membase(inst, $1, X86_ESP, -32);
+        
+    }
+    [=freg, reg] -> {
+        unsigned int value = 0x43300000;
+        x86_mov_membase_imm(inst, X86_ESP, -4, value, 4);
+        x86_mov_membase_reg(inst, X86_ESP, -8, $2, 4);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -8);
+        x86_mov_membase_imm(inst, X86_ESP, -8, 0, 4);
+        sse2_subsd_xmreg_membase(inst, $1, X86_ESP, -8);
+    }
+    [=local, imm] -> {
+        jit_nfloat float_value = (jit_nfloat)((jit_uint)$2);
+        void *ptr = &float_value;
+        jit_uint *ptr_u = (jit_uint*)ptr;
+        x86_mov_membase_imm(inst, X86_EBP, $1, ptr_u[0], 4);
+        x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr_u[1], 4);
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_mov_membase_imm(inst, X86_EBP, $1 + 8, ptr_u[2], 4);
+        }
+    }
+    [=local, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_push_imm(inst, 0);
+            x86_push_membase(inst, X86_EBP, $2);
+            x86_fild_membase(inst, X86_ESP, 0, 1);
+            x86_alu_reg_imm(inst, X86_ADD, X86_ESP, sizeof(jit_long));
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            unsigned int value = 0x43300000;
+                find_one_gp_reg(inst);
+                find_one_xmm_reg(inst);
+            x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
+            x86_mov_membase_imm(inst, X86_ESP, -44, value, 4);
+            x86_mov_membase_reg(inst, X86_ESP, -48, gpreg1, 4);
+            sse2_movsd_xmreg_membase(inst, xmmreg1, X86_ESP, -48);
+            x86_mov_membase_imm(inst, X86_ESP, -48, 0, 4);
+            sse2_subsd_xmreg_membase(inst, xmmreg1, X86_ESP, -48);
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+            
+        }
+    }
+    [=local, reg] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_push_imm(inst, 0);
+            x86_push_reg(inst, $2);
+            x86_fild_membase(inst, X86_ESP, 0, 1);
+            x86_alu_reg_imm(inst, X86_ADD, X86_ESP, sizeof(jit_long));
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            unsigned int value = 0x43300000;
+            x86_mov_membase_imm(inst, X86_EBP, $1 + 4, value, 4);
+            x86_mov_membase_reg(inst, X86_EBP, $1, $2, 4);
+            sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
+            x86_mov_membase_imm(inst, X86_EBP, $1, 0, 4);
+            sse2_subsd_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
 
 JIT_OP_NFLOAT_TO_UINT:
-	[=reg, imm] -> {
-		jit_nfloat float_value = ((jit_nfloat *)($2))[0];
-		jit_uint uint_value = (jit_uint)(float_value);
-		x86_mov_reg_imm(inst, $1, uint_value);
-	}
-	[=reg, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{			
-			x86_fld80_membase(inst, X86_EBP, $2);
-			x86_fst_membase(inst, X86_ESP, -32, 1, 1);
-			find_one_xmm_reg(inst);
-			sse2_movsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
-			unsigned int value = 0x43300000;
-			x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
-        		x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
-			sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
-			sse2_movd_reg_xmreg(inst, gpreg1, xmmreg1);
-					
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-			unsigned int value = 0x43300000;
-			x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
-        		x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
-			sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
-			sse2_movd_reg_xmreg(inst, gpreg1, xmmreg1);
-			
-		}
-	}
-	[=reg, freg] -> {
-		find_one_xmm_reg(inst);
-		if($2 != xmmreg1) sse2_movsd_xmreg_xmreg(inst, xmmreg1, $2);
-		unsigned int value = 0x43300000;
-		x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
-		x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
-		sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
-		sse2_movd_reg_xmreg(inst, $1, xmmreg1);
-		
-	}
-	[=local, imm] -> {
-		jit_float64 float_value = ((jit_float64 *)($2))[0];
-		jit_uint uint_value = (jit_uint)(float_value);
-		x86_mov_membase_imm(inst, X86_EBP, $1, uint_value, 4);
-	}
-	[=local, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld80_membase(inst, X86_EBP, $2);
-			x86_fst_membase(inst, X86_ESP, -32, 1, 1);	
-			find_one_xmm_reg(inst);
-			sse2_movsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
-			unsigned int value = 0x43300000;
-			x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
-			x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
-			sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
-			sse2_movd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-						
-		}
-		else
-		{
-			find_one_xmm_reg(inst);
-			sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-			unsigned int value = 0x43300000;
-			x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
-			x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
-			sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
-			sse2_movd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-			
-		}
-	}
-	[=local, freg] -> {
-		find_one_xmm_reg(inst);
-		sse2_movsd_xmreg_xmreg(inst, xmmreg1, $2);
-		unsigned int value = 0x43300000;
-		x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
-		x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
-		sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
-		sse2_movd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-		
-	}
+    [=reg, imm] -> {
+        jit_nfloat float_value = ((jit_nfloat *)($2))[0];
+        jit_uint uint_value = (jit_uint)(float_value);
+        x86_mov_reg_imm(inst, $1, uint_value);
+    }
+    [=reg, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {            
+            x86_fld80_membase(inst, X86_EBP, $2);
+            x86_fst_membase(inst, X86_ESP, -32, 1, 1);
+            find_one_xmm_reg(inst);
+            sse2_movsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
+            unsigned int value = 0x43300000;
+            x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
+                x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
+            sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
+            sse2_movd_reg_xmreg(inst, gpreg1, xmmreg1);
+                    
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
+            unsigned int value = 0x43300000;
+            x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
+                x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
+            sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
+            sse2_movd_reg_xmreg(inst, gpreg1, xmmreg1);
+            
+        }
+    }
+    [=reg, freg] -> {
+        find_one_xmm_reg(inst);
+        if($2 != xmmreg1) sse2_movsd_xmreg_xmreg(inst, xmmreg1, $2);
+        unsigned int value = 0x43300000;
+        x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
+        x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
+        sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
+        sse2_movd_reg_xmreg(inst, $1, xmmreg1);
+        
+    }
+    [=local, imm] -> {
+        jit_float64 float_value = ((jit_float64 *)($2))[0];
+        jit_uint uint_value = (jit_uint)(float_value);
+        x86_mov_membase_imm(inst, X86_EBP, $1, uint_value, 4);
+    }
+    [=local, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+            x86_fst_membase(inst, X86_ESP, -32, 1, 1);    
+            find_one_xmm_reg(inst);
+            sse2_movsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
+            unsigned int value = 0x43300000;
+            x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
+            x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
+            sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
+            sse2_movd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+                        
+        }
+        else
+        {
+            find_one_xmm_reg(inst);
+            sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
+            unsigned int value = 0x43300000;
+            x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
+            x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
+            sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
+            sse2_movd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+            
+        }
+    }
+    [=local, freg] -> {
+        find_one_xmm_reg(inst);
+        sse2_movsd_xmreg_xmreg(inst, xmmreg1, $2);
+        unsigned int value = 0x43300000;
+        x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
+        x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
+        sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
+        sse2_movd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
+        
+    }
 
 JIT_OP_LONG_TO_NFLOAT:
-	[=freg, imm] -> {
-		jit_long long_value = *((jit_long*)($2));
-		jit_nfloat float_value = (jit_nfloat)(long_value);
-		inst = masm_mov_reg_imm(inst, $1, (jit_nint)(&float_value), jit_value_get_type(dest));
-	}
-	[=freg, local] -> {
-		x86_fild_membase(inst, X86_EBP, $2, 1);
-		x86_fst_membase(inst, X86_ESP, -16, 1, 1);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -16);
-	}
-	[=freg, lreg] -> {
-		inst = masm_mov_membase_reg(inst, X86_ESP, -16, $2, sourceType);
-		x86_fild_membase(inst, X86_ESP, -16, 1);
-		x86_fst_membase(inst, X86_ESP, -16, 1, 1);
-		sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -16);
-	}
-	[=local, imm] -> {
-		jit_long long_value = *((jit_long*)($2));
-		jit_nfloat float_value = (jit_nfloat)long_value;
-		inst = masm_mov_membase_imm(inst, X86_EBP, $1, (jit_nint)(&float_value), jit_value_get_type(dest));
-	}
-	[=local, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fild_membase(inst, X86_EBP, $2, 1);
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			x86_fild_membase(inst, X86_EBP, $2, 1);
-			x86_fst_membase(inst, X86_EBP, $1, 1, 1);
-		}
-	}
-	[=local, lreg] -> {
-		inst = masm_mov_membase_reg(inst, X86_ESP, -16, $2, sourceType);
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fild_membase(inst, X86_ESP, -16, 1);
-			x86_fst80_membase(inst, X86_EBP, $1);
-		}
-		else
-		{
-			x86_fild_membase(inst, X86_ESP, -16, 1);
-			x86_fst_membase(inst, X86_EBP, $1, 1, 1);
-		}
-	}
+    [=freg, imm] -> {
+        jit_long long_value = *((jit_long*)($2));
+        jit_nfloat float_value = (jit_nfloat)(long_value);
+        inst = masm_mov_reg_imm(inst, $1, (jit_nint)(&float_value), jit_value_get_type(dest));
+    }
+    [=freg, local] -> {
+        x86_fild_membase(inst, X86_EBP, $2, 1);
+        x86_fst_membase(inst, X86_ESP, -16, 1, 1);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -16);
+    }
+    [=freg, lreg] -> {
+        inst = masm_mov_membase_reg(inst, X86_ESP, -16, $2, sourceType);
+        x86_fild_membase(inst, X86_ESP, -16, 1);
+        x86_fst_membase(inst, X86_ESP, -16, 1, 1);
+        sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -16);
+    }
+    [=local, imm] -> {
+        jit_long long_value = *((jit_long*)($2));
+        jit_nfloat float_value = (jit_nfloat)long_value;
+        inst = masm_mov_membase_imm(inst, X86_EBP, $1, (jit_nint)(&float_value), jit_value_get_type(dest));
+    }
+    [=local, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fild_membase(inst, X86_EBP, $2, 1);
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            x86_fild_membase(inst, X86_EBP, $2, 1);
+            x86_fst_membase(inst, X86_EBP, $1, 1, 1);
+        }
+    }
+    [=local, lreg] -> {
+        inst = masm_mov_membase_reg(inst, X86_ESP, -16, $2, sourceType);
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fild_membase(inst, X86_ESP, -16, 1);
+            x86_fst80_membase(inst, X86_EBP, $1);
+        }
+        else
+        {
+            x86_fild_membase(inst, X86_ESP, -16, 1);
+            x86_fst_membase(inst, X86_EBP, $1, 1, 1);
+        }
+    }
 
 JIT_OP_NFLOAT_TO_LONG:
-	[=local, imm] -> {
-		jit_nfloat float_value = *((jit_nfloat*)($2));
-		jit_long long_value = (jit_long)(float_value);
-		inst = masm_mov_membase_imm(inst, X86_EBP, $1, (jit_nint)(&long_value), jit_value_get_type(dest));
-	}
-	[=lreg, imm] -> {
-		jit_nfloat float_value = *((jit_nfloat*)($2));
-		jit_long long_value = (jit_long)(float_value);
-		inst = masm_mov_reg_imm(inst, $1, (jit_nint)(&long_value), jit_value_get_type(dest));
-	}
-	[=local, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld80_membase(inst, X86_EBP, $2);
-		}
-		else
-		{
-			x86_fld_membase(inst, X86_EBP, $2, 1);
-		}
-		x86_fist_pop_membase(inst, X86_EBP, $1, 1);
-	}
-	[=lreg, local] -> {
-		if(sizeof(jit_nfloat) != sizeof(jit_float64))
-		{
-			x86_fld80_membase(inst, X86_EBP, $2);
-		}
-		else
-		{
-			x86_fld_membase(inst, X86_EBP, $2, 1);
-		}
-		x86_fist_pop_membase(inst, X86_ESP, -16, 1);
-		inst = masm_mov_reg_membase(inst, $1, X86_ESP, -16, jit_value_get_type(dest));
-	}
-	[=local, freg] -> {
-		sse2_movsd_membase_xmreg(inst, X86_ESP, -16, $2);
-		x86_fld_membase(inst, X86_ESP, -16, 1);
-		x86_fist_pop_membase(inst, X86_EBP, $1, 1);
-	}
-	[=lreg, freg] -> {
-		sse2_movsd_membase_xmreg(inst, X86_ESP, -16, $2);
-		x86_fld_membase(inst, X86_ESP, -16, 1);
-		x86_fist_pop_membase(inst, X86_ESP, -16, 1);
-		inst = masm_mov_reg_membase(inst, $1, X86_ESP, -16, jit_value_get_type(dest));
-	}
+    [=local, imm] -> {
+        jit_nfloat float_value = *((jit_nfloat*)($2));
+        jit_long long_value = (jit_long)(float_value);
+        inst = masm_mov_membase_imm(inst, X86_EBP, $1, (jit_nint)(&long_value), jit_value_get_type(dest));
+    }
+    [=lreg, imm] -> {
+        jit_nfloat float_value = *((jit_nfloat*)($2));
+        jit_long long_value = (jit_long)(float_value);
+        inst = masm_mov_reg_imm(inst, $1, (jit_nint)(&long_value), jit_value_get_type(dest));
+    }
+    [=local, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+        }
+        else
+        {
+            x86_fld_membase(inst, X86_EBP, $2, 1);
+        }
+        x86_fist_pop_membase(inst, X86_EBP, $1, 1);
+    }
+    [=lreg, local] -> {
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        {
+            x86_fld80_membase(inst, X86_EBP, $2);
+        }
+        else
+        {
+            x86_fld_membase(inst, X86_EBP, $2, 1);
+        }
+        x86_fist_pop_membase(inst, X86_ESP, -16, 1);
+        inst = masm_mov_reg_membase(inst, $1, X86_ESP, -16, jit_value_get_type(dest));
+    }
+    [=local, freg] -> {
+        sse2_movsd_membase_xmreg(inst, X86_ESP, -16, $2);
+        x86_fld_membase(inst, X86_ESP, -16, 1);
+        x86_fist_pop_membase(inst, X86_EBP, $1, 1);
+    }
+    [=lreg, freg] -> {
+        sse2_movsd_membase_xmreg(inst, X86_ESP, -16, $2);
+        x86_fld_membase(inst, X86_ESP, -16, 1);
+        x86_fist_pop_membase(inst, X86_ESP, -16, 1);
+        inst = masm_mov_reg_membase(inst, $1, X86_ESP, -16, jit_value_get_type(dest));
+    }
