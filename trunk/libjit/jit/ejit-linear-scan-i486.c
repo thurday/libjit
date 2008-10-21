@@ -1,8 +1,8 @@
 #if defined(__i386) || defined(__i386__) || defined(_M_IX86)
 #include "jit-internal.h"
-#include "jit-linear-scan-i486.h"
+#include "ejit-linear-scan-i486.h"
 #include "jit-setjmp.h"
-#include "jit-gen-i486-masm.h"
+#include "ejit-gen-i486-masm.h"
 #include <math.h>
 
 void ejit_init(jit_function_t func)
@@ -663,16 +663,16 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             
             switch(insn->opcode)
             {
-                #include "jit-i486-extra-arith.h"
+                #include "ejit-i486-extra-arith.h"
                 #define JIT_INCLUDE_RULES
-                #include "jit-rules-i486-arith.inc"
-                #include "jit-rules-i486-conv.inc"
-                #include "jit-rules-i486-math.inc"
-                #include "jit-rules-i486-obj.inc"
-                #include "jit-rules-i486-call.inc"
-                #include "jit-rules-i486-branch.inc"
-                #include "jit-rules-i486-except.inc"
-                #include "jit-rules-i486-logic.inc"
+                #include "ejit-rules-i486-arith.inc"
+                #include "ejit-rules-i486-conv.inc"
+                #include "ejit-rules-i486-math.inc"
+                #include "ejit-rules-i486-obj.inc"
+                #include "ejit-rules-i486-call.inc"
+                #include "ejit-rules-i486-branch.inc"
+                #include "ejit-rules-i486-except.inc"
+                #include "ejit-rules-i486-logic.inc"
                 #undef JIT_INCLUDE_RULES
                 default:
                 {
