@@ -4,7 +4,7 @@
  * Copyright (C) 2007 Free Software Foundation.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
@@ -29,8 +29,8 @@
 
 
 
-#define ejit_N_GP_REGISTERS     6
-#define ejit_N_XMM_REGISTERS    8
+#define EJIT_N_GP_REGISTERS     6
+#define EJIT_N_XMM_REGISTERS    8
 
 #define LOCAL_ALLOCATE_FOR_INPUT  0x0
 #define LOCAL_ALLOCATE_FOR_OUTPUT 0x1
