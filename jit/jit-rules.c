@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-internal.h"
@@ -32,29 +34,20 @@ jit_reginfo_t const _jit_reg_info[JIT_NUM_REGS] = {JIT_REG_INFO};
  * List of registers to use for simple parameter passing.
  */
 static int const cdecl_word_regs[] = JIT_CDECL_WORD_REG_PARAMS;
-static int const cdecl_float_regs[] = JIT_CDECL_FLOAT_REG_PARAMS;
 #ifdef JIT_FASTCALL_WORD_REG_PARAMS
 static int const fastcall_word_regs[] = JIT_FASTCALL_WORD_REG_PARAMS;
-static int const fastcall_float_regs[] = JIT_FASTCALL_FLOAT_REG_PARAMS;
 #endif
-
-static int const internal_word_regs[]  = JIT_INTERNAL_WORD_REG_PARAMS;
-static int const internal_float_regs[] = JIT_INTERNAL_FLOAT_REG_PARAMS;
 
 /*
  * Structure that is used to help with parameter passing.
  */
 typedef struct
 {
-	jit_nint	   offset;
-	unsigned int	   word_index;
-	unsigned int       float_index;
-	unsigned int	   max_word_regs;
-	unsigned int       max_float_regs;
+	jit_nint		offset;
+	unsigned int	index;
+	unsigned int	max_regs;
 	const int	   *word_regs;
-	jit_value_t	   word_values[JIT_MAX_WORD_REG_PARAMS];
-	const int          *float_regs;
-	jit_value_t        float_values[JIT_MAX_FLOAT_REG_PARAMS];
+	jit_value_t		word_values[JIT_MAX_WORD_REG_PARAMS];
 
 } jit_param_passing_t;
 
@@ -67,26 +60,22 @@ typedef struct
 		(((size) + (sizeof(void *) - 1)) / sizeof(void *))
 
 /*
- * Allocate a word or float register or incoming frame position to a value.
+ * Allocate a word register or incoming frame position to a value.
  */
-static int alloc_incoming_param
+static int alloc_incoming_word
 	(jit_function_t func, jit_param_passing_t *passing,
 	 jit_value_t value, int extra_offset)
 {
 	int reg;
-	switch(jit_type_get_kind(jit_value_get_type(value)))
-	{
-	CASE_USE_WORD
-	{
-	reg = passing->word_regs[passing->word_index];
-	if(reg != -1 && passing->word_values[passing->word_index] != 0)
+	reg = passing->word_regs[passing->index];
+	if(reg != -1 && passing->word_values[passing->index] != 0)
 	{
 		/* The value was already forced out previously, so just copy it */
-		if(!jit_insn_store(func, value, passing->word_values[passing->word_index]))
+		if(!jit_insn_store(func, value, passing->word_values[passing->index]))
 		{
 			return 0;
 		}
-		++(passing->word_index);
+		++(passing->index);
 	}
 	else if(reg != -1)
 	{
@@ -94,7 +83,7 @@ static int alloc_incoming_param
 		{
 			return 0;
 		}
-		++(passing->word_index);
+		++(passing->index);
 	}
 	else
 	{
@@ -104,50 +93,6 @@ static int alloc_incoming_param
 			return 0;
 		}
 		passing->offset += sizeof(void *);
-	}
-	}
-	break;
-	CASE_USE_FLOAT
-	{
-	reg = passing->float_regs[passing->float_index];
-	if(reg != -1 && passing->float_values[passing->float_index] != 0)
-	{
-		/* The value was already forced out previously, so just copy it */
-		if(!jit_insn_store(func, value, passing->float_values[passing->float_index]))
-		{
-			return 0;
-		}
-		++(passing->float_index);
-	}
-	else if(reg != -1)
-	{
-		if(!jit_insn_incoming_reg(func, value, reg))
-		{
-			return 0;
-		}
-		++(passing->float_index);
-	}
-	else
-	{
-		if(!jit_insn_incoming_frame_posn
-				(func, value, passing->offset + extra_offset))
-		{
-			return 0;
-		}
-		passing->offset += jit_type_get_size(jit_value_get_type(value));;
-	}
-	}
-	break;
-	default:
-	{
-		if(!jit_insn_incoming_frame_posn
-				(func, value, passing->offset + extra_offset))
-		{
-			return 0;
-		}
-		passing->offset += jit_type_get_size(jit_value_get_type(value));
-	}
-	break;
 	}
 	return 1;
 }
@@ -160,9 +105,9 @@ static int alloc_incoming_param
 static int force_remaining_out
 	(jit_function_t func, jit_param_passing_t *passing)
 {
-	unsigned int index = passing->word_index;
+	unsigned int index = passing->index;
 	jit_value_t value;
-	while(index < passing->max_word_regs && passing->word_regs[index] != -1)
+	while(index < passing->max_regs && passing->word_regs[index] != -1)
 	{
 		if(passing->word_values[index] != 0)
 		{
@@ -202,34 +147,20 @@ int _jit_create_entry_insns(jit_function_t func)
 
 	/* Initialize the parameter passing information block */
 	passing.offset = JIT_INITIAL_STACK_OFFSET;
-	passing.word_index  = 0;
-	passing.float_index = 0;
+	passing.index = 0;
 #ifdef JIT_FASTCALL_WORD_REG_PARAMS
 	if(jit_type_get_abi(signature) == jit_abi_fastcall)
 	{
-		passing.word_regs  = fastcall_word_regs;
-		passing.float_regs = fastcall_float_regs;
+		passing.word_regs = fastcall_word_regs;
 	}
 	else
 #endif
 	{
-		passing.word_regs  = cdecl_word_regs;
-		passing.float_regs = cdecl_float_regs;
+		passing.word_regs = cdecl_word_regs;
 	}
-	if(jit_type_get_abi(signature) == jit_abi_internal)
-	{
-		passing.word_regs  = internal_word_regs;
-		passing.float_regs = internal_float_regs;
-	}
-
 	for(size = 0; size < JIT_MAX_WORD_REG_PARAMS; ++size)
 	{
-		passing.word_values[size]  = 0;
-	}
-
-	for(size = 0; size < JIT_MAX_FLOAT_REG_PARAMS; ++size)
-	{
-		passing.float_values[size] = 0;
+		passing.word_values[size] = 0;
 	}
 
 	/* If the function is nested, then we need an extra parameter
@@ -242,7 +173,7 @@ int _jit_create_entry_insns(jit_function_t func)
 			return 0;
 		}
 		func->builder->parent_frame = value;
-		if(!alloc_incoming_param(func, &passing, value, 0))
+		if(!alloc_incoming_word(func, &passing, value, 0))
 		{
 			return 0;
 		}
@@ -252,7 +183,7 @@ int _jit_create_entry_insns(jit_function_t func)
 	value = jit_value_get_struct_pointer(func);
 	if(value)
 	{
-		if(!alloc_incoming_param(func, &passing, value, 0))
+		if(!alloc_incoming_word(func, &passing, value, 0))
 		{
 			return 0;
 		}
@@ -261,15 +192,14 @@ int _jit_create_entry_insns(jit_function_t func)
 	/* Determine the maximum number of registers that may be needed
 	   to pass the function's parameters */
 	num_params = jit_type_num_params(signature);
-	passing.max_word_regs  = passing.word_index;
-	passing.max_float_regs = passing.float_index;
+	passing.max_regs = passing.index;
 	for(param = 0; param < num_params; ++param)
 	{
 		value = jit_value_get_param(func, param);
 		if(value)
 		{
 			size = STACK_WORDS(jit_type_get_size(jit_value_get_type(value)));
-			passing.max_word_regs += size;
+			passing.max_regs += size;
 		}
 	}
 
@@ -287,7 +217,7 @@ int _jit_create_entry_insns(jit_function_t func)
 			case JIT_TYPE_SBYTE:
 			case JIT_TYPE_UBYTE:
 			{
-				if(!alloc_incoming_param
+				if(!alloc_incoming_word
 					(func, &passing, value, _jit_nint_lowest_byte()))
 				{
 					return 0;
@@ -298,7 +228,7 @@ int _jit_create_entry_insns(jit_function_t func)
 			case JIT_TYPE_SHORT:
 			case JIT_TYPE_USHORT:
 			{
-				if(!alloc_incoming_param
+				if(!alloc_incoming_word
 					(func, &passing, value, _jit_nint_lowest_short()))
 				{
 					return 0;
@@ -309,7 +239,7 @@ int _jit_create_entry_insns(jit_function_t func)
 			case JIT_TYPE_INT:
 			case JIT_TYPE_UINT:
 			{
-				if(!alloc_incoming_param
+				if(!alloc_incoming_word
 					(func, &passing, value, _jit_nint_lowest_int()))
 				{
 					return 0;
@@ -322,7 +252,7 @@ int _jit_create_entry_insns(jit_function_t func)
 			case JIT_TYPE_SIGNATURE:
 			case JIT_TYPE_PTR:
 			{
-				if(!alloc_incoming_param(func, &passing, value, 0))
+				if(!alloc_incoming_word(func, &passing, value, 0))
 				{
 					return 0;
 				}
@@ -333,7 +263,7 @@ int _jit_create_entry_insns(jit_function_t func)
 			case JIT_TYPE_ULONG:
 		#ifdef JIT_NATIVE_INT64
 			{
-				if(!alloc_incoming_param(func, &passing, value, 0))
+				if(!alloc_incoming_word(func, &passing, value, 0))
 				{
 					return 0;
 				}
@@ -348,78 +278,68 @@ int _jit_create_entry_insns(jit_function_t func)
 			case JIT_TYPE_STRUCT:
 			case JIT_TYPE_UNION:
 			{
-				if(!jit_function_extended_compiler_is_enabled(func))
+				/* Force the remaining registers out into temporary copies */
+				if(!force_remaining_out(func, &passing))
 				{
-					/* Force the remaining registers out into temporary copies */
-					if(!force_remaining_out(func, &passing))
-					{
-						return 0;
-					}
-
-					/* Determine how many words that we need to copy */
-					size = STACK_WORDS(jit_type_get_size(type));
-
-					/* If there are no registers left, then alloc on the stack */
-					if(passing.word_regs[passing.word_index] == -1)
-					{
-						if(!jit_insn_incoming_frame_posn
-							(func, value, passing.offset))
-						{
-							return 0;
-						}
-						passing.offset += size * sizeof(void *);
-						break;
-					}
-
-					/* Copy the register components across */
-					partial_offset = 0;
-					addr_of = jit_insn_address_of(func, value);
-					if(!addr_of)
-					{
-						return 0;
-					}
-					while(size > 0 && passing.word_regs[passing.word_index] != -1)
-					{
-						temp = passing.word_values[passing.word_index];
-						++(passing.word_index);
-						if(!jit_insn_store_relative
-								(func, addr_of, partial_offset, temp))
-						{
-							return 0;
-						}
-						partial_offset += sizeof(void *);
-						--size;
-					}
-
-					/* Copy the stack components across */
-					while(size > 0)
-					{
-						temp = jit_value_create(func, jit_type_void_ptr);
-						if(!temp)
-						{
-							return 0;
-						}
-						if(!jit_insn_incoming_frame_posn
-								(func, temp, passing.offset))
-						{
-							return 0;
-						}
-						if(!jit_insn_store_relative
-								(func, addr_of, partial_offset, temp))
-						{
-							return 0;
-						}
-						passing.offset += sizeof(void *);
-						partial_offset += sizeof(void *);
-						--size;
-					}
+					return 0;
 				}
-				else
+
+				/* Determine how many words that we need to copy */
+				size = STACK_WORDS(jit_type_get_size(type));
+
+				/* If there are no registers left, then alloc on the stack */
+				if(passing.word_regs[passing.index] == -1)
 				{
-					if(!alloc_incoming_param(func, &passing, value, 0))
+					if(!jit_insn_incoming_frame_posn
+						(func, value, passing.offset))
 					{
 						return 0;
 					}
+					passing.offset += size * sizeof(void *);
+					break;
+				}
+
+				/* Copy the register components across */
+				partial_offset = 0;
+				addr_of = jit_insn_address_of(func, value);
+				if(!addr_of)
+				{
+					return 0;
+				}
+				while(size > 0 && passing.word_regs[passing.index] != -1)
+				{
+					temp = passing.word_values[passing.index];
+					++(passing.index);
+					if(!jit_insn_store_relative
+							(func, addr_of, partial_offset, temp))
+					{
+						return 0;
+					}
+					partial_offset += sizeof(void *);
+					--size;
+				}
+
+				/* Copy the stack components across */
+				while(size > 0)
+				{
+					temp = jit_value_create(func, jit_type_void_ptr);
+					if(!temp)
+					{
+						return 0;
+					}
+					if(!jit_insn_incoming_frame_posn
+							(func, temp, passing.offset))
+					{
+						return 0;
+					}
+					if(!jit_insn_store_relative
+							(func, addr_of, partial_offset, temp))
+					{
+						return 0;
+					}
+					passing.offset += sizeof(void *);
+					partial_offset += sizeof(void *);
+					--size;
 				}
 			}
 			break;
@@ -433,87 +353,33 @@ int _jit_create_entry_insns(jit_function_t func)
  */
 static void need_outgoing_word(jit_param_passing_t *passing)
 {
-	if(passing->word_regs[passing->word_index] != -1)
+	if(passing->word_regs[passing->index] != -1)
 	{
-		++(passing->word_index);
+		++(passing->index);
 	}
 	else
 	{
 		passing->offset += sizeof(void *);
 	}
 }
-
-static void need_outgoing_slot(jit_param_passing_t *passing, jit_value_t value)
-{
-	jit_type_t type = jit_value_get_type(value);
-	switch(jit_type_get_kind(type))
-	{
-	CASE_USE_WORD
-	{
-	if(passing->word_regs[passing->word_index] != -1)
-	{
-		++(passing->word_index);
-	}
-	else
-	{
-		passing->offset += sizeof(void *);
-	}
-	}
-	break;
-
-	CASE_USE_FLOAT
-	{
-	if(passing->float_regs[passing->float_index] != -1)
-	{
-		++(passing->float_index);
-	}
-	else
-	{
-		passing->offset += jit_type_get_size(type);
-	}
-	}
-	break;
-
-	default:
-	{
-		passing->offset	 += jit_type_get_size(type);
-	}
-	break;
-	}
-}
-
 
 /*
  * Record that we need an outgoing register, containing a particular value.
  */
-static void need_outgoing_register
+static void need_outgoing_value
 	(jit_param_passing_t *passing, jit_value_t value)
 {
-	int typeKind = jit_type_get_kind(jit_value_get_type(value));
-	switch(typeKind)
-	{
-		CASE_USE_FLOAT
-		{
-			passing->float_values[passing->float_index] = value;
-			++(passing->float_index);
-		}
-		break;
-		default:
-		{
-			passing->word_values[passing->word_index] = value;
-			++(passing->word_index);
-		}
-		break;
-	}
+	passing->word_values[passing->index] = value;
+	++(passing->index);
 }
 
 /*
  * Count the number of registers that are left for parameter passing.
  */
-static jit_nint count_word_regs_left(jit_param_passing_t *passing)
+static jit_nint count_regs_left(jit_param_passing_t *passing)
 {
 	int left = 0;
-	unsigned int index = passing->word_index;
+	unsigned int index = passing->index;
 	while(passing->word_regs[index] != -1)
 	{
 		++left;
@@ -521,19 +387,6 @@ static jit_nint count_word_regs_left(jit_param_passing_t *passing)
 	}
 	return left;
 }
-
-static jit_nint count_float_regs_left(jit_param_passing_t *passing)
-{
-	int left = 0;
-	unsigned int index = passing->float_index;
-	while(passing->float_regs[index] != -1)
-	{
-		++left;
-		++index;
-	}
-	return left;
-}
-
 
 /*
  * Determine if a type corresponds to a structure or union.
@@ -595,50 +448,26 @@ static int push_param
 	return 1;
 }
 
-
 /*
- * Allocate an outgoing word or float register to a value.
+ * Allocate an outgoing word register to a value.
  */
-static int alloc_outgoing_register
+static int alloc_outgoing_word
 	(jit_function_t func, jit_param_passing_t *passing, jit_value_t value)
 {
 	int reg;
-	switch(jit_type_get_kind(jit_value_get_type(value)))
+	--(passing->index);
+	reg = passing->word_regs[passing->index];
+	if(passing->word_values[passing->index] != 0)
 	{
-	CASE_USE_FLOAT
-	{
-		--(passing->float_index);
-		reg = passing->float_regs[passing->float_index];
-		if(passing->float_values[passing->float_index] != 0)
-		{
-			/* We copied the value previously, so use the copy instead */
-			value = passing->float_values[passing->float_index];
-		}
-		if(!jit_insn_outgoing_reg(func, value, reg))
-		{
-			return 0;
-		}
+		/* We copied the value previously, so use the copy instead */
+		value = passing->word_values[passing->index];
 	}
-	break;
-	default:
+	if(!jit_insn_outgoing_reg(func, value, reg))
 	{
-		--(passing->word_index);
-		reg = passing->word_regs[passing->word_index];
-		if(passing->word_values[passing->word_index] != 0)
-		{
-			/* We copied the value previously, so use the copy instead */
-			value = passing->word_values[passing->word_index];
-		}
-		if(!jit_insn_outgoing_reg(func, value, reg))
-		{
-			return 0;
-		}
-	}
-	break;
+		return 0;
 	}
 	return 1;
 }
-
 
 int _jit_create_call_setup_insns
 	(jit_function_t func, jit_type_t signature,
@@ -657,36 +486,21 @@ int _jit_create_call_setup_insns
 	unsigned int param;
 
 	/* Initialize the parameter passing information block */
-	passing.offset      = 0;
-	passing.word_index  = 0;
-	passing.float_index = 0;
+	passing.offset = 0;
+	passing.index = 0;
 #ifdef JIT_FASTCALL_WORD_REG_PARAMS
 	if(jit_type_get_abi(signature) == jit_abi_fastcall)
 	{
-		passing.word_regs  = fastcall_word_regs;
-		passing.float_regs = fastcall_float_regs;
+		passing.word_regs = fastcall_word_regs;
 	}
 	else
 #endif
 	{
-		passing.word_regs  = cdecl_word_regs;
-		passing.float_regs = cdecl_float_regs;
+		passing.word_regs = cdecl_word_regs;
 	}
-	
-	if((jit_type_get_abi(signature) == jit_abi_internal) && (jit_type_get_abi(jit_function_get_signature(func)) == jit_abi_internal))
-	{
-		passing.word_regs  = internal_word_regs;
-		passing.float_regs = internal_float_regs;
-	}
-
 	for(size = 0; size < JIT_MAX_WORD_REG_PARAMS; ++size)
 	{
-		passing.word_values[size]  = 0;
-	}
-
-	for(size = 0; size < JIT_MAX_FLOAT_REG_PARAMS; ++size)
-	{
-		passing.float_values[size] = 0;
+		passing.word_values[size] = 0;
 	}
 
 	/* Determine how many parameters are going to end up in word registers,
@@ -709,7 +523,7 @@ int _jit_create_call_setup_insns
 		{
 			return 0;
 		}
-		need_outgoing_slot(&passing, return_ptr);
+		need_outgoing_word(&passing);
 	}
 	else
 	{
@@ -719,18 +533,16 @@ int _jit_create_call_setup_insns
 	partial = 0;
 	for(param = 0; param < num_args; ++param)
 	{
-	        value = args[param];
 		type = jit_type_get_param(signature, param);
 		size = STACK_WORDS(jit_type_get_size(type));
-		
 		if(size <= 1)
 		{
 			/* Allocate a word register or stack position */
-			need_outgoing_slot(&passing, value);
+			need_outgoing_word(&passing);
 		}
 		else
 		{
-			regs_left = count_word_regs_left(&passing);
+			regs_left = count_regs_left(&passing);
 			if(regs_left > 0)
 			{
 				/* May be partly in registers and partly on the stack */
@@ -752,7 +564,7 @@ int _jit_create_call_setup_insns
 								(func, jit_type_void_ptr,
 								 *((jit_nint *)(args[param]->address +
 								 				partial_offset)));
-							need_outgoing_register(&passing, value);
+							need_outgoing_value(&passing, value);
 							partial_offset += sizeof(void *);
 							--size;
 						}
@@ -791,7 +603,7 @@ int _jit_create_call_setup_insns
 					{
 						return 0;
 					}
-					need_outgoing_register(&passing, value);
+					need_outgoing_value(&passing, value);
 					--size;
 					--regs_left;
 					partial_offset += sizeof(void *);
@@ -856,24 +668,24 @@ int _jit_create_call_setup_insns
 			}
 			while(size > 0)
 			{
-				if(!alloc_outgoing_register(func, &passing, 0))
+				if(!alloc_outgoing_word(func, &passing, 0))
 				{
 					return 0;
 				}
-				size--;
+				--size;
 			}
 		}
 		else
-		{		
+		{
 			/* This parameter is completely in registers.  If the parameter
 			   occupies multiple registers, then it has already been split */
 			while(size > 0)
 			{
-				if(!alloc_outgoing_register(func, &passing, args[param]))
+				if(!alloc_outgoing_word(func, &passing, args[param]))
 				{
 					return 0;
 				}
-				size--;
+				--size;
 			}
 		}
 	}
@@ -881,9 +693,9 @@ int _jit_create_call_setup_insns
 	/* Add the structure return pointer if required */
 	if(return_ptr)
 	{
-		if(passing.word_index > 0)
+		if(passing.index > 0)
 		{
-			if(!alloc_outgoing_register(func, &passing, return_ptr))
+			if(!alloc_outgoing_word(func, &passing, return_ptr))
 			{
 				return 0;
 			}
@@ -901,11 +713,11 @@ int _jit_create_call_setup_insns
 	/* Add nested scope information if required */
 	if(is_nested)
 	{
-		if(passing.word_index > 0)
+		if(passing.index > 0)
 		{
-			--(passing.word_index);
+			--(passing.index);
 			if(!jit_insn_setup_for_nested
-					(func, nesting_level, passing.word_regs[passing.word_index]))
+					(func, nesting_level, passing.word_regs[passing.index]))
 			{
 				return 0;
 			}

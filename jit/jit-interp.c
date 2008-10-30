@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -30,6 +32,9 @@ straight vanilla ANSI C.
 #include "jit-rules.h"
 #include "jit-memory.h"
 #include <config.h>
+#if HAVE_STDLIB_H
+	#include <stdlib.h>
+#endif
 #if HAVE_ALLOCA_H
 	#include <alloca.h>
 #endif
@@ -338,6 +343,7 @@ restart_tail:
 		{
 			/* An exception has been thrown by lower-level code */
 			exception_object = jit_exception_get_last_and_clear();
+			exception_pc = pc - 1;
 			goto handle_exception;
 		}
 	}
@@ -399,7 +405,7 @@ restart_tail:
 		VMCASE(JIT_OP_TRUNC_INT):
 		{
 			/* Truncate an integer to a signed 32-bit value */
-			/* In the interpreter, this is a NOP */
+			VM_R0_INT = VM_R1_INT;
 			VM_MODIFY_PC(1);
 		}
 		VMBREAK;
@@ -407,7 +413,7 @@ restart_tail:
 		VMCASE(JIT_OP_TRUNC_UINT):
 		{
 			/* Truncate an integer to an unsigned 32-bit value */
-			/* In the interpreter, this is a NOP */
+			VM_R0_INT = VM_R1_INT;
 			VM_MODIFY_PC(1);
 		}
 		VMBREAK;
@@ -763,8 +769,8 @@ restart_tail:
 		VMCASE(JIT_OP_LADD):
 		{
 			/* Add signed 64-bit integers */
-			VM_STK_LONG1 = VM_STK_LONG1 + VM_STK_LONG0;
-			VM_MODIFY_PC_AND_STACK(1, 1);
+			VM_R0_LONG = VM_R1_LONG + VM_R2_LONG;
+			VM_MODIFY_PC(1);
 		}
 		VMBREAK;
 
@@ -1079,8 +1085,8 @@ restart_tail:
 		VMCASE(JIT_OP_ISHL):
 		{
 			/* Shift left signed 32-bit integers */
-			VM_STK_INT1 = VM_STK_INT1 << (VM_STK_UINT0 & 0x1F);
-			VM_MODIFY_PC_AND_STACK(1, 1);
+			VM_R0_INT = VM_R1_INT << (VM_R2_INT & 0x1F);
+			VM_MODIFY_PC(1);
 		}
 		VMBREAK;
 
@@ -1150,9 +1156,9 @@ restart_tail:
 
 		VMCASE(JIT_OP_LSHR_UN):
 		{
-			/* Shift right signed 64-bit integers */
+			/* Shift right unsigned 64-bit integers */
 			VM_R0_ULONG = (VM_R1_ULONG >> (VM_R2_UINT & 0x3F));
-			VM_MODIFY_PC_AND_STACK(1, 1);
+			VM_MODIFY_PC(1);
 		}
 		VMBREAK;
 
@@ -2036,7 +2042,7 @@ restart_tail:
 		{
 			/* Compare unsigned 32-bit integers */
 			VM_R0_UINT = jit_uint_cmp(VM_R1_UINT, VM_R2_UINT);
-			VM_MODIFY_PC_AND_STACK(1, 1);
+			VM_MODIFY_PC(1);
 		}
 		VMBREAK;
 
@@ -2044,15 +2050,15 @@ restart_tail:
 		{
 			/* Compare signed 64-bit integers */
 			VM_R0_INT = jit_long_cmp(VM_R1_LONG, VM_R2_LONG);
-			VM_MODIFY_PC_AND_STACK(1, 1);
+			VM_MODIFY_PC(1);
 		}
 		VMBREAK;
 
 		VMCASE(JIT_OP_LCMP_UN):
 		{
 			/* Compare unsigned 64-bit integers */
-			VM_R0_INT = jit_long_cmp(VM_R1_ULONG, VM_R2_ULONG);
-			VM_MODIFY_PC_AND_STACK(1, 1);
+			VM_R0_INT = jit_ulong_cmp(VM_R1_ULONG, VM_R2_ULONG);
+			VM_MODIFY_PC(1);
 		}
 		VMBREAK;
 
@@ -3308,7 +3314,7 @@ restart_tail:
 			_jit_backtrace_push(&call_trace, pc);
 			if(!entry)
 			{
-				entry = _jit_function_compile_on_demand(call_func);
+				entry = (*call_func->context->on_demand_driver)(call_func);
 			}
 			_jit_run_function((jit_function_interp_t)entry,
 					  stacktop,
@@ -3324,7 +3330,7 @@ restart_tail:
 			entry = call_func->entry_point;
 			if(!entry)
 			{
-				entry = _jit_function_compile_on_demand(call_func);
+				entry = (*call_func->context->on_demand_driver)(call_func);
 			}
 			VM_PERFORM_TAIL((jit_function_interp_t)entry);
 		}
@@ -3360,7 +3366,7 @@ restart_tail:
 			_jit_backtrace_push(&call_trace, pc);
 			if(!entry)
 			{
-				entry = _jit_function_compile_on_demand(call_func);
+				entry = (*call_func->context->on_demand_driver)(call_func);
 			}
 			_jit_run_function((jit_function_interp_t)entry,
 					  stacktop,
@@ -3380,7 +3386,7 @@ restart_tail:
 			entry = call_func->entry_point;
 			if(!entry)
 			{
-				entry = _jit_function_compile_on_demand(call_func);
+				entry = (*call_func->context->on_demand_driver)(call_func);
 			}
 			VM_PERFORM_TAIL((jit_function_interp_t)entry);
 		}
@@ -3615,8 +3621,8 @@ restart_tail:
 		{
 			/* Throw an exception, which may be handled in this function */
 			exception_object = VM_R1_PTR;
-		handle_exception:
 			exception_pc = pc;
+		handle_exception:
 			tempptr = jit_function_from_pc(func->func->context, pc, &handler);
 			if(tempptr == func->func && handler != 0)
 			{
@@ -4053,6 +4059,7 @@ restart_tail:
 				if(setjmp(jbuf->buf))
 				{
 					exception_object = jit_exception_get_last_and_clear();
+					exception_pc = pc - 1;
 					goto handle_exception;
 				}
 			}
@@ -4987,7 +4994,7 @@ int jit_function_apply_vararg
 	if(setjmp(jbuf.buf))
 	{
 		_jit_unwind_pop_setjmp();
-		return 1;
+		return 0;
 	}
 
 	/* Initialize the backtrace information */
@@ -5009,8 +5016,7 @@ int jit_function_apply_vararg
 	}
 	else
 	{
-		entry = (jit_function_interp_t)
-			_jit_function_compile_on_demand(func);
+		entry = (jit_function_interp_t)(*func->context->on_demand_driver)(func);
 	}
 
 	/* Populate the low-level argument buffer */

@@ -1,5 +1,7 @@
 
-noinst_PROGRAMS = gen-apply gen-rules gen-sel gen-lir
+noinst_PROGRAMS = gen-apply gen-rules gen-sel
+
+noinst_HEADERS = gen-apply-macosx.h
 
 gen_apply_SOURCES = gen-apply.c
 
@@ -8,16 +10,11 @@ gen_rules_SOURCES = gen-rules-parser.y gen-rules-scanner.l
 gen_sel_SOURCES = gen-sel-parser.y \
 				  gen-sel-scanner.l
 
-gen_lir_SOURCES = gen-lir-parser.y \
-				  gen-lir-scanner.l
-
 AM_YFLAGS = -d
 
 gen-rules-scanner.l: gen-rules-parser.c
 
 gen-sel-scanner.l: gen-sel-parser.c
-
-gen-lir-scanner.l: gen-lir-parser.c
 
 all-local: $(top_builddir)/jit/jit-apply-rules.h
 
@@ -29,5 +26,4 @@ AM_CFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include \
 
 CLEANFILES = $(top_builddir)/jit/jit-apply-rules.h \
 	gen-rules-parser.c gen-rules-parser.h gen-rules-scanner.c \
-	gen-sel-parser.c gen-sel-parser.h gen-sel-scanner.c \
-	gen-lir-parser.c gen-lir-parser.h gen-lir-scanner.c
+	gen-sel-parser.c gen-sel-parser.h gen-sel-scanner.c

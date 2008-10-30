@@ -2511,18 +2511,17 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
         
     }
     [=local, local, freg] -> {
-        find_one_xmm_reg(inst);
+        find_one_xmm_reg_cond1(inst, $3);
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
         emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
-        inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
+        inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);        
     }
     [=local, freg, imm] -> {
         inst = masm_mov_membase_imm(inst, X86_ESP, -32, $3, sourceType);
         if(!ejit_xmm_reg_is_free(func, $2))
         {
             find_one_xmm_reg(inst);
-            if($2 != xmmreg1) inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
+            inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_ESP, -32);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
             
@@ -2537,7 +2536,7 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
         if(!ejit_xmm_reg_is_free(func, $2))
         {
             find_one_xmm_reg(inst);
-            if($2 != xmmreg1) inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
+            inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_EBP, $3);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
             
@@ -2584,7 +2583,6 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
             inst = masm_mov_reg_imm(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
             inst = masm_mov_reg_reg(inst, $1, xmmreg1, sourceType);
-            
         }
     }
     [=freg, local, imm] -> {
@@ -2608,7 +2606,6 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
             inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
             emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
             inst = masm_mov_reg_reg(inst, $1, xmmreg1, sourceType);
-            
         }
     }
     [=freg, freg, imm] -> {

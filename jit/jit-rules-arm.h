@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #ifndef	_JIT_RULES_ARM_H
@@ -120,7 +122,6 @@ extern	"C" {
    r8, r7, r6, r5, and r4 need to be saved in the local frame.
  */
 #define	JIT_CDECL_WORD_REG_PARAMS		{0, 1, 2, 3, -1}
-#define	JIT_CDECL_FLOAT_REG_PARAMS		{-1, -1, -1, -1, -1}
 #define	JIT_MAX_WORD_REG_PARAMS			4
 #define	JIT_INITIAL_STACK_OFFSET		(sizeof(void *))
 #define	JIT_INITIAL_FRAME_SIZE			(8 * sizeof(void *))

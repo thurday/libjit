@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-internal.h"
@@ -136,8 +138,8 @@ int _jit_block_record_label(jit_block_t block)
 }
 
 /*@
- * @deftypefun jit_function_t jit_block_get_function (jit_block_t block)
- * Get the function that a particular @code{block} belongs to.
+ * @deftypefun jit_function_t jit_block_get_function (jit_block_t @var{block})
+ * Get the function that a particular @var{block} belongs to.
  * @end deftypefun
 @*/
 jit_function_t jit_block_get_function(jit_block_t block)
@@ -153,8 +155,8 @@ jit_function_t jit_block_get_function(jit_block_t block)
 }
 
 /*@
- * @deftypefun jit_context_t jit_block_get_context (jit_block_t block)
- * Get the context that a particular @code{block} belongs to.
+ * @deftypefun jit_context_t jit_block_get_context (jit_block_t @var{block})
+ * Get the context that a particular @var{block} belongs to.
  * @end deftypefun
 @*/
 jit_context_t jit_block_get_context(jit_block_t block)
@@ -170,7 +172,7 @@ jit_context_t jit_block_get_context(jit_block_t block)
 }
 
 /*@
- * @deftypefun jit_label_t jit_block_get_label (jit_block_t block)
+ * @deftypefun jit_label_t jit_block_get_label (jit_block_t @var{block})
  * Get the label associated with a block.
  * @end deftypefun
 @*/
@@ -187,9 +189,9 @@ jit_label_t jit_block_get_label(jit_block_t block)
 }
 
 /*@
- * @deftypefun jit_block_t jit_block_next (jit_function_t func, jit_block_t previous)
+ * @deftypefun jit_block_t jit_block_next (jit_function_t @var{func}, jit_block_t @var{previous})
  * Iterate over the blocks in a function, in order of their creation.
- * The @code{previous} argument should be NULL on the first call.
+ * The @var{previous} argument should be NULL on the first call.
  * This function will return NULL if there are no further blocks to iterate.
  * @end deftypefun
 @*/
@@ -210,9 +212,9 @@ jit_block_t jit_block_next(jit_function_t func, jit_block_t previous)
 }
 
 /*@
- * @deftypefun jit_block_t jit_block_previous (jit_function_t func, jit_block_t previous)
+ * @deftypefun jit_block_t jit_block_previous (jit_function_t @var{func}, jit_block_t @var{previous})
  * Iterate over the blocks in a function, in reverse order of their creation.
- * The @code{previous} argument should be NULL on the first call.
+ * The @var{previous} argument should be NULL on the first call.
  * This function will return NULL if there are no further blocks to iterate.
  * @end deftypefun
 @*/
@@ -233,8 +235,8 @@ jit_block_t jit_block_previous(jit_function_t func, jit_block_t previous)
 }
 
 /*@
- * @deftypefun jit_block_t jit_block_from_label (jit_function_t func, jit_label_t label)
- * Get the block that corresponds to a particular @code{label}.
+ * @deftypefun jit_block_t jit_block_from_label (jit_function_t @var{func}, jit_label_t @var{label})
+ * Get the block that corresponds to a particular @var{label}.
  * Returns NULL if there is no block associated with the label.
  * @end deftypefun
 @*/
@@ -286,19 +288,7 @@ jit_insn_t _jit_block_add_insn(jit_block_t block)
 		insns = builder->insns;
 	}
 	insns[builder->num_insns] = insn;
-	insn->insn_num = builder->num_insns;
 	block->last_insn = (builder->num_insns)++;
-	insn->used = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
-							struct _ejit_linked_list);
-	insn->in = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
-							struct _ejit_linked_list);
-
-	insn->out = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
-							struct _ejit_linked_list);
-	insn->def = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
-							struct _ejit_linked_list);
-	insn->prev_insn = jit_memory_pool_alloc(&(builder->ejit_linked_list_pool), 
-							struct _ejit_linked_list);
 
 	/* Return the instruction, which is now ready to fill in */
 	return insn;
@@ -317,9 +307,9 @@ jit_insn_t _jit_block_get_last(jit_block_t block)
 }
 
 /*@
- * @deftypefun int jit_block_set_meta (jit_block_t block, int type, {void *} data, jit_meta_free_func free_data)
+ * @deftypefun int jit_block_set_meta (jit_block_t @var{block}, int @var{type}, void *@var{data}, jit_meta_free_func @var{free_data})
  * Tag a block with some metadata.  Returns zero if out of memory.
- * If the @code{type} already has some metadata associated with it, then
+ * If the @var{type} already has some metadata associated with it, then
  * the previous value will be freed.  Metadata may be used to store
  * dependency graphs, branch prediction information, or any other
  * information that is useful to optimizers or code generators.
@@ -334,9 +324,9 @@ int jit_block_set_meta(jit_block_t block, int type, void *data,
 }
 
 /*@
- * @deftypefun {void *} jit_block_get_meta (jit_block_t block, int type)
+ * @deftypefun {void *} jit_block_get_meta (jit_block_t @var{block}, int @var{type})
  * Get the metadata associated with a particular tag.  Returns NULL
- * if @code{type} does not have any metadata associated with it.
+ * if @var{type} does not have any metadata associated with it.
  * @end deftypefun
 @*/
 void *jit_block_get_meta(jit_block_t block, int type)
@@ -345,9 +335,9 @@ void *jit_block_get_meta(jit_block_t block, int type)
 }
 
 /*@
- * @deftypefun void jit_block_free_meta (jit_block_t block, int type)
+ * @deftypefun void jit_block_free_meta (jit_block_t @var{block}, int @var{type})
  * Free metadata of a specific type on a block.  Does nothing if
- * the @code{type} does not have any metadata associated with it.
+ * the @var{type} does not have any metadata associated with it.
  * @end deftypefun
 @*/
 void jit_block_free_meta(jit_block_t block, int type)
@@ -356,7 +346,7 @@ void jit_block_free_meta(jit_block_t block, int type)
 }
 
 /*@
- * @deftypefun int jit_block_is_reachable (jit_block_t block)
+ * @deftypefun int jit_block_is_reachable (jit_block_t @var{block})
  * Determine if a block is reachable from some other point in
  * its function.  Unreachable blocks can be discarded in their
  * entirety.  If the JIT is uncertain as to whether a block is
@@ -371,7 +361,7 @@ int jit_block_is_reachable(jit_block_t block)
 }
 
 /*@
- * @deftypefun int jit_block_ends_in_dead (jit_block_t block)
+ * @deftypefun int jit_block_ends_in_dead (jit_block_t @var{block})
  * Determine if a block ends in a "dead" marker.  That is, control
  * will not fall out through the end of the block.
  * @end deftypefun
@@ -382,7 +372,7 @@ int jit_block_ends_in_dead(jit_block_t block)
 }
 
 /*@
- * @deftypefun int jit_block_current_is_dead (jit_function_t func)
+ * @deftypefun int jit_block_current_is_dead (jit_function_t @var{func})
  * Determine if the current point in the function is dead.  That is,
  * there are no existing branches or fall-throughs to this point.
  * This differs slightly from @code{jit_block_ends_in_dead} in that

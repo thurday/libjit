@@ -15,8 +15,8 @@ void ejit_init(jit_function_t func)
     }
 
     state->frame_index = 2;
-    state->gp_index = 0;
-    state->xmm_index = 0;
+    state->gp_index    = 0;
+    state->xmm_index   = 0;
 
     func->ejit->regs_state = 0;
     ejit_list_t list = func->ejit->frame_state;
@@ -198,6 +198,29 @@ unsigned char ejit_regIndex_is_free(jit_function_t func, int regIndex, jit_value
     return 0;
 }
 
+ejit_reg_t ejit_reg2object(jit_function_t func, int reg, jit_type_t type)
+{
+    type = jit_type_remove_tags(type);
+    int typeKind = jit_type_get_kind(type);
+
+    if(reg >= X86_REG_XMM0) reg -= X86_REG_XMM0;
+
+    switch(typeKind)
+    {
+        CASE_USE_FLOAT
+        {
+            return &ejit_xmm_regs_map[reg];
+        }
+        break;
+        default:
+        {
+            return &ejit_gp_regs_map[gp_reg_map[reg]];
+        }
+        break;
+    }
+    return (ejit_reg_t)(0);
+}
+
 int ejit_regIndex2reg(jit_function_t func, int regIndex, jit_type_t type)
 {
     type = jit_type_remove_tags(type);
@@ -217,6 +240,7 @@ int ejit_regIndex2reg(jit_function_t func, int regIndex, jit_type_t type)
     }
     return -1;
 }
+
 
 unsigned int ejit_type_get_size(jit_type_t type)
 {
@@ -281,9 +305,9 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
     switch(insn->opcode)
     {
         case JIT_OP_NOP:
-        {
-        }
-        break;
+	{
+	}
+	break;
 
         case JIT_OP_INCOMING_FRAME_POSN:
         {
@@ -493,7 +517,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 break;
                 case JIT_OP_ADDRESS_OF:
                 {
-                    inst = ejit_allocate_local_register(inst, func, dest->vreg, 0, 0, LOCAL_ALLOCATE_FOR_INPUT, 0, 0, 0);
+                    inst = ejit_allocate_local_register(inst, func, dest->vreg, 0, 0, LOCAL_ALLOCATE_FOR_OUTPUT, 0, 0, 0);
                 }
                 break;
                 case JIT_OP_CALL:
@@ -536,7 +560,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 {
                     // Restore ECX
                     inst = ejit_restore_local_registers(inst, func, 0x4);
-                    }
+                }
                 break;
                 case JIT_OP_ISHR:
                 case JIT_OP_ISHR_UN:
@@ -614,7 +638,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 if(value1->vreg)
                 {    
                     inst = ejit_restore_local_vreg(inst, func, value1->vreg);
-                        if(value1->vreg->in_reg)
+                    if(value1->vreg->in_reg)
                     {
                         param[index] = value1->vreg->reg->reg;
                     }
@@ -685,9 +709,20 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             
             if(insn->opcode == JIT_OP_JUMP_TABLE)
             {
-                // Free EAX used for JUMP_TABLE is the value was in local frame.
+                // Free EAX used for JUMP_TABLE if the value was in local frame.
                 inst = ejit_restore_local_registers(inst, func, 0x1);
             }
+
+	    if(insn->opcode == JIT_OP_OUTGOING_REG)
+	    {
+                jit_value_t value = insn->value1;
+                jit_type_t type = jit_value_get_type(value);
+                int reg = (int)jit_value_get_nint_constant(insn->value2);
+                ejit_reg_t objectReg = ejit_reg2object(func, reg, type);
+
+   	        inst = ejit_restore_local_registers(inst, func, objectReg->hash_code);
+	    }
+
             // LibJIT does not use true SSA form because jit-insn.c may transform a jit_insn_store
             // to a change of the dest value in the previous opcode.
             // If a value is used for output then restore the frame which the value
@@ -965,11 +1000,10 @@ unsigned char *ejit_restore_local_frame(unsigned char *inst, jit_function_t func
         if(vreg == vreg->reg->local_vreg)
         {
             inst = masm_mov_membase_reg(inst, X86_EBP, vreg->frame->frame_offset, vreg->reg->reg, jit_value_get_type(vreg->value));
-
         }
         else if(vreg == vreg->reg->vreg)
         {
-            ejit_vreg_t local_vreg = vreg->reg->local_vreg;
+	    ejit_vreg_t local_vreg = vreg->reg->local_vreg;
             if(local_vreg)
             {
                 local_vreg->in_reg = 0;
@@ -979,7 +1013,29 @@ unsigned char *ejit_restore_local_frame(unsigned char *inst, jit_function_t func
             
                 ejit_free_frame(func, vreg->reg->temp_frame);
                 vreg->reg->temp_frame = 0;
-            }
+            }    
+
+	    jit_type_t type = jit_value_get_type(vreg->value);
+	    type = jit_type_remove_tags(type);
+	    int typeKind = jit_type_get_kind(type);
+	    switch(typeKind)
+	    {
+		CASE_USE_LONG
+		{
+		    local_vreg = ejit_object_register_pair(vreg->reg)->local_vreg;
+                    if(local_vreg)
+                    {
+                        local_vreg->in_reg = 0;
+                        local_vreg->in_frame = 1;
+                        local_vreg->reg = 0;
+                        vreg->reg->local_vreg = 0;
+            
+                        ejit_free_frame(func, vreg->reg->temp_frame);
+                        vreg->reg->temp_frame = 0;
+                    }
+		}
+		break;
+	    }
         }
     }
     return inst;
@@ -1128,7 +1184,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                     CASE_USE_WORD
                     {
                         int regIndex = gp_reg_map[(int)jit_value_get_nint_constant(insn->value2)];
-                        if(value->vreg->min_range != value->vreg->max_range)
+                        if(value && value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
                             
@@ -1163,7 +1219,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                                         value->vreg->reg = (ejit_reg_t)(&(ejit_gp_regs_map[indexFound]));
                                     value->vreg->reg->vreg = value->vreg;
                                 }
-                                }
+                            }
 
                             if(indexFound == - 1)
                             {
@@ -1177,7 +1233,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                     case JIT_TYPE_FLOAT64:
                     {
                         int regIndex = (int)jit_value_get_nint_constant(insn->value2) - X86_REG_XMM0;
-                        if(value->vreg->min_range != value->vreg->max_range)
+                        if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
                             if(!func->has_try && !jit_value_is_addressable(value))
@@ -1222,7 +1278,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                     {
                         if(sizeof(jit_nfloat) != sizeof(jit_float64))
                         {
-                            if(value->vreg->min_range != value->vreg->max_range)
+                            if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                             {
                                 value->vreg->in_frame = 1;
                                 value->vreg->in_reg = 0;
@@ -1231,7 +1287,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                         else
                         {
                             int regIndex = (int)jit_value_get_nint_constant(insn->value2) - X86_REG_XMM0;
-                            if(value->vreg->min_range != value->vreg->max_range)
+                            if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                             {
                                 int indexFound = -1;
                                 if(!func->has_try && !jit_value_is_addressable(value))
@@ -1259,7 +1315,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                                         func->ejit->scratch_regs = func->ejit->scratch_regs | ejit_xmm_regs_map[indexFound].hash_code;
                                         value->vreg->in_reg = 1;
                                         value->vreg->in_frame = 0;
-                                            value->vreg->reg = (ejit_reg_t)(&(ejit_xmm_regs_map[indexFound]));
+                                        value->vreg->reg = (ejit_reg_t)(&(ejit_xmm_regs_map[indexFound]));
                                         value->vreg->reg->vreg = value->vreg;
                                     }
                                 }
@@ -1278,7 +1334,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                     {
                         if(value->vreg->min_range != value->vreg->max_range)
                         {
-                                value->vreg->in_frame = 1;
+                            value->vreg->in_frame = 1;
                             value->vreg->in_reg = 0;
                         }
                     }
@@ -1286,7 +1342,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
 
                     default: // Anything else is a structure or a union.
                     {
-                        if(value->vreg->min_range != value->vreg->max_range)
+                        if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             value->vreg->in_frame = 1;
                             value->vreg->in_reg = 0;
@@ -1308,7 +1364,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                 {
                     CASE_USE_WORD
                     {
-                        if(value->vreg->min_range != value->vreg->max_range)
+                        if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
                             
@@ -1333,7 +1389,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                 
                                     value->vreg->in_reg = 1;
                                     value->vreg->in_frame = 0;
-                                        value->vreg->reg = (ejit_reg_t)(&(ejit_gp_regs_map[indexFound]));
+                                    value->vreg->reg = (ejit_reg_t)(&(ejit_gp_regs_map[indexFound]));
                                     value->vreg->reg->vreg = value->vreg;
                                 }
                                 }
@@ -1349,7 +1405,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                     case JIT_TYPE_FLOAT32:
                     case JIT_TYPE_FLOAT64:
                     {
-                        if(value->vreg->min_range != value->vreg->max_range)
+                        if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
                             if(!func->has_try && !jit_value_is_addressable(value) && value->usage_count > 3 )
@@ -1370,7 +1426,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                                     func->ejit->scratch_regs = func->ejit->scratch_regs | ejit_xmm_regs_map[indexFound].hash_code;
                                     value->vreg->in_reg = 1;
                                     value->vreg->in_frame = 0;
-                                        value->vreg->reg = (ejit_reg_t)(&(ejit_xmm_regs_map[indexFound]));
+                                    value->vreg->reg = (ejit_reg_t)(&(ejit_xmm_regs_map[indexFound]));
                                     value->vreg->reg->vreg = value->vreg;
                                 }
                             }
@@ -1387,7 +1443,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                     {
                         if(sizeof(jit_nfloat) != sizeof(jit_float64))
                         {
-                            if(value->vreg->min_range != value->vreg->max_range)
+                            if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                             {
                                 value->vreg->in_frame = 1;
                                 value->vreg->in_reg = 0;
@@ -1395,7 +1451,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                         }
                         else
                         {
-                            if(value->vreg->min_range != value->vreg->max_range && value->usage_count > 3 )
+                            if(value->vreg && value->vreg->min_range != value->vreg->max_range && value->usage_count > 3 )
                             {
                                 int indexFound = -1;
                                 if(!func->has_try && !jit_value_is_addressable(value))
@@ -1416,7 +1472,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                                         func->ejit->scratch_regs = func->ejit->scratch_regs | ejit_xmm_regs_map[indexFound].hash_code;
                                         value->vreg->in_reg = 1;
                                         value->vreg->in_frame = 0;
-                                            value->vreg->reg = (ejit_reg_t)(&(ejit_xmm_regs_map[indexFound]));
+                                        value->vreg->reg = (ejit_reg_t)(&(ejit_xmm_regs_map[indexFound]));
                                         value->vreg->reg->vreg = value->vreg;
                                     }
                                 }
@@ -1433,9 +1489,9 @@ void ejit_preallocate_global_registers(jit_function_t func)
 
                     CASE_USE_LONG
                     {
-                        if(value->vreg->min_range != value->vreg->max_range)
+                        if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
-                                value->vreg->in_frame = 1;
+                            value->vreg->in_frame = 1;
                             value->vreg->in_reg = 0;
                         }
                     }
@@ -1443,7 +1499,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
 
                     default: // Anything else is a structure or a union.
                     {
-                        if(value->vreg->min_range != value->vreg->max_range)
+                        if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             value->vreg->in_frame = 1;
                             value->vreg->in_reg = 0;
@@ -1478,7 +1534,7 @@ void ejit_preallocate_global_registers(jit_function_t func)
                 }
                 break;
             }
-            }
+    	}
     }
 }
 
@@ -1507,6 +1563,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
     unsigned int need_n_xmm = ejit_count_items(func, float_list);
     unsigned int need_n_long = ejit_count_items(func, qword_list);
     unsigned int need_n_large_frames = ejit_count_items(func, large_frames_list);
+
     ejit_vreg_t vreg;
     int weight;
     int index;
@@ -1521,7 +1578,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
             int use_reg = 0;
             ejit_vreg_t vreg;
             if(func && list && func->ejit)
-                {
+            {
                 ejit_linked_list_t temp = dword_list;
                 while(temp)
                 {
@@ -1550,7 +1607,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
                      func->ejit->scratch_regs = func->ejit->scratch_regs | (&ejit_gp_regs_map[index])->hash_code;
                      func->ejit->regs_state = func->ejit->regs_state | (&ejit_gp_regs_map[index])->hash_code;
                 }
-                    }
+            }
         }
     }
 
@@ -1579,7 +1636,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
         int use_reg = 0;
         ejit_vreg_t vreg;
         if(func && list && func->ejit)
-            {
+        {
             ejit_linked_list_t temp = dword_list;
             while(temp)
             {
@@ -1610,12 +1667,12 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
 
                  vregs[found_index]->reg->vreg = vregs[found_index];
             }
-                }
+        }
     }
 
     // Allocate a memory frame.
     if((need_n_gp > 0) && func && list && func->ejit && dword_list)
-        {
+    {
         ejit_linked_list_t temp = dword_list;
         while(temp)
         {
@@ -1626,7 +1683,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
             }
             temp = temp->next;
         }
-           }
+    }
 
     // Allocates registers for the parallel group of virtual registers.
 
@@ -1639,7 +1696,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
             int use_reg = 0;
             ejit_vreg_t vreg;
             if(func && list && func->ejit)
-                {
+            {
                 ejit_linked_list_t temp = qword_list;
                 while(temp)
                 {
@@ -1673,7 +1730,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
                      func->ejit->scratch_regs = func->ejit->scratch_regs | (&ejit_gp_regs_map[index_pair])->hash_code;
                      func->ejit->regs_state = func->ejit->regs_state | (&ejit_gp_regs_map[index_pair])->hash_code;
                 }
-                    }
+            }
         }
     }
 
@@ -1740,12 +1797,12 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
                  ejit_gp_regs_map[found_index].vreg = vregs[found_index];
                  ejit_gp_regs_map[found_index_pair].vreg = vregs[found_index];
             }
-                }
+        }
     }
 
     // Allocate a memory frame.
-    if((need_n_long > 0) && func && list && func->ejit && qword_list)
-        {
+    if(need_n_long > 0 && func && list && func->ejit && qword_list)
+    {
         ejit_linked_list_t temp = qword_list;
         while(temp)
         {
@@ -1756,7 +1813,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
             }
             temp = temp->next;
         }
-           }
+    }
 
     memset(reg_weight, 0, sizeof(char) * max);
     for(index = 0; func && func->ejit && list
@@ -1767,7 +1824,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
             int use_reg = 0;
             ejit_vreg_t vreg;
             if(func && list && func->ejit)
-                {
+            {
                 ejit_linked_list_t temp = float_list;
                 while(temp)
                 {
@@ -1795,13 +1852,13 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
                      func->ejit->scratch_regs = func->ejit->scratch_regs | (&ejit_xmm_regs_map[index])->hash_code;
                      func->ejit->regs_state = func->ejit->regs_state | (&ejit_xmm_regs_map[index])->hash_code;
                 }
-                    }
+            }
         }
     }
 
 
     for(index = 0; func && func->ejit && list
-                && (index < EJIT_N_XMM_REGISTERS) && float_list && (need_n_xmm > 0); index++)
+                && index < EJIT_N_XMM_REGISTERS && float_list && need_n_xmm > 0; index++)
     {
         int found_index = -1;
         unsigned int count;
@@ -1824,7 +1881,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
         int use_reg = 0;
         ejit_vreg_t vreg;
         if(func && list && func->ejit)
-            {
+        {
             ejit_linked_list_t temp = float_list;
             while(temp)
             {
@@ -1855,12 +1912,12 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
                  vregs[found_index]->reg->vreg = vregs[found_index];
 
             }
-                }
+        }
     }
 
     // Allocate a memory frame.
     if((need_n_xmm > 0) && func && list && func->ejit && float_list)
-        {
+    {
         ejit_linked_list_t temp = float_list;
         while(temp)
         {
@@ -1871,11 +1928,11 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
             }
             temp = temp->next;
         }
-           }
+    }
 
     // Allocate large memory frames.
     if(need_n_large_frames > 0 && func && list && func->ejit && large_frames_list)
-        {
+    {
         ejit_linked_list_t temp = large_frames_list;
         while(temp)
         {
@@ -1886,7 +1943,7 @@ void ejit_preallocate_registers_and_frames(jit_function_t func, ejit_list_t list
             }
             temp = temp->next;
         }
-           }
+    }
 }
 
 
@@ -1981,14 +2038,17 @@ unsigned char *ejit_allocate_registers_and_frames(unsigned char *inst, jit_funct
                         }
                         else if(vreg->in_reg)
                         {
-                            ejit_vreg_t local_vreg = ejit_xmm_regs_map[vreg->reg->index].local_vreg;
-                            if(local_vreg)
-                            {
-                                local_vreg->in_reg = 0;
-                                local_vreg->in_frame = 0;
-                                local_vreg->reg = 0;
-                                ejit_xmm_regs_map[vreg->reg->index].local_vreg = 0;
-                            }
+			    /* If there was a locally used register then restore the value
+			       for which it was used that it is in frame */
+			       // TODO: Add the same to all other cases.
+//                            ejit_vreg_t local_vreg = ejit_xmm_regs_map[vreg->reg->index].local_vreg;
+//                            if(local_vreg)
+//                            {
+//                                local_vreg->in_reg = 0;
+//                                local_vreg->in_frame = 1;
+//                                local_vreg->reg = 0;
+//                                ejit_xmm_regs_map[vreg->reg->index].local_vreg = 0;
+//                            }
                             ejit_xmm_regs_map[vreg->reg->index].vreg = vreg;
                             func->ejit->regs_state = func->ejit->regs_state | vreg->reg->hash_code;
                             func->ejit->scratch_regs = func->ejit->scratch_regs | vreg->reg->hash_code;                
@@ -2128,9 +2188,9 @@ void ejit_allocate_large_frame_cond6(jit_function_t func, ejit_frame_t frame, in
                                 flag = 1;
                             }
                             else if(flag)
-                                {
-                                    state_end = temp;
-                                    segment_end = 1;
+                            {
+                                state_end = temp;
+                                segment_end = 1;
                                 offset_end = offset;
                                 flag++;
                             }
@@ -2531,20 +2591,23 @@ unsigned char *ejit_allocate_local_register(unsigned char *inst, jit_function_t 
         jit_type_t type;
         unsigned char bRegFound = 0;
         ejit_reg_t reg1 = 0, reg2 = 0, reg3 = 0, reg4 = 0;
-        if((vreg1 != 0) && vreg1->in_reg && vreg1->reg)
+        if(vreg1 != 0 && vreg1->in_reg && vreg1->reg)
         {
             reg1 = vreg1->reg;
             type = jit_value_get_type(vreg1->value);
+            type = jit_type_normalize(type);
             typeKind = jit_type_get_kind(type);
             if(typeKind == JIT_TYPE_LONG || typeKind == JIT_TYPE_ULONG)
             {
                 reg3 = ejit_object_register_pair(reg1);
             }
         }
-        if((vreg2 != 0) && vreg2->in_reg && vreg2->reg)
+        if(vreg2 != 0 && vreg2->in_reg && vreg2->reg)
         {
             reg2 = vreg2->reg;
             type = jit_value_get_type(vreg2->value);
+            type = jit_type_normalize(type);
+            type = jit_type_normalize(type);
             typeKind = jit_type_get_kind(type);
             if(typeKind == JIT_TYPE_LONG || typeKind == JIT_TYPE_ULONG)
             {
@@ -2688,7 +2751,7 @@ unsigned char *ejit_allocate_local_register(unsigned char *inst, jit_function_t 
                             int typeKind = jit_type_get_kind(type);
 
                             x86_mov_membase_reg(inst, X86_EBP, frame->frame_offset, ejit_gp_regs_map[count].reg, 4);
-            
+
                             if(typeKind == JIT_TYPE_LONG || typeKind == JIT_TYPE_ULONG)
                             {
                                 x86_mov_membase_reg(inst, X86_EBP, frame->frame_offset + 4, ejit_register_pair(ejit_gp_regs_map[count].reg), 4);
@@ -3080,7 +3143,7 @@ unsigned char *ejit_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
                     else
                     {
                         stack_offset-=8;
-                            switch(xmm_index)
+                        switch(xmm_index)
                         {
                             case 1:
                             {
@@ -3137,8 +3200,8 @@ unsigned char *ejit_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
         
         if(call_type == NORMAL_CALL) x86_call_code(buf, func_address);
         else if(call_type == INDIRECT_CALL) x86_call_membase(buf, X86_ESP, ((n_frames << 2)));
-        // We do not need to restore the stack. As an internal abi restores stack itself.
-        // The items which we were pushed on stack to perform this call will be poped by the cdecl -O0 engine.
+        /* We do not need to restore the stack. As an internal abi restores stack itself.
+           The items which were pushed on stack to perform the function call will be poped back by the cdecl -O0 engine. */
 
         jit_type_t type = jit_value_get_type(return_value);
         type = jit_type_remove_tags(type);
@@ -3501,7 +3564,7 @@ void ejit_compute_register_holes(jit_function_t func)
                     case JIT_OP_LSHL:
                     {
                         ejit_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
-                        }
+                    }
                     break;
                     case JIT_OP_ISHR:
                     case JIT_OP_ISHR_UN:
@@ -3595,7 +3658,7 @@ void ejit_compute_register_holes(jit_function_t func)
                     {
                         jit_value_t source1 = jit_insn_get_value1(insn);
                         int destReg = (int)jit_value_get_nint_constant(insn->value2);
-                        if(source1->vreg->max_range != source1->vreg->min_range)
+                        if(source1->vreg && source1->vreg->max_range != source1->vreg->min_range)
                         {
                             ejit_add_item_to_linked_list(func, insn, holes[destReg]);
                         }
@@ -3685,7 +3748,7 @@ unsigned int ejit_register_pair(unsigned int reg)
 
 unsigned int ejit_index_register_pair(unsigned int index)
 {
-    if(index < (EJIT_N_GP_REGISTERS - 1)) return index + 1;
+    if(index < EJIT_N_GP_REGISTERS - 1) return index + 1;
     return 0;
 }
 

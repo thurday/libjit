@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2001-2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include <jit/jit-dynamic.h>
@@ -48,23 +50,23 @@ are not portable across operating systems.
 You must include @code{<jit/jit-dynamic.h>} to use these routines,
 and then link with @code{-ljitdynamic -ljit}.
 
-@deftypefun jit_dynlib_handle_t jit_dynlib_open ({const char *} name)
-Opens the dynamic library called @code{name}, returning a handle for it.
+@deftypefun jit_dynlib_handle_t jit_dynlib_open (const char *@var{name})
+Opens the dynamic library called @var{name}, returning a handle for it.
 @end deftypefun
 
-@deftypefun void jit_dynlib_close (jit_dynlib_handle_t handle)
+@deftypefun void jit_dynlib_close (jit_dynlib_handle_t @var{handle})
 Close a dynamic library.
 @end deftypefun
 
-@deftypefun {void *} jit_dynlib_get_symbol (jit_dynlib_handle_t handle, {const char *} symbol)
-Retrieve the symbol @code{name} from the specified dynamic library.
+@deftypefun {void *} jit_dynlib_get_symbol (jit_dynlib_handle_t @var{handle}, const char *@var{symbol})
+Retrieve the symbol @var{symbol} from the specified dynamic library.
 Returns NULL if the symbol could not be found.  This will try both
-non-prefixed and underscore-prefixed forms of @code{name} on platforms
+non-prefixed and underscore-prefixed forms of @var{symbol} on platforms
 where it makes sense to do so, so there is no need for the caller
 to perform prefixing.
 @end deftypefun
 
-@deftypefun void jit_dynlib_set_debug (int flag)
+@deftypefun void jit_dynlib_set_debug (int @var{flag})
 Enable or disable additional debug messages to stderr.  Debugging is
 disabled by default.  Normally the dynamic library routines will silently
 report errors via NULL return values, leaving reporting up to the caller.

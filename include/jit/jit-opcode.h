@@ -3,19 +3,19 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #ifndef	_JIT_OPCODE_H
@@ -526,14 +526,9 @@ extern	"C" {
 #define JIT_OP_JUMP_TABLE					0x01A5
 
 /*
- * Perform a tail call
- */
-#define JIT_OP_TAIL_CALL					0x01A6
-
-/*
  * The number of opcodes in the above list.
  */
-#define	JIT_OP_NUM_OPCODES					0x01A7
+#define	JIT_OP_NUM_OPCODES					0x01A6
 
 /*
  * Opcode information.
@@ -606,7 +601,7 @@ struct jit_opcode_info
 #define	JIT_OPCODE_SRC1_PTR				JIT_OPCODE_SRC1_LONG
 #define	JIT_OPCODE_SRC2_PTR				JIT_OPCODE_SRC2_LONG
 #endif
-extern jit_opcode_info_t const jit_opcodes[JIT_OP_NUM_OPCODES];
+JIT_EXPORT_DATA jit_opcode_info_t const jit_opcodes[JIT_OP_NUM_OPCODES];
 
 #ifdef	__cplusplus
 };

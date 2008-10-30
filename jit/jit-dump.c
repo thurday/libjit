@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-internal.h"
@@ -40,7 +42,7 @@
 @*/
 
 /*@
- * @deftypefun void jit_dump_type ({FILE *} stream, jit_type_t type)
+ * @deftypefun void jit_dump_type (FILE *@var{stream}, jit_type_t @var{type})
  * Dump the name of a type to a stdio stream.
  * @end deftypefun
 @*/
@@ -119,10 +121,10 @@ static char *format_integer(char *buf, int is_neg, jit_ulong value)
 }
 
 /*@
- * @deftypefun void jit_dump_value ({FILE *} stream, jit_function_t func, jit_value_t value, const char *prefix)
- * Dump the name of a value to a stdio stream.  If @code{prefix} is not
+ * @deftypefun void jit_dump_value (FILE *@var{stream}, jit_function_t @var{func}, jit_value_t @var{value}, const char *@var{prefix})
+ * Dump the name of a value to a stdio stream.  If @var{prefix} is not
  * NULL, then it indicates a type prefix to add to the value name.
- * If @code{prefix} is NULL, then this function intuits the type prefix.
+ * If @var{prefix} is NULL, then this function intuits the type prefix.
  * @end deftypefun
 @*/
 void jit_dump_value(FILE *stream, jit_function_t func, jit_value_t value, const char *prefix)
@@ -345,7 +347,7 @@ static void dump_value(FILE *stream, jit_function_t func,
 }
 
 /*@
- * @deftypefun void jit_dump_insn ({FILE *} stream, jit_function_t func, jit_value_t value)
+ * @deftypefun void jit_dump_insn (FILE *@var{stream}, jit_function_t @var{func}, jit_value_t @var{value})
  * Dump the contents of an instruction to a stdio stream.
  * @end deftypefun
 @*/
@@ -372,6 +374,7 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 	name = jit_opcodes[opcode].name;
 	flags = jit_opcodes[opcode].flags;
 	infix_name = 0;
+
 	/* Dump branch, call, or register information */
 	if((flags & JIT_OPCODE_IS_BRANCH) != 0)
 	{
@@ -382,79 +385,24 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 		}
 		fprintf(stream, "if ");
 	}
-	else if((flags & JIT_OPCODE_IS_CALL) != 0 ||
-		    (jit_function_extended_compiler_is_enabled(func) && (insn->opcode == JIT_OP_CALL_INDIRECT
-			|| insn->opcode == JIT_OP_CALL_INDIRECT_TAIL
-			|| insn->opcode == JIT_OP_CALL_VTABLE_PTR
-			|| insn->opcode == JIT_OP_CALL_VTABLE_PTR_TAIL)))
-        {
-	    if(insn->call_params)
-	    {
-		    if(insn->value2)
-		    {
-			    jit_type_t type = jit_value_get_type(insn->value2);
-			    jit_dump_type(stream, type);
-			    fprintf(stream, " ");
-			    if(type != jit_type_void) 
-			    {
-				    jit_dump_value(stream, func, insn->value2, 0);
-				    fprintf(stream, " = ");
-			    }
-		    }
-		    if(insn->flags & JIT_INSN_VALUE1_IS_NAME)
-		    {
-			    if(insn->value1)
-				    fprintf(stream, "%s", (const char *)(insn->value1));
-			    else
-				    fprintf(stream, "%s 0x08%lx", name, (long)(jit_nuint)(insn->dest));
-		    }
-		    else
-		    {
-			    printf("call_indirect(");
-			    jit_dump_value(stdout, func, insn->value1, 0);
-			    printf(")");
-		    }
-	    }
-	    else
-	    {
-		    if(insn->value1)
-			    fprintf(stream, "%s %s", name, (const char *)(insn->value1));
-		    else
-			    fprintf(stream, "%s 0x08%lx", name, (long)(jit_nuint)(insn->dest));
-		    return;
-	    }
+	else if((flags & JIT_OPCODE_IS_CALL) != 0)
+	{
+		if(insn->value1)
+			fprintf(stream, "%s %s", name, (const char *)(insn->value1));
+		else
+			fprintf(stream, "%s 0x08%lx", name, (long)(jit_nuint)(insn->dest));
+		return;
 	}
 	else if((flags & JIT_OPCODE_IS_CALL_EXTERNAL) != 0)
 	{
-	    if(insn->call_params)
-	    {
-		    if(insn->value2)
-		    {
-			    jit_type_t type = jit_value_get_type(insn->value2);
-			    jit_dump_type(stream, type);
-			    fprintf(stream, " ");
-			    if(type != jit_type_void)
-			    {
-				    jit_dump_value(stream, func, insn->value2, 0);
-				    fprintf(stream, " = ");
-			    }
-		    }
-		    if(insn->value1)
-			    fprintf(stream, "%s", (const char *)(insn->value1));
-		    else
-			    fprintf(stream, "%s 0x08%lx", name, (long)(jit_nuint)(insn->dest));
-	    }
-	    else
-	    {
-		    if(insn->value1)
-			    fprintf(stream, "%s %s (0x%08lx)", name,
-				    	    (const char *)(insn->value1),
-					    (long)(jit_nuint)(insn->dest));
-		    else
-			    fprintf(stream, "%s 0x08%lx", name,
-					    (long)(jit_nuint)(insn->dest));
-		    return;
-	    }
+		if(insn->value1)
+			fprintf(stream, "%s %s (0x%08lx)", name,
+					(const char *)(insn->value1),
+					(long)(jit_nuint)(insn->dest));
+		else
+			fprintf(stream, "%s 0x08%lx", name,
+					(long)(jit_nuint)(insn->dest));
+		return;
 	}
 	else if((flags & JIT_OPCODE_IS_REG) != 0)
 	{
@@ -490,23 +438,6 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 		return;
 	}
 
-	if(insn->call_params)
-	{
-		ejit_call_params_t params = *(insn->call_params);
-		unsigned int num = params->num;
-		int index;
-		jit_value_t *args = (jit_value_t*)(params->args);
-		printf("(");
-		for(index = 0; index < num; index++)
-		{
-		    jit_dump_type(stream, jit_value_get_type(args[index]));
-		    fprintf(stream, " ");
-		    jit_dump_value(stream, func, args[index], 0);
-		    if(index < (num - 1)) fprintf(stream, ", ");
-		}
-		printf(")");
-		return;
-	}
 	/* Output the destination information */
 	if((flags & JIT_OPCODE_DEST_MASK) != JIT_OPCODE_DEST_EMPTY &&
 	   !jit_insn_dest_is_value(insn))
@@ -812,9 +743,9 @@ static void dump_object_code(FILE *stream, void *start, void *end)
 #endif /* !JIT_BACKEND_INTERP */
 
 /*@
- * @deftypefun void jit_dump_function ({FILE *} stream, jit_function_t func, {const char *} name)
+ * @deftypefun void jit_dump_function (FILE *@var{stream}, jit_function_t @var{func}, const char *@var{name})
  * Dump the three-address instructions within a function to a stream.
- * The @code{name} is attached to the output as a friendly label, but
+ * The @var{name} is attached to the output as a friendly label, but
  * has no other significance.
  *
  * If the function has not been compiled yet, then this will dump the
@@ -840,36 +771,6 @@ void jit_dump_function(FILE *stream, jit_function_t func, const char *name)
 	}
 
 	/* Output the function header */
-	jit_abi_t func_abi = jit_type_get_abi(func->signature);
-	switch(func_abi)
-	{
-		case jit_abi_vararg:
-		{
-			fprintf(stream, "vararg ");
-		}
-		break;
-		case jit_abi_stdcall:
-		{
-			fprintf(stream, "stdcall ");
-		}
-		break;
-		case jit_abi_fastcall:
-		{
-			fprintf(stream, "fastcall ");
-		}
-		break;
-		case jit_abi_cdecl:
-		{
-			fprintf(stream, "cdecl ");
-		}
-		break;
-		case jit_abi_internal:
-		{
-			fprintf(stream, "internal ");
-		}
-		break;
-	}
-	printf("-O%d ", jit_function_get_optimization_level(func));
 	if(name)
 		fprintf(stream, "function %s(", name);
 	else
@@ -993,4 +894,5 @@ void jit_dump_function(FILE *stream, jit_function_t func, const char *name)
 
 	/* Output the function footer */
 	fprintf(stream, "end\n\n");
+	fflush(stream);
 }

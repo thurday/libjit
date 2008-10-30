@@ -1120,10 +1120,15 @@ JIT_OP_COPY_LOAD_SBYTE, JIT_OP_COPY_LOAD_UBYTE, JIT_OP_COPY_STORE_BYTE, JIT_OP_C
         inst = masm_mov_membase_imm(inst, X86_EBP, $1, $2, sourceType);
     }
 
-JIT_OP_ADDRESS_OF:
+JIT_OP_ADDRESS_OF: 
+    [=reg, reg] -> {
+        /* This case can be if the value, address of which we try to load, was saved temporary to a register */
+        x86_lea_membase(inst, $1, X86_EBP, value1->vreg->frame->frame_offset);	
+    }
     [=reg, local] -> {
         x86_lea_membase(inst, $1, X86_EBP, $2);
     }
+
 
 JIT_OP_MEMCPY:
        [=reg, reg, imm] -> {

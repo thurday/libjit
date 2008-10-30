@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #ifndef	_JIT_RULES_H
@@ -39,6 +41,9 @@ extern	"C" {
 	#define	JIT_HAVE_BACKEND		1
 #elif defined(__alpha) || defined(__alpha__)
 	#define JIT_BACKEND_ALPHA		1
+	#define	JIT_HAVE_BACKEND		1
+#elif defined(__amd64) || defined(__amd64__) || defined(_x86_64) || defined(_x86_64__)
+	#define JIT_BACKEND_X86_64		1
 	#define	JIT_HAVE_BACKEND		1
 #endif
 /*#define	JIT_BACKEND_ARM		1*/
@@ -86,6 +91,8 @@ typedef struct
 	#include "jit-rules-arm.h"
 #elif defined(JIT_BACKEND_ALPHA)
 	#include "jit-rules-alpha.h"
+#elif defined(JIT_BACKEND_X86_64)
+	#include "jit-rules-x86-64.h"
 #else
 	#error "unknown jit backend type"
 #endif
@@ -185,7 +192,7 @@ int _jit_create_call_return_insns
 	(jit_function_t func, jit_type_t signature,
 	 jit_value_t *args, unsigned int num_args,
 	 jit_value_t return_value, int is_nested);
-int _jit_opcode_is_supported(jit_function_t func, int opcode);
+int _jit_opcode_is_supported(int opcode);
 void *_jit_gen_prolog(jit_gencode_t gen, jit_function_t func, void *buf);
 void _jit_gen_epilog(jit_gencode_t gen, jit_function_t func);
 void *_jit_gen_redirector(jit_gencode_t gen, jit_function_t func);

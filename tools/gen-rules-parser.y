@@ -2,25 +2,28 @@
 /*
  * gen-rules-parser.y - Bison grammar for the "gen-rules" program.
  *
- * Copyright (C) 2006  Southern Storm Software, Pty Ltd.
+ * Copyright (C) 2004, 2006-2007  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include <config.h>
 #include <stdio.h>
+#include <ctype.h>
 #ifdef HAVE_STRING_H
 	#include <string.h>
 #elif defined(HAVE_STRINGS_H)
@@ -129,12 +132,14 @@ static int gensel_reserve_more_space = 128;
 #define	GENSEL_PATT_IMMU8			7
 #define	GENSEL_PATT_IMMS16			8
 #define	GENSEL_PATT_IMMU16			9
-#define	GENSEL_PATT_LOCAL			10
-#define	GENSEL_PATT_FRAME			11
-#define	GENSEL_PATT_SCRATCH			12
-#define	GENSEL_PATT_CLOBBER			13
-#define	GENSEL_PATT_IF				14
-#define	GENSEL_PATT_SPACE			15
+#define	GENSEL_PATT_IMMS32			10
+#define	GENSEL_PATT_IMMU32			11
+#define	GENSEL_PATT_LOCAL			12
+#define	GENSEL_PATT_FRAME			13
+#define	GENSEL_PATT_SCRATCH			14
+#define	GENSEL_PATT_CLOBBER			15
+#define	GENSEL_PATT_IF				16
+#define	GENSEL_PATT_SPACE			17
 
 /*
  * Value types.
@@ -283,7 +288,7 @@ gensel_create_value(int type)
 }
 
 /*
- * Create string value.
+ * Create literal string value.
  */
 static gensel_value_t
 gensel_create_string_value(char *value)
@@ -297,7 +302,7 @@ gensel_create_string_value(char *value)
 }
 
 /*
- * Create string value.
+ * Create register class value.
  */
 static gensel_value_t
 gensel_create_regclass_value(char *value)
@@ -485,6 +490,8 @@ gensel_declare_regs(gensel_clause_t clauses, gensel_option_t options)
 			case GENSEL_PATT_IMMU8:
 			case GENSEL_PATT_IMMS16:
 			case GENSEL_PATT_IMMU16:
+			case GENSEL_PATT_IMMS32:
+			case GENSEL_PATT_IMMU32:
 				++imms;
 				break;
 
@@ -678,6 +685,8 @@ gensel_build_arg_index(
 		case GENSEL_PATT_IMMU8:
 		case GENSEL_PATT_IMMS16:
 		case GENSEL_PATT_IMMU16:
+		case GENSEL_PATT_IMMS32:
+		case GENSEL_PATT_IMMU32:
 			if(ternary || free_dest)
 			{
 				if(index < 3)
@@ -731,6 +740,8 @@ gensel_build_imm_arg_index(
 		case GENSEL_PATT_IMMU8:
 		case GENSEL_PATT_IMMS16:
 		case GENSEL_PATT_IMMU16:
+		case GENSEL_PATT_IMMS32:
+		case GENSEL_PATT_IMMU32:
 			if(ternary || free_dest)
 			{
 				if(index < 3)
@@ -799,6 +810,8 @@ gensel_build_var_index(
 		case GENSEL_PATT_IMMU8:
 		case GENSEL_PATT_IMMS16:
 		case GENSEL_PATT_IMMU16:
+		case GENSEL_PATT_IMMS32:
+		case GENSEL_PATT_IMMU32:
 			names[index] = gensel_imm_names[imms];
 			++imms;
 			++index;
@@ -939,6 +952,24 @@ gensel_output_register_pattern(char *name, gensel_option_t pattern)
 }
 
 /*
+ * Create an upper-case copy of a string.
+ */
+static char *
+gensel_string_upper(char *string)
+{
+	char *cp;
+	if(string)
+	{
+		string = strdup(string);
+		for(cp = string; *cp; cp++)
+		{
+			*cp = toupper(*cp);
+		}
+	}
+	return string;
+}
+
+/*
  * Output the clauses for a rule.
  */
 static void gensel_output_clauses(gensel_clause_t clauses, gensel_option_t options)
@@ -956,6 +987,7 @@ static void gensel_output_clauses(gensel_clause_t clauses, gensel_option_t optio
 	int ternary, free_dest;
 	int contains_registers;
 	gensel_regclass_t regclass;
+	char *uc_arg;
 
 	/* If the clause is manual, then output it as-is */
 	if(gensel_search_option(options, GENSEL_OPT_MANUAL))
@@ -1099,6 +1131,30 @@ static void gensel_output_clauses(gensel_clause_t clauses, gensel_option_t optio
 					++index;
 					break;
 
+				case GENSEL_PATT_IMMS32:
+					if(seen_option)
+					{
+						printf(" && ");
+					}
+					printf("insn->%s->is_nint_constant && ", args[index]);
+					printf("insn->%s->address >= -2147483648 && ", args[index]);
+					printf("insn->%s->address <= 2147483647", args[index]);
+					seen_option = 1;
+					++index;
+					break;
+
+				case GENSEL_PATT_IMMU32:
+					if(seen_option)
+					{
+						printf(" && ");
+					}
+					printf("insn->%s->is_nint_constant && ", args[index]);
+					printf("insn->%s->address >= 0 && ", args[index]);
+					printf("insn->%s->address <= 4294967295", args[index]);
+					seen_option = 1;
+					++index;
+					break;
+
 				case GENSEL_PATT_LOCAL:
 					if(seen_option)
 					{
@@ -1107,6 +1163,14 @@ static void gensel_output_clauses(gensel_clause_t clauses, gensel_option_t optio
 					printf("!insn->%s->is_constant && ", args[index]);
 					printf("!insn->%s->in_register && ", args[index]);
 					printf("!insn->%s->has_global_register", args[index]);
+					/* If the value is used again in the same basic block
+					   it is highly likely that using a register instead
+					   of the stack will be a win. Assume that if the
+					   "local" pattern is not the last one then it must
+					   be followed by a "reg" pattern. */
+					uc_arg = gensel_string_upper(args[index]);
+					printf("&& (insn->flags & JIT_INSN_%s_NEXT_USE) == 0", uc_arg);
+					free(uc_arg);
 					seen_option = 1;
 					++index;
 					break;
@@ -1283,6 +1347,8 @@ static void gensel_output_clauses(gensel_clause_t clauses, gensel_option_t optio
 			case GENSEL_PATT_IMMU8:
 			case GENSEL_PATT_IMMS16:
 			case GENSEL_PATT_IMMU16:
+			case GENSEL_PATT_IMMS32:
+			case GENSEL_PATT_IMMU32:
 				++index;
 				break;
 
@@ -1462,6 +1528,8 @@ static void gensel_output_clauses(gensel_clause_t clauses, gensel_option_t optio
 			case GENSEL_PATT_IMMU8:
 			case GENSEL_PATT_IMMS16:
 			case GENSEL_PATT_IMMU16:
+			case GENSEL_PATT_IMMS32:
+			case GENSEL_PATT_IMMU32:
 				printf("\t\t%s = insn->%s->address;\n",
 				       gensel_imm_names[imms], args[index]);
 				++imms;
@@ -1624,6 +1692,8 @@ static void gensel_output_supported(void)
 %token K_IMMU8			"immediate unsigned 8-bit value"
 %token K_IMMS16			"immediate signed 16-bit value"
 %token K_IMMU16			"immediate unsigned 16-bit value"
+%token K_IMMS32			"immediate signed 32-bit value"
+%token K_IMMU32			"immediate unsigned 32-bit value"
 %token K_LOCAL			"local variable"
 %token K_FRAME			"local variable forced out into the stack frame"
 %token K_NOTE			"`note'"
@@ -1922,6 +1992,8 @@ InputTag
 	| K_IMMU8			{ $$ = GENSEL_PATT_IMMU8; }
 	| K_IMMS16			{ $$ = GENSEL_PATT_IMMS16; }
 	| K_IMMU16			{ $$ = GENSEL_PATT_IMMU16; }
+	| K_IMMS32			{ $$ = GENSEL_PATT_IMMS32; }
+	| K_IMMU32			{ $$ = GENSEL_PATT_IMMU32; }
 	| K_LOCAL			{ $$ = GENSEL_PATT_LOCAL; }
 	| K_FRAME			{ $$ = GENSEL_PATT_FRAME; }
 	| K_ANY				{ $$ = GENSEL_PATT_ANY; }
@@ -1957,21 +2029,23 @@ Literal
 %%
 
 #define	COPYRIGHT_MSG	\
-" * Copyright (C) 2004  Southern Storm Software, Pty Ltd.\n" \
+" * Copyright (C) 2004, 2006-2007  Southern Storm Software, Pty Ltd.\n" \
 " *\n" \
-" * This program is free software; you can redistribute it and/or modify\n" \
-" * it under the terms of the GNU General Public License as published by\n" \
-" * the Free Software Foundation; either version 2 of the License, or\n" \
-" * (at your option) any later version.\n" \
+" * This file is part of the libjit library.\n" \
 " *\n" \
-" * This program is distributed in the hope that it will be useful,\n" \
+" * The libjit library is free software: you can redistribute it and/or\n" \
+" * modify it under the terms of the GNU Lesser General Public License\n" \
+" * as published by the Free Software Foundation, either version 2.1 of\n" \
+" * the License, or (at your option) any later version.\n" \
+" *\n" \
+" * The libjit library is distributed in the hope that it will be useful,\n" \
 " * but WITHOUT ANY WARRANTY; without even the implied warranty of\n" \
-" * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n" \
-" * GNU General Public License for more details.\n" \
+" * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU\n" \
+" * Lesser General Public License for more details.\n" \
 " *\n" \
-" * You should have received a copy of the GNU General Public License\n" \
-" * along with this program; if not, write to the Free Software\n" \
-" * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA\n"
+" * You should have received a copy of the GNU Lesser General Public\n" \
+" * License along with the libjit library.  If not, see\n" \
+" * <http://www.gnu.org/licenses/>.\n"
  
 int main(int argc, char *argv[])
 {

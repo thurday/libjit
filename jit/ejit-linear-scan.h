@@ -6,7 +6,7 @@
 #include "jit-memory.h"
 #include "jit-rules.h"
 
-#if !defined(JIT_BACKEND_INTERP) && (defined(__i386) && defined(__i386__) || defined(_M_IX86))
+#if !defined(JIT_BACKEND_INTERP) && (defined(__i386) || defined(__i386__) || defined(_M_IX86))
 #define EJIT_ENABLED
 #endif
 

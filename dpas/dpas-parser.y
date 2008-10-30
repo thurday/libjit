@@ -4,19 +4,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "dpas-internal.h"
@@ -678,6 +680,34 @@ static int throw_builtin_exception(jit_function_t func, int exception_type)
 		} while (0)
 
 /*
+ * Handle a boolean binary operator.
+ */
+#define	handle_boolean_binary(name,func,arg1,arg2)	\
+		do { \
+			if(!dpas_sem_is_rvalue(arg1) || \
+			   !dpas_type_is_numeric(dpas_sem_get_type(arg2)) || \
+			   !dpas_sem_is_rvalue(arg1) || \
+			   !dpas_type_is_numeric(dpas_sem_get_type(arg2))) \
+			{ \
+				if(!dpas_sem_is_error(arg1) && !dpas_sem_is_error(arg2)) \
+				{ \
+					dpas_error("invalid operands to binary `" name "'"); \
+				} \
+				dpas_sem_set_error(yyval.semvalue); \
+			} \
+			else \
+			{ \
+				jit_value_t value; \
+				value = func \
+					(dpas_current_function(), \
+					 dpas_sem_get_value(dpas_lvalue_to_rvalue(arg1)), \
+					 dpas_sem_get_value(dpas_lvalue_to_rvalue(arg2))); \
+				dpas_sem_set_rvalue \
+					(yyval.semvalue, dpas_type_boolean, value); \
+			} \
+		} while (0)
+
+/*
  * Handle a comparison binary operator.
  */
 #define	handle_compare_binary(name,func,arg1,arg2)	\
@@ -693,11 +723,11 @@ static int throw_builtin_exception(jit_function_t func, int exception_type)
 					 dpas_sem_get_value(dpas_lvalue_to_rvalue(arg1)), \
 					 dpas_sem_get_value(dpas_lvalue_to_rvalue(arg2))); \
 				dpas_sem_set_rvalue \
-					(yyval.semvalue, jit_value_get_type(value), value); \
+					(yyval.semvalue, dpas_type_boolean, value); \
 			} \
 			else \
 			{ \
-				handle_binary(name, func, arg1, arg2); \
+				handle_boolean_binary(name, func, arg1, arg2); \
 			} \
 		} while (0)
 

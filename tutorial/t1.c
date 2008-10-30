@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 	x = jit_value_get_param(function, 0);
 	y = jit_value_get_param(function, 1);
 	z = jit_value_get_param(function, 2);
-	temp1 = jit_insn_div(function, x, y);
+	temp1 = jit_insn_mul(function, x, y);
 	temp2 = jit_insn_add(function, temp1, z);
 	jit_insn_return(function, temp2);
 

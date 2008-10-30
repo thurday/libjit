@@ -284,7 +284,7 @@ unsigned long _jit_cache_get_size(jit_cache_t cache);
 /*
  * Determine if there is sufficient space for N bytes in the current method.
  */
-#define	jit_cache_check_for_n(posn,n) \
+#define	jit_cache_check_for_n(posn,n)	\
 				(((posn)->ptr + (n)) <= (posn)->limit)
 
 /*

@@ -1,21 +1,6 @@
 /*
  * jit-gen-i486-masm.h: Macro assembler for generating machine code.
  *
- * Copyright (C) 2007 Free Software Foundation.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef JIT_GEN_I486_MASM_H
@@ -916,6 +901,8 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
 
 unsigned char *masm_mov_membase_reg(unsigned char *inst, unsigned char basereg, unsigned int offset, unsigned char sreg, jit_type_t type)
 {
+    if(sreg >= 16) sreg -= 16;
+
     type = jit_type_remove_tags(type);
     int typeKind = jit_type_get_kind(type);
     switch(typeKind)
@@ -957,6 +944,9 @@ unsigned char *masm_mov_reg_membase(unsigned char *inst, unsigned char dreg, uns
 {
     type = jit_type_remove_tags(type);
     int typeKind = jit_type_get_kind(type);
+
+    if(dreg >= 16) dreg -= 16;
+
     switch(typeKind)
     {
         CASE_USE_WORD
@@ -1004,6 +994,10 @@ unsigned char *masm_mov_reg_reg(unsigned char *inst, unsigned char dreg, unsigne
 {
     type = jit_type_remove_tags(type);
     int typeKind = jit_type_get_kind(type);
+
+    if(dreg >= 16) dreg -= 16;
+    if(sreg >= 16) sreg -= 16;
+
     switch(typeKind)
     {
         CASE_USE_WORD
@@ -1097,6 +1091,8 @@ unsigned char* masm_mov_membase_imm(unsigned char *inst, unsigned char basereg, 
 
 unsigned char* masm_mov_reg_imm(unsigned char *inst, unsigned char dreg, jit_nint address, jit_type_t type)
 {
+    if(dreg >= 16) dreg -= 16;
+
     type = jit_type_remove_tags(type);
     int typeKind = jit_type_get_kind(type);
 

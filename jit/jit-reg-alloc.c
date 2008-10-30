@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-internal.h"
@@ -1217,6 +1219,8 @@ choose_output_register(jit_gencode_t gen, _jit_regs_t *regs)
 				{
 					if(regs->commutative)
 					{
+						/* This depends on choose_input_order()
+						   doing its job on the next step. */
 						use_cost = 0;
 					}
 					else
@@ -1271,11 +1275,15 @@ choose_output_register(jit_gencode_t gen, _jit_regs_t *regs)
 			{
 				if(regs->commutative)
 				{
+					/* This depends on choose_input_order()
+					   doing its job on the next step. */
 					use_cost = 0;
 				}
 #ifdef JIT_REG_STACK
 				else if(regs->reversible && regs->no_pop)
 				{
+					/* This depends on choose_input_order()
+					   doing its job on the next step. */
 					use_cost = 0;
 				}
 #endif
@@ -1334,10 +1342,14 @@ choose_output_register(jit_gencode_t gen, _jit_regs_t *regs)
 static void
 choose_input_order(jit_gencode_t gen, _jit_regs_t *regs)
 {
-	if(regs->descs[2].value
-	   && regs->descs[2].value->in_register
-	   && regs->descs[2].value->reg == regs->descs[0].reg
-	   && regs->descs[2].value != regs->descs[1].value)
+	jit_value_t value;
+
+	value = regs->descs[2].value;
+	if(value && value != regs->descs[1].value
+	   && ((value->in_register
+		&& value->reg == regs->descs[0].reg)
+	       || (value->in_global_register
+		   && value->global_reg == regs->descs[0].reg)))
 	{
 #ifdef JIT_REG_STACK
 		if(regs->reversible && regs->no_pop)
@@ -2612,10 +2624,12 @@ commit_output_value(jit_gencode_t gen, _jit_regs_t *regs, int push_stack_top)
 		return;
 	}
 
+#ifdef JIT_REG_STACK
 	if(IS_STACK_REG(desc->reg) && push_stack_top)
 	{
 		++(gen->reg_stack_top);
 	}
+#endif
 	bind_value(gen, desc->value, desc->reg, desc->other_reg, 0);
 
 	if(!desc->used)
@@ -2911,8 +2925,8 @@ _jit_regs_spill_all(jit_gencode_t gen)
 /*@
  * @deftypefun void _jit_regs_set_incoming (jit_gencode_t gen, int reg, jit_value_t value)
  * Set pseudo register @code{reg} to record that it currently holds the
- * contents of @code{value}.  If the register was previously in use,
- * then spill its value first.
+ * contents of @code{value}.  The register must not contain any other
+ * live value at this point.
  * @end deftypefun
 @*/
 void
@@ -2930,12 +2944,18 @@ _jit_regs_set_incoming(jit_gencode_t gen, int reg, jit_value_t value)
 		other_reg = -1;
 	}
 
+	/* avd: It's too late to spill here, if there was any
+	   value it is already cloberred by the incoming value.
+	   So for correct code generation the register must be
+	   free by now (spilled at some earlier point). */
+#if 0
 	/* Eject any values that are currently in the register */
 	spill_register(gen, reg);
 	if(other_reg >= 0)
 	{
 		spill_register(gen, other_reg);
 	}
+#endif
 
 	/* Record that the value is in "reg", but not in the frame */
 #ifdef JIT_REG_STACK
@@ -3013,12 +3033,12 @@ _jit_regs_set_outgoing(jit_gencode_t gen, int reg, jit_value_t value)
 		}
 
 		_jit_gen_load_value(gen, reg, other_reg, value);
+	}
 
-		jit_reg_set_used(gen->inhibit, reg);
-		if(other_reg > 0)
-		{
-			jit_reg_set_used(gen->inhibit, other_reg);
-		}
+	jit_reg_set_used(gen->inhibit, reg);
+	if(other_reg >= 0)
+	{
+		jit_reg_set_used(gen->inhibit, other_reg);
 	}
 }
 

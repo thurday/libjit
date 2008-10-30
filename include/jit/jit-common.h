@@ -3,19 +3,19 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #ifndef	_JIT_COMMON_H
@@ -36,11 +36,6 @@ typedef struct _jit_context *jit_context_t;
  * Opaque structure that represents a function.
  */
 typedef struct _jit_function *jit_function_t;
-
-/*
- * Opaque type that represents the compiled form of a function.
- */
-typedef void *jit_function_compiled_t;
 
 /*
  * Opaque structure that represents a block.
@@ -75,7 +70,12 @@ typedef jit_nuint jit_label_t;
 /*
  * Value that represents an undefined label.
  */
-#define	jit_label_undefined		((jit_label_t)~((jit_uint)0))
+#define	jit_label_undefined	((jit_label_t)~((jit_uint)0))
+
+/*
+ * Value that represents an undefined offset.
+ */
+#define	JIT_NO_OFFSET		(~((unsigned int)0))
 
 /*
  * Function that is used to free user-supplied metadata.

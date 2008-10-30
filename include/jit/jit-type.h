@@ -3,19 +3,19 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #ifndef	_JIT_TYPE_H
@@ -30,41 +30,41 @@ extern	"C" {
 /*
  * Pre-defined type descriptors.
  */
-extern jit_type_t const jit_type_void;
-extern jit_type_t const jit_type_sbyte;
-extern jit_type_t const jit_type_ubyte;
-extern jit_type_t const jit_type_short;
-extern jit_type_t const jit_type_ushort;
-extern jit_type_t const jit_type_int;
-extern jit_type_t const jit_type_uint;
-extern jit_type_t const jit_type_nint;
-extern jit_type_t const jit_type_nuint;
-extern jit_type_t const jit_type_long;
-extern jit_type_t const jit_type_ulong;
-extern jit_type_t const jit_type_float32;
-extern jit_type_t const jit_type_float64;
-extern jit_type_t const jit_type_nfloat;
-extern jit_type_t const jit_type_void_ptr;
+JIT_EXPORT_DATA jit_type_t const jit_type_void;
+JIT_EXPORT_DATA jit_type_t const jit_type_sbyte;
+JIT_EXPORT_DATA jit_type_t const jit_type_ubyte;
+JIT_EXPORT_DATA jit_type_t const jit_type_short;
+JIT_EXPORT_DATA jit_type_t const jit_type_ushort;
+JIT_EXPORT_DATA jit_type_t const jit_type_int;
+JIT_EXPORT_DATA jit_type_t const jit_type_uint;
+JIT_EXPORT_DATA jit_type_t const jit_type_nint;
+JIT_EXPORT_DATA jit_type_t const jit_type_nuint;
+JIT_EXPORT_DATA jit_type_t const jit_type_long;
+JIT_EXPORT_DATA jit_type_t const jit_type_ulong;
+JIT_EXPORT_DATA jit_type_t const jit_type_float32;
+JIT_EXPORT_DATA jit_type_t const jit_type_float64;
+JIT_EXPORT_DATA jit_type_t const jit_type_nfloat;
+JIT_EXPORT_DATA jit_type_t const jit_type_void_ptr;
 
 /*
  * Type descriptors for the system "char", "int", "long", etc types.
  * These are defined to one of the above values.
  */
-extern jit_type_t const jit_type_sys_bool;
-extern jit_type_t const jit_type_sys_char;
-extern jit_type_t const jit_type_sys_schar;
-extern jit_type_t const jit_type_sys_uchar;
-extern jit_type_t const jit_type_sys_short;
-extern jit_type_t const jit_type_sys_ushort;
-extern jit_type_t const jit_type_sys_int;
-extern jit_type_t const jit_type_sys_uint;
-extern jit_type_t const jit_type_sys_long;
-extern jit_type_t const jit_type_sys_ulong;
-extern jit_type_t const jit_type_sys_longlong;
-extern jit_type_t const jit_type_sys_ulonglong;
-extern jit_type_t const jit_type_sys_float;
-extern jit_type_t const jit_type_sys_double;
-extern jit_type_t const jit_type_sys_long_double;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_bool;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_char;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_schar;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_uchar;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_short;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_ushort;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_int;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_uint;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_long;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_ulong;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_longlong;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_ulonglong;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_float;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_double;
+JIT_EXPORT_DATA jit_type_t const jit_type_sys_long_double;
 
 /*
  * Type kinds that may be returned by "jit_type_get_kind".
@@ -127,8 +127,7 @@ typedef enum
 	jit_abi_cdecl,			/* Native C calling conventions */
 	jit_abi_vararg,			/* Native C with optional variable arguments */
 	jit_abi_stdcall,		/* Win32 STDCALL (same as cdecl if not Win32) */
-	jit_abi_fastcall,		/* Win32 FASTCALL (same as cdecl if not Win32) */
-	jit_abi_internal		/* Special libjit optimizing calling convention (platform specific) */
+	jit_abi_fastcall		/* Win32 FASTCALL (same as cdecl if not Win32) */
 
 } jit_abi_t;
 

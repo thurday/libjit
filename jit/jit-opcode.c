@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-internal.h"
@@ -413,7 +415,7 @@ jit_opcode_info_t const jit_opcodes[JIT_OP_NUM_OPCODES] = {
 	{"return_float32",				F_(EMPTY, FLOAT32, EMPTY)},
 	{"return_float64",				F_(EMPTY, FLOAT64, EMPTY)},
 	{"return_nfloat",				F_(EMPTY, NFLOAT, EMPTY)},
-	{"return_small_struct",			F_(EMPTY, PTR, PTR)},
+	{"return_small_struct",			F_(EMPTY, PTR, PTR) | NINT_ARG},
 	{"setup_for_nested",			F_(EMPTY, INT, EMPTY)},
 	{"setup_for_sibling",			F_(EMPTY, INT, INT) | NINT_ARG},
 	{"import",						F_(PTR, ANY, INT)},
@@ -446,7 +448,7 @@ jit_opcode_info_t const jit_opcodes[JIT_OP_NUM_OPCODES] = {
 	{"copy_float32",				O_(FLOAT32, FLOAT32, EMPTY, COPY)},
 	{"copy_float64",				O_(FLOAT64, FLOAT64, EMPTY, COPY)},
 	{"copy_nfloat",					O_(NFLOAT, NFLOAT, EMPTY, COPY)},
-	{"copy_struct",					O_(PTR, PTR, EMPTY, COPY)},
+	{"copy_struct",					O_(PTR, PTR, EMPTY, COPY) | NINT_ARG},
 	{"copy_store_byte",				F_(INT, INT, EMPTY)},
 	{"copy_store_short",			F_(INT, INT, EMPTY)},
 	{"address_of",					O_(PTR, ANY, EMPTY, ADDRESS_OF)},
@@ -466,7 +468,7 @@ jit_opcode_info_t const jit_opcodes[JIT_OP_NUM_OPCODES] = {
 	{"push_nfloat",					F_(EMPTY, NFLOAT, EMPTY)},
 	{"push_struct",					F_(EMPTY, ANY, PTR) | NINT_ARG},
 	{"pop_stack",					F_(EMPTY, INT, EMPTY) | NINT_ARG},
-	{"flush_small_struct",			F_(EMPTY, ANY, EMPTY)},
+	{"flush_small_struct",			F_(EMPTY, ANY, EMPTY) | NINT_ARG},
 	{"set_param_int",				F_(EMPTY, INT, PTR)},
 	{"set_param_long",				F_(EMPTY, LONG, PTR)},
 	{"set_param_float32",			F_(EMPTY, FLOAT32, PTR)},
@@ -540,7 +542,6 @@ jit_opcode_info_t const jit_opcodes[JIT_OP_NUM_OPCODES] = {
 	 * Switch statement support.
 	 */
 	{"jump_table",				F_(ANY, PTR, INT)|JIT_OPCODE_IS_JUMP_TABLE},
-	{"tail_call",				F_(EMPTY, EMPTY, EMPTY)},
 };
 
 #if defined(JIT_BACKEND_INTERP)

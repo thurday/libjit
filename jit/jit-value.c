@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-internal.h"
@@ -203,12 +205,11 @@ static jit_value_t alloc_value(jit_function_t func, jit_type_t type)
 	value->reg = -1;
 	value->frame_offset = JIT_INVALID_FRAME_OFFSET;
 	value->index = -1;
-	value->vreg = 0;
 	return value;
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_create (jit_function_t func, jit_type_t type)
+ * @deftypefun jit_value_t jit_value_create (jit_function_t @var{func}, jit_type_t @var{type})
  * Create a new value in the context of a function's current block.
  * The value initially starts off as a block-specific temporary.
  * It will be converted into a function-wide local variable if
@@ -238,11 +239,11 @@ jit_value_t jit_value_create(jit_function_t func, jit_type_t type)
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_create_nint_constant (jit_function_t func, jit_type_t type, jit_nint const_value)
+ * @deftypefun jit_value_t jit_value_create_nint_constant (jit_function_t @var{func}, jit_type_t @var{type}, jit_nint @var{const_value})
  * Create a new native integer constant in the specified function.
  * Returns NULL if out of memory.
  *
- * The @code{type} parameter indicates the actual type of the constant,
+ * The @var{type} parameter indicates the actual type of the constant,
  * if it happens to be something other than @code{jit_type_nint}.
  * For example, the following will create an unsigned byte constant:
  *
@@ -309,7 +310,7 @@ jit_value_t jit_value_create_nint_constant
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_create_long_constant (jit_function_t func, jit_type_t type, jit_long const_value)
+ * @deftypefun jit_value_t jit_value_create_long_constant (jit_function_t @var{func}, jit_type_t @var{type}, jit_long @var{const_value})
  * Create a new 64-bit integer constant in the specified
  * function.  This can also be used to create constants of
  * type @code{jit_type_ulong}.  Returns NULL if out of memory.
@@ -339,7 +340,7 @@ jit_value_t jit_value_create_long_constant
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_create_float32_constant (jit_function_t func, jit_type_t type, jit_float32 const_value)
+ * @deftypefun jit_value_t jit_value_create_float32_constant (jit_function_t @var{func}, jit_type_t @var{type}, jit_float32 @var{const_value})
  * Create a new 32-bit floating-point constant in the specified
  * function.  Returns NULL if out of memory.
  * @end deftypefun
@@ -364,7 +365,7 @@ jit_value_t jit_value_create_float32_constant
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_create_float64_constant (jit_function_t func, jit_type_t type, jit_float64 const_value)
+ * @deftypefun jit_value_t jit_value_create_float64_constant (jit_function_t @var{func}, jit_type_t @var{type}, jit_float64 @var{const_value})
  * Create a new 64-bit floating-point constant in the specified
  * function.  Returns NULL if out of memory.
  * @end deftypefun
@@ -389,7 +390,7 @@ jit_value_t jit_value_create_float64_constant
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_create_nfloat_constant (jit_function_t func, jit_type_t type, jit_nfloat const_value)
+ * @deftypefun jit_value_t jit_value_create_nfloat_constant (jit_function_t @var{func}, jit_type_t @var{type}, jit_nfloat @var{const_value})
  * Create a new native floating-point constant in the specified
  * function.  Returns NULL if out of memory.
  * @end deftypefun
@@ -408,28 +409,16 @@ jit_value_t jit_value_create_nfloat_constant
 	{
 		return 0;
 	}
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
-	jit_abi_t abi = jit_type_get_abi(jit_function_get_signature(func));
-	if(abi == jit_abi_internal)
-	{
-		// SSE uses 64 bits for a maximum width float value. FPU87 uses 80 bits.
-		// Convert 80 bits float to 64 bits float already here.
-		*((jit_float64 *)(value->address)) = (jit_float64)(const_value);
-	}
-	else
-#endif
-	{
-		*((jit_nfloat *)(value->address)) = const_value;
-	}
+	*((jit_nfloat *)(value->address)) = const_value;
 	value->free_address = 1;
 	return value;
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_create_constant (jit_function_t func, const jit_constant *const_value)
+ * @deftypefun jit_value_t jit_value_create_constant (jit_function_t @var{func}, const jit_constant *@var{const_value})
  * Create a new constant from a generic constant structure in the specified
  * function.  Returns NULL if out of memory or if the type in
- * @code{const_value} is not suitable for a constant.
+ * @var{const_value} is not suitable for a constant.
  * @end deftypefun
 @*/
 jit_value_t jit_value_create_constant
@@ -458,8 +447,13 @@ jit_value_t jit_value_create_constant
 
 		case JIT_TYPE_LONG:
 		case JIT_TYPE_ULONG:
+#ifdef JIT_NATIVE_INT64
+			return jit_value_create_nint_constant
+				(func, const_value->type, const_value->un.long_value);
+#else
 			return jit_value_create_long_constant
 				(func, const_value->type, const_value->un.long_value);
+#endif
 
 		case JIT_TYPE_FLOAT32:
 			return jit_value_create_float32_constant
@@ -477,7 +471,7 @@ jit_value_t jit_value_create_constant
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_get_param (jit_function_t func, {unsigned int} param)
+ * @deftypefun jit_value_t jit_value_get_param (jit_function_t @var{func}, unsigned int @var{param})
  * Get the value that corresponds to a specified function parameter.
  * Returns NULL if out of memory.
  * @end deftypefun
@@ -528,7 +522,7 @@ jit_value_t jit_value_get_param(jit_function_t func, unsigned int param)
 }
 
 /*@
- * @deftypefun jit_value_t jit_value_get_struct_pointer (jit_function_t func)
+ * @deftypefun jit_value_t jit_value_get_struct_pointer (jit_function_t @var{func})
  * Get the value that contains the structure return pointer for
  * a function.  If the function does not have a structure return pointer
  * (i.e. structures are returned in registers), then this returns NULL.
@@ -572,7 +566,7 @@ jit_value_t jit_value_get_struct_pointer(jit_function_t func)
 }
 
 /*@
- * @deftypefun int jit_value_is_temporary (jit_value_t value)
+ * @deftypefun int jit_value_is_temporary (jit_value_t @var{value})
  * Determine if a value is temporary.  i.e. its scope extends
  * over a single block within its function.
  * @end deftypefun
@@ -583,7 +577,7 @@ int jit_value_is_temporary(jit_value_t value)
 }
 
 /*@
- * @deftypefun int jit_value_is_local (jit_value_t value)
+ * @deftypefun int jit_value_is_local (jit_value_t @var{value})
  * Determine if a value is local.  i.e. its scope extends
  * over multiple blocks within its function.
  * @end deftypefun
@@ -594,7 +588,7 @@ int jit_value_is_local(jit_value_t value)
 }
 
 /*@
- * @deftypefun int jit_value_is_constant (jit_value_t value)
+ * @deftypefun int jit_value_is_constant (jit_value_t @var{value})
  * Determine if a value is a constant.
  * @end deftypefun
 @*/
@@ -604,7 +598,7 @@ int jit_value_is_constant(jit_value_t value)
 }
 
 /*@
- * @deftypefun int jit_value_is_parameter (jit_value_t value)
+ * @deftypefun int jit_value_is_parameter (jit_value_t @var{value})
  * Determine if a value is a function parameter.
  * @end deftypefun
 @*/
@@ -614,13 +608,13 @@ int jit_value_is_parameter(jit_value_t value)
 }
 
 /*@
- * @deftypefun void jit_value_ref (jit_function_t func, jit_value_t value)
- * Create a reference to the specified @code{value} from the current
- * block in @code{func}.  This will convert a temporary value into
- * a local value if @code{value} is being referenced from a different
+ * @deftypefun void jit_value_ref (jit_function_t @var{func}, jit_value_t @var{value})
+ * Create a reference to the specified @var{value} from the current
+ * block in @var{func}.  This will convert a temporary value into
+ * a local value if @var{value} is being referenced from a different
  * block than its original.
  *
- * It is not necessary that @code{func} be the same function as the
+ * It is not necessary that @var{func} be the same function as the
  * one where the value was originally created.  It may be a nested
  * function, referring to a local variable in its parent function.
  * @end deftypefun
@@ -640,7 +634,6 @@ void jit_value_ref(jit_function_t func, jit_value_t value)
 			value->is_temporary = 0;
 			value->is_local = 1;
 			value->is_addressable = 1;
-			value->live = 1;
 
 			/* Mark the two functions as not leaves because we will need
 			   them to set up proper frame pointers to allow us to access
@@ -653,7 +646,6 @@ void jit_value_ref(jit_function_t func, jit_value_t value)
 			/* Reference from another block in same function: local */
 			value->is_temporary = 0;
 			value->is_local = 1;
-			value->live = 1;
 			if(_jit_gen_is_global_candidate(value->type))
 			{
 				value->global_candidate = 1;
@@ -686,7 +678,7 @@ void _jit_value_ref_params(jit_function_t func)
 }
 
 /*@
- * @deftypefun void jit_value_set_volatile (jit_value_t value)
+ * @deftypefun void jit_value_set_volatile (jit_value_t @var{value})
  * Set a flag on a value to indicate that it is volatile.  The contents
  * of the value must always be reloaded from memory, never from a
  * cached register copy.
@@ -698,7 +690,7 @@ void jit_value_set_volatile(jit_value_t value)
 }
 
 /*@
- * @deftypefun int jit_value_is_volatile (jit_value_t value)
+ * @deftypefun int jit_value_is_volatile (jit_value_t @var{value})
  * Determine if a value is volatile.
  * @end deftypefun
 @*/
@@ -708,7 +700,7 @@ int jit_value_is_volatile(jit_value_t value)
 }
 
 /*@
- * @deftypefun void jit_value_set_addressable (jit_value_t value)
+ * @deftypefun void jit_value_set_addressable (jit_value_t @var{value})
  * Set a flag on a value to indicate that it is addressable.
  * This should be used when you want to take the address of a
  * value (e.g. @code{&variable} in C).  The value is guaranteed
@@ -723,7 +715,7 @@ void jit_value_set_addressable(jit_value_t value)
 }
 
 /*@
- * @deftypefun int jit_value_is_addressable (jit_value_t value)
+ * @deftypefun int jit_value_is_addressable (jit_value_t @var{value})
  * Determine if a value is addressable.
  * @end deftypefun
 @*/
@@ -733,7 +725,7 @@ int jit_value_is_addressable(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_type_t jit_value_get_type (jit_value_t value)
+ * @deftypefun jit_type_t jit_value_get_type (jit_value_t @var{value})
  * Get the type that is associated with a value.
  * @end deftypefun
 @*/
@@ -750,8 +742,8 @@ jit_type_t jit_value_get_type(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_function_t jit_value_get_function (jit_value_t value)
- * Get the function which owns a particular @code{value}.
+ * @deftypefun jit_function_t jit_value_get_function (jit_value_t @var{value})
+ * Get the function which owns a particular @var{value}.
  * @end deftypefun
 @*/
 jit_function_t jit_value_get_function(jit_value_t value)
@@ -767,8 +759,8 @@ jit_function_t jit_value_get_function(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_block_t jit_value_get_block (jit_value_t value)
- * Get the block which owns a particular @code{value}.
+ * @deftypefun jit_block_t jit_value_get_block (jit_value_t @var{value})
+ * Get the block which owns a particular @var{value}.
  * @end deftypefun
 @*/
 jit_block_t jit_value_get_block(jit_value_t value)
@@ -784,8 +776,8 @@ jit_block_t jit_value_get_block(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_context_t jit_value_get_context (jit_value_t value)
- * Get the context which owns a particular @code{value}.
+ * @deftypefun jit_context_t jit_value_get_context (jit_value_t @var{value})
+ * Get the context which owns a particular @var{value}.
  * @end deftypefun
 @*/
 jit_context_t jit_value_get_context(jit_value_t value)
@@ -801,8 +793,8 @@ jit_context_t jit_value_get_context(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_constant_t jit_value_get_constant (jit_value_t value)
- * Get the constant value within a particular @code{value}.  The returned
+ * @deftypefun jit_constant_t jit_value_get_constant (jit_value_t @var{value})
+ * Get the constant value within a particular @var{value}.  The returned
  * structure's @code{type} field will be @code{jit_type_void} if
  * @code{value} is not a constant.
  * @end deftypefun
@@ -875,8 +867,8 @@ jit_constant_t jit_value_get_constant(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_nint jit_value_get_nint_constant (jit_value_t value)
- * Get the constant value within a particular @code{value}, assuming
+ * @deftypefun jit_nint jit_value_get_nint_constant (jit_value_t @var{value})
+ * Get the constant value within a particular @var{value}, assuming
  * that its type is compatible with @code{jit_type_nint}.
  * @end deftypefun
 @*/
@@ -893,9 +885,9 @@ jit_nint jit_value_get_nint_constant(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_nint jit_value_get_nint_constant (jit_value_t value)
- * Get the constant value within a particular @code{value}, assuming
- * that its type is compatible with @code{jit_type_nint}.
+ * @deftypefun jit_nint jit_value_get_long_constant (jit_value_t @var{value})
+ * Get the constant value within a particular @var{value}, assuming
+ * that its type is compatible with @code{jit_type_long}.
  * @end deftypefun
 @*/
 jit_long jit_value_get_long_constant(jit_value_t value)
@@ -921,8 +913,8 @@ jit_long jit_value_get_long_constant(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_float32 jit_value_get_float32_constant (jit_value_t value)
- * Get the constant value within a particular @code{value}, assuming
+ * @deftypefun jit_float32 jit_value_get_float32_constant (jit_value_t @var{value})
+ * Get the constant value within a particular @var{value}, assuming
  * that its type is compatible with @code{jit_type_float32}.
  * @end deftypefun
 @*/
@@ -940,8 +932,8 @@ jit_float32 jit_value_get_float32_constant(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_float64 jit_value_get_float64_constant (jit_value_t value)
- * Get the constant value within a particular @code{value}, assuming
+ * @deftypefun jit_float64 jit_value_get_float64_constant (jit_value_t @var{value})
+ * Get the constant value within a particular @var{value}, assuming
  * that its type is compatible with @code{jit_type_float64}.
  * @end deftypefun
 @*/
@@ -959,8 +951,8 @@ jit_float64 jit_value_get_float64_constant(jit_value_t value)
 }
 
 /*@
- * @deftypefun jit_nfloat jit_value_get_nfloat_constant (jit_value_t value)
- * Get the constant value within a particular @code{value}, assuming
+ * @deftypefun jit_nfloat jit_value_get_nfloat_constant (jit_value_t @var{value})
+ * Get the constant value within a particular @var{value}, assuming
  * that its type is compatible with @code{jit_type_nfloat}.
  * @end deftypefun
 @*/
@@ -978,8 +970,8 @@ jit_nfloat jit_value_get_nfloat_constant(jit_value_t value)
 }
 
 /*@
- * @deftypefun int jit_value_is_true (jit_value_t value)
- * Determine if @code{value} is constant and non-zero.
+ * @deftypefun int jit_value_is_true (jit_value_t @var{value})
+ * Determine if @var{value} is constant and non-zero.
  * @end deftypefun
 @*/
 int jit_value_is_true(jit_value_t value)
@@ -1038,9 +1030,9 @@ int jit_value_is_true(jit_value_t value)
 }
 
 /*@
- * @deftypefun int jit_constant_convert ({jit_constant_t *} result, {const jit_constant_t *} value, jit_type_t type, int overflow_check)
- * Convert a the constant @code{value} into a new @code{type}, and
- * return its value in @code{result}.  Returns zero if the conversion
+ * @deftypefun int jit_constant_convert (jit_constant_t *@var{result}, const jit_constant_t *@var{value}, jit_type_t @var{type}, int @var{overflow_check})
+ * Convert a the constant @var{value} into a new @var{type}, and
+ * return its value in @var{result}.  Returns zero if the conversion
  * is not possible, usually due to overflow.
  * @end deftypefun
 @*/

@@ -3,19 +3,19 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #ifndef	_JIT_PLUS_H
@@ -24,6 +24,15 @@
 #include <jit/jit.h>
 
 #ifdef __cplusplus
+
+class jit_build_exception
+{
+public:
+	jit_build_exception(int result) { this->result = result; }
+	~jit_build_exception() {}
+
+	int result;
+};
 
 class jit_value
 {
@@ -110,6 +119,30 @@ private:
 	jit_label_t label;
 };
 
+class jit_jump_table
+{
+ public:
+
+	jit_jump_table(int size);
+	~jit_jump_table();
+
+	int size() { return num_labels; }
+	jit_label_t *raw() { return labels; }
+
+	jit_label get(int index);
+
+	void set(int index, jit_label label);
+
+ private:
+
+	jit_label_t *labels;
+	int num_labels;
+
+	// forbid copying
+	jit_jump_table(const jit_jump_table&);
+	jit_jump_table& operator=(const jit_jump_table&);
+};
+
 class jit_context
 {
 public:
@@ -117,6 +150,8 @@ public:
 	jit_context(jit_context_t context);
 	~jit_context();
 
+	void build_start() { jit_context_build_start(context); }
+	void build_end() { jit_context_build_end(context); }
 	jit_context_t raw() const { return context; }
 
 private:
@@ -146,12 +181,10 @@ public:
 
 	int is_compiled() const { return jit_function_is_compiled(func); }
 
-	int recompile();
-
 	int is_recompilable() const { return jit_function_is_recompilable(func); }
 
 	void set_recompilable() { jit_function_set_recompilable(func); }
-	void clear_recompilable() { jit_function_set_recompilable(func); }
+	void clear_recompilable() { jit_function_clear_recompilable(func); }
 	void set_recompilable(int flag)
 		{ if(flag) set_recompilable(); else clear_recompilable(); }
 
@@ -205,6 +238,8 @@ public:
 	jit_value new_constant(const jit_constant_t& value);
 	jit_value get_param(unsigned int param);
 	jit_value get_struct_pointer();
+
+	jit_label new_label();
 
 	void insn_label(jit_label& label);
 	void insn_new_block();
@@ -284,6 +319,7 @@ public:
 	void insn_branch(jit_label& label);
 	void insn_branch_if(const jit_value& value, jit_label& label);
 	void insn_branch_if_not(const jit_value& value, jit_label& label);
+	void insn_jump_table(const jit_value& value, jit_jump_table& jump_table);
 	jit_value insn_address_of(const jit_value& value1);
 	jit_value insn_address_of_label(jit_label& label);
 	jit_value insn_convert

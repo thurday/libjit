@@ -3,8 +3,8 @@
 #include "jit-setjmp.h"
 #include "jit/jit-dump.h"
 
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
-
+// #if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+#if defined(EJIT_ENABLED)
 
 unsigned int ejit_value_in_reg(jit_value_t value)
 {
@@ -512,8 +512,8 @@ unsigned char ejit_update_liveness_for_branch(jit_function_t func, jit_insn_t in
             if(vreg->min_range->insn_num <= range2 && vreg->max_range->insn_num >= range2)
             {
                 if(vreg->min_range->insn_num > range1)
-                    {
-                        ejit_add_vreg_to_complex_list(func, vreg, insn_from->cpoint->vregs_born);
+                {
+                    ejit_add_vreg_to_complex_list(func, vreg, insn_from->cpoint->vregs_born);
                     ejit_remove_vreg_from_complex_list(func, vreg, vreg->min_range->cpoint->vregs_born);
                     vreg->min_range = insn_from;
                     updated = 1;
@@ -591,7 +591,7 @@ void ejit_free_frames(jit_function_t func, ejit_list_t list)
 {
     ejit_linked_list_t linked_list;
     if(func && list && func->ejit)
-        {
+    {
         linked_list = (ejit_linked_list_t)list->item1;
         while(linked_list)
         {
@@ -616,7 +616,7 @@ void ejit_free_frames(jit_function_t func, ejit_list_t list)
             ejit_free_vreg_frame(func, linked_list->item);
             linked_list = linked_list->next;
         }
-        }
+    }
 }
 
 
@@ -716,7 +716,7 @@ int ejit_count_vregs(jit_function_t func, ejit_list_t list)
     int num = 0;
     unsigned int segment, offset;    
     if(func && list && func->ejit)
-        {
+    {
         ejit_list_t temp = list;
         while(temp)
         {
@@ -746,7 +746,7 @@ int ejit_count_vregs(jit_function_t func, ejit_list_t list)
             }
             temp = temp->next;
         }
-        }
+    }
     return num;
 }
 
@@ -808,7 +808,7 @@ void ejit_compute_liveness(jit_function_t func)
     jit_insn_t min_insn = 0, max_insn = 0;
     unsigned char updated;
     // Step 1. Compute vregs liveness without branches.
-        block = 0;
+    block = 0;
 
     if(!func->has_try)
     {
@@ -830,11 +830,18 @@ void ejit_compute_liveness(jit_function_t func)
                 jit_value_t dest = insn->dest;
                 jit_value_t value1 = insn->value1;
                 jit_value_t value2 = insn->value2;
+		if(insn && insn->opcode == JIT_OP_NOP)
+		{
+		    continue;
+		}
+
                 if(insn && (insn->flags & JIT_INSN_DEST_IS_LABEL) !=0)
                 {
                     ejit_create_critical_point(func, insn); // Point from which there is a branch.
                     ejit_add_branch_target(func, insn, (jit_label_t)dest);
                 }
+
+
                 // constants are not considered to be associated with virtual registers,
                 // though in the future we may store the low and high ranges that are 
                 // applicable for the virtual registers as it walks thru code.
@@ -848,7 +855,7 @@ void ejit_compute_liveness(jit_function_t func)
                     && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
                 {
                     if(!ejit_value_is_in_vreg(func, dest))
-                        {
+                    {
                         ejit_create_vreg(func, dest);
                     }
                     if(!dest->vreg->min_range)
@@ -981,6 +988,11 @@ void ejit_compute_liveness(jit_function_t func)
             jit_insn_iter_init(&iter, block);
             while((insn = jit_insn_iter_next(&iter)) != 0)
             {
+		if(insn && insn->opcode == JIT_OP_NOP)
+		{
+		    continue;
+		}
+
                 jit_value_t dest = insn->dest;
                 jit_value_t value1 = insn->value1;
                 jit_value_t value2 = insn->value2;
@@ -992,7 +1004,7 @@ void ejit_compute_liveness(jit_function_t func)
                     && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
                 {
                     if(!ejit_value_is_in_vreg(func, dest))
-                        {
+                    {
                         vreg = ejit_create_vreg(func, dest);                    
                     }
                     if(!dest->vreg->min_range) dest->vreg->min_range = insn;
@@ -1062,7 +1074,7 @@ void ejit_compute_liveness(jit_function_t func)
                     }
                     ejit_add_vreg_to_complex_list(func, vreg, vreg->min_range->cpoint->vregs_born);
                 }
-                if(jit_value_is_temporary(vreg->value) && !jit_value_is_addressable(vreg->value))//
+                if(jit_value_is_temporary(vreg->value) && !jit_value_is_addressable(vreg->value))
                 {
                     ejit_create_critical_point(func, vreg->max_range);
                 }
@@ -1165,7 +1177,6 @@ int ejit_compile(jit_function_t func, void **entry_point)
     jit_memzero(&gen, sizeof(gen));
     func->ejit = ejit_create_instance(func);
     ejit_compute_liveness(func);
-    // ejit_preallocate_global_registers(func);
     /* We may need to perform output twice, if the first attempt fails
        due to a lack of space in the current method cache page */
 

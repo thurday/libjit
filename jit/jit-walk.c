@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-internal.h"
@@ -119,9 +121,9 @@ up the native execution stack, inspecting frames and return addresses.
 @*/
 
 /*@
- * @deftypefun {void *} jit_get_frame_address (unsigned int n)
- * Get the frame address for the call frame @code{n} levels up
- * the stack.  Setting @code{n} to zero will retrieve the frame
+ * @deftypefun {void *} jit_get_frame_address (unsigned int @var{n})
+ * Get the frame address for the call frame @var{n} levels up
+ * the stack.  Setting @var{n} to zero will retrieve the frame
  * address for the current function.  Returns NULL if it isn't
  * possible to retrieve the address of the specified frame.
  * @end deftypefun
@@ -151,13 +153,13 @@ void *_jit_get_frame_address(void *start, unsigned int n)
 }
 
 /*@
- * @deftypefun {void *} jit_get_next_frame_address ({void *} frame)
- * Get the address of the next frame up the stack from @code{frame}.
+ * @deftypefun {void *} jit_get_next_frame_address (void *@var{frame})
+ * Get the address of the next frame up the stack from @var{frame}.
  * Returns NULL if it isn't possible to retrieve the address of
  * the next frame up the stack.
  * @end deftypefun
 @*/
-void *jit_get_next_frame_address(void *frame)
+void *_jit_get_next_frame_address(void *frame)
 {
 	if(frame)
 	{
@@ -170,7 +172,7 @@ void *jit_get_next_frame_address(void *frame)
 }
 
 /*@
- * @deftypefun {void *} jit_get_return_address ({void *} frame)
+ * @deftypefun {void *} jit_get_return_address (void *@var{frame})
  * Get the return address from a specified frame.  The address
  * represents the place where execution returns to when the
  * specified frame exits.  Returns NULL if it isn't possible
@@ -203,11 +205,11 @@ void *_jit_get_return_address(void *frame, void *frame0, void *return0)
 }
 
 /*@
- * @deftypefun int jit_frame_contains_crawl_mark ({void *}frame, {jit_crawl_mark_t *} mark)
- * Determine if the stack frame that resides just above @code{frame}
- * contains a local variable whose address is @code{mark}.  The @code{mark}
+ * @deftypefun int jit_frame_contains_crawl_mark (void *@var{frame}, jit_crawl_mark_t *@var{mark})
+ * Determine if the stack frame that resides just above @var{frame}
+ * contains a local variable whose address is @var{mark}.  The @var{mark}
  * parameter should be the address of a local variable that is declared with
- * @code{jit_declare_crawl_mark(name)}.
+ * @code{jit_declare_crawl_mark(@var{name})}.
  *
  * Crawl marks are used internally by libjit to determine where control
  * passes between JIT'ed and ordinary code during an exception throw.

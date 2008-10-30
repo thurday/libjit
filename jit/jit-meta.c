@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-internal.h"
@@ -44,13 +46,13 @@ to do this:
 @*/
 
 /*@
- * @deftypefun int jit_meta_set ({jit_meta_t *}list, int type, {void *}data, jit_meta_free_func free_data, jit_function_t pool_owner)
- * Set a metadata value on a list.  If the @code{type} is already present
- * in the list, then its previous value will be freed.  The @code{free_func}
+ * @deftypefun int jit_meta_set (jit_meta_t *@var{list}, int @var{type}, void *@var{data}, jit_meta_free_func @var{free_data}, jit_function_t @var{pool_owner})
+ * Set a metadata value on a list.  If the @var{type} is already present
+ * in the list, then its previous value will be freed.  The @var{free_func}
  * is called when the metadata value is freed with @code{jit_meta_free}
  * or @code{jit_meta_destroy}.  Returns zero if out of memory.
  *
- * If @code{pool_owner} is not NULL, then the metadata value will persist
+ * If @var{pool_owner} is not NULL, then the metadata value will persist
  * until the specified function is finished building.  Normally you would
  * set this to NULL.
  *
@@ -111,9 +113,9 @@ int jit_meta_set(jit_meta_t *list, int type, void *data,
 }
 
 /*@
- * @deftypefun {void *} jit_meta_get (jit_meta_t list, int type)
- * Get the value associated with @code{type} in the specified @code{list}.
- * Returns NULL if @code{type} is not present.
+ * @deftypefun {void *} jit_meta_get (jit_meta_t @var{list}, int @var{type})
+ * Get the value associated with @var{type} in the specified @var{list}.
+ * Returns NULL if @var{type} is not present.
  * @end deftypefun
 @*/
 void *jit_meta_get(jit_meta_t list, int type)
@@ -130,9 +132,9 @@ void *jit_meta_get(jit_meta_t list, int type)
 }
 
 /*@
- * @deftypefun void jit_meta_free ({jit_meta_t *} list, int type)
- * Free the metadata value in the @code{list} that has the
- * specified @code{type}.  Does nothing if the @code{type}
+ * @deftypefun void jit_meta_free (jit_meta_t *@var{list}, int @var{type})
+ * Free the metadata value in the @var{list} that has the
+ * specified @var{type}.  Does nothing if the @var{type}
  * is not present.
  * @end deftypefun
 @*/
@@ -177,8 +179,8 @@ void jit_meta_free(jit_meta_t *list, int type)
 }
 
 /*@
- * @deftypefun void jit_meta_destroy ({jit_meta_t *}list)
- * Destroy all of the metadata values in the specified @code{list}.
+ * @deftypefun void jit_meta_destroy (jit_meta_t *@var{list})
+ * Destroy all of the metadata values in the specified @var{list}.
  * @end deftypefun
 @*/
 void jit_meta_destroy(jit_meta_t *list)

@@ -511,7 +511,6 @@ JIT_OP_PUSH_STRUCT:
         unsigned int size = ejit_type_get_size(sourceType);
         func->ejit->relative_sp_offset -= size;
         find_one_gp_reg(inst);
-//        x86_alu_reg_imm(inst, X86_SUB, X86_ESP, size);
         inst = ejit_memory_copy_with_reg(inst, X86_ESP, func->ejit->relative_sp_offset, X86_EBP, insn->value1->vreg->frame->frame_offset, size, gpreg1);
         gen->stack_changed = 1;
     }

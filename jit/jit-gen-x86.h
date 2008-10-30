@@ -18,7 +18,6 @@
 #ifndef JIT_GEN_X86_H
 #define JIT_GEN_X86_H
 #define	jit_assert(x)	if (!(x)) break
-
 /*
 // x86 register numbers
 */
@@ -752,13 +751,6 @@ typedef union {
 		*(inst)++ = (unsigned char)0xac;	\
 		x86_reg_emit ((inst), (reg), (dreg));	\
 		x86_imm_emit8 ((inst), (shamt));	\
-	} while (0)
-
-#define x86_shrd_reg_cl(inst,dreg,reg)			\
-        do {                                            \
-		*(inst)++ = (unsigned char)0x0f;	\
-		*(inst)++ = (unsigned char)0xad;	\
-		x86_reg_emit ((inst), (reg), (dreg));	\
 	} while (0)
 
 #define x86_shld_reg(inst,dreg,reg)                     \
@@ -1749,20 +1741,6 @@ typedef union {
 		}	\
 		x86_leave ((inst));	\
 		x86_ret ((inst));	\
-	} while (0)
-
-#define x86_bsr_reg_reg(inst,dreg,reg)		\
-	do {	\
-		*(inst)++ = 0x0f;	\
-		*(inst)++ = 0xbd;	\
-		x86_reg_emit((inst), (dreg), (reg));	\
-	} while (0)
-
-#define x86_bsr_reg_membase(inst,dreg,basereg,disp)		\
-	do {	\
-		*(inst)++ = 0x0f;	\
-		*(inst)++ = 0xbd;	\
-		x86_membase_emit((inst), (dreg), (basereg), (disp));	\
 	} while (0)
 
 #endif /* JIT_GEN_X86_H */

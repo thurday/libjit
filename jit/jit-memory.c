@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include "jit-memory.h"
@@ -39,9 +41,9 @@
 @*/
 
 /*@
- * @deftypefun {void *} jit_memset ({void *} dest, int ch, {unsigned int} len)
- * Set the @code{len} bytes at @code{dest} to the value @code{ch}.
- * Returns @code{dest}.
+ * @deftypefun {void *} jit_memset (void *@var{dest}, int @var{ch}, unsigned int @var{len})
+ * Set the @var{len} bytes at @var{dest} to the value @var{ch}.
+ * Returns @var{dest}.
  * @end deftypefun
 @*/
 void *jit_memset(void *dest, int ch, unsigned int len)
@@ -60,16 +62,14 @@ void *jit_memset(void *dest, int ch, unsigned int len)
 }
 
 /*@
- * @deftypefun {void *} jit_memcpy ({void *} dest, {const void *} src, {unsigned int} len)
- * Copy the @code{len} bytes at @code{src} to @code{dest}.  Returns
- * @code{dest}.  The behavior is undefined if the blocks overlap
- * (use @code{jit_memmove} instead for that case).
+ * @deftypefun {void *} jit_memcpy (void *@var{dest}, const void *@var{src}, unsigned int @var{len})
+ * Copy the @var{len} bytes at @var{src} to @var{dest}.  Returns
+ * @var{dest}.  The behavior is undefined if the blocks overlap
+ * (use @var{jit_memmove} instead for that case).
  * @end deftypefun
 @*/
 void *jit_memcpy(void *dest, const void *src, unsigned int len)
 {
-//	printf("src_zero = %d\n", ((unsigned int *)src)[0]);
-//	fflush();
 #if defined(HAVE_MEMCPY)
 	return memcpy(dest, src, len);
 #elif defined(HAVE_BCOPY)
@@ -88,9 +88,9 @@ void *jit_memcpy(void *dest, const void *src, unsigned int len)
 }
 
 /*@
- * @deftypefun {void *} jit_memmove ({void *} dest, {const void *} src, {unsigned int} len)
- * Copy the @code{len} bytes at @code{src} to @code{dest} and handle
- * overlapping blocks correctly.  Returns @code{dest}.
+ * @deftypefun {void *} jit_memmove (void *@var{dest}, const void *@var{src}, unsigned int @var{len})
+ * Copy the @var{len} bytes at @var{src} to @var{dest} and handle
+ * overlapping blocks correctly.  Returns @var{dest}.
  * @end deftypefun
 @*/
 void *jit_memmove(void *dest, const void *src, unsigned int len)
@@ -123,8 +123,8 @@ void *jit_memmove(void *dest, const void *src, unsigned int len)
 }
 
 /*@
- * @deftypefun int jit_memcmp ({const void *} s1, {const void *} s2, {unsigned int} len)
- * Compare @code{len} bytes at @code{s1} and @code{s2}, returning a negative,
+ * @deftypefun int jit_memcmp (const void *@var{s1}, const void *@var{s2}, unsigned int @var{len})
+ * Compare @var{len} bytes at @var{s1} and @var{s2}, returning a negative,
  * zero, or positive result depending upon their relationship.  It is
  * system-specific as to whether this function uses signed or unsigned
  * byte comparisons.
@@ -154,9 +154,9 @@ int jit_memcmp(const void *s1, const void *s2, unsigned int len)
 }
 
 /*@
- * @deftypefun {void *} jit_memchr ({void *} str, int ch, {unsigned int} len)
- * Search the @code{len} bytes at @code{str} for the first instance of
- * the value @code{ch}.  Returns the location of @code{ch} if it was found,
+ * @deftypefun {void *} jit_memchr (void *@var{str}, int @var{ch}, unsigned int @var{len})
+ * Search the @var{len} bytes at @var{str} for the first instance of
+ * the value @var{ch}.  Returns the location of @var{ch} if it was found,
  * or NULL if it was not found.
  * @end deftypefun
 @*/
@@ -177,13 +177,4 @@ void *jit_memchr(const void *str, int ch, unsigned int len)
 	}
 	return (void *)0;
 #endif
-}
-
-void _jit_memory_free(void *_value)
-{
-	void **value = (void**)_value;
-	if(value && *value)
-	{
-		jit_free(*value);
-	}	
 }

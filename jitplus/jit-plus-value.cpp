@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include <jit/jit-plus.h>
@@ -31,12 +33,12 @@ on the @code{jit_function} class during the function building process.
 Construct an empty value.
 @end defop
 
-@defop Constructor jit_value jit_value (jit_value_t value)
+@defop Constructor jit_value jit_value (jit_value_t @var{value})
 Construct a value by wrapping up a raw C @code{jit_value_t} object.
 @end defop
 
-@defop Constructor jit_value jit_value ({const jit_value& value})
-Create a copy of @code{value}.
+@defop Constructor jit_value jit_value (const jit_value& @var{value})
+Create a copy of @var{value}.
 @end defop
 
 @defop Destructor jit_value ~jit_value ()
@@ -44,7 +46,7 @@ Destroy the C++ value wrapper, but leave the underlying raw C
 value alone.
 @end defop
 
-@defop Operator jit_value {jit_value& operator=} ({const jit_value& value})
+@defop Operator jit_value {jit_value& operator=} (const jit_value& @var{value})
 Copy @code{jit_value} objects.
 @end defop
 
@@ -92,24 +94,24 @@ Get the owning function, block, or context for this value.
 Extract the constant stored in this value.
 @end deftypemethod
 
-@defop Operator jit_value {jit_value operator+} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator-} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator*} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator/} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator%} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator-} ({const jit_value& value1})
-@defopx Operator jit_value {jit_value operator&} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator|} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator^} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator~} ({const jit_value& value1})
-@defopx Operator jit_value {jit_value operator<<} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator>>} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator==} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator!=} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator<} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator<=} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator>} ({const jit_value& value1}, {const jit_value& value2})
-@defopx Operator jit_value {jit_value operator>=} ({const jit_value& value1}, {const jit_value& value2})
+@defop Operator jit_value {jit_value operator+} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator-} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator*} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator/} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator%} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator-} (const jit_value& @var{value1})
+@defopx Operator jit_value {jit_value operator&} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator|} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator^} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator~} (const jit_value& @var{value1})
+@defopx Operator jit_value {jit_value operator<<} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator>>} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator==} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator!=} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator<} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator<=} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator>} (const jit_value& @var{value1}, const jit_value& @var{value2})
+@defopx Operator jit_value {jit_value operator>=} (const jit_value& @var{value1}, const jit_value& @var{value2})
 Generate an arithmetic, bitwise, or comparison instruction based on
 one or two @code{jit_value} objects.  These operators are shortcuts
 for calling @code{insn_add}, @code{insn_sub}, etc on the

@@ -3,19 +3,19 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #ifndef	_JIT_WALK_H
@@ -33,10 +33,10 @@ extern	"C" {
  */
 void *_jit_get_frame_address(void *start, unsigned int n);
 #if defined(__GNUC__)
-#define	jit_get_frame_address(n)	\
+# define jit_get_frame_address(n)	\
 	(_jit_get_frame_address(jit_get_current_frame(), (n)))
 #else
-#define	jit_get_frame_address(n)	(_jit_get_frame_address(0, (n)))
+# define jit_get_frame_address(n)	(_jit_get_frame_address(0, (n)))
 #endif
 
 /*
@@ -47,37 +47,61 @@ void *_jit_get_frame_address(void *start, unsigned int n);
  * _JIT_ARCH_GET_CURRENT_FRAME() if available. 
  */
 #if defined(__GNUC__)
-#if defined(_JIT_ARCH_GET_CURRENT_FRAME)
-#define	jit_get_current_frame()				\
+# define JIT_FAST_GET_CURRENT_FRAME	1
+# if defined(_JIT_ARCH_GET_CURRENT_FRAME)
+#  define jit_get_current_frame()			\
 	({						\
 		void *address;				\
 		_JIT_ARCH_GET_CURRENT_FRAME(address);	\
 		address;				\
 	})
+# else
+#  define jit_get_current_frame()	(__builtin_frame_address(0))
+# endif
 #else
-#define	jit_get_current_frame()		(__builtin_frame_address(0))
-#endif
-#else
-#define	jit_get_current_frame()		(jit_get_frame_address(0))
+# define JIT_FAST_GET_CURRENT_FRAME	0
+# define jit_get_current_frame()	(jit_get_frame_address(0))
 #endif
 
 /*
  * Get the next frame up the stack from a specified frame.
  * Returns NULL if it isn't possible to retrieve the next frame.
  */
-void *jit_get_next_frame_address(void *frame);
+void *_jit_get_next_frame_address(void *frame);
+#if defined(__GNUC__) && defined(_JIT_ARCH_GET_NEXT_FRAME)
+# define jit_get_next_frame_address(frame)			\
+	({							\
+		void *address;					\
+		_JIT_ARCH_GET_NEXT_FRAME(address, (frame));	\
+		address;					\
+	})
+#else
+# define jit_get_next_frame_address(frame)	\
+	(_jit_get_next_frame_address(frame))
+#endif
 
 /*
  * Get the return address for a specific frame.
  */
 void *_jit_get_return_address(void *frame, void *frame0, void *return0);
 #if defined(__GNUC__)
-#define	jit_get_return_address(frame)	\
-		(_jit_get_return_address	\
-			((frame), __builtin_frame_address(0), __builtin_return_address(0)))
+# if defined(_JIT_ARCH_GET_RETURN_ADDRESS)
+#  define jit_get_return_address(frame)				\
+	({							\
+		void *address;					\
+		_JIT_ARCH_GET_RETURN_ADDRESS(address, (frame));	\
+		address;					\
+	})
+# else
+#  define jit_get_return_address(frame)			\
+	(_jit_get_return_address			\
+		((frame),				\
+		 __builtin_frame_address(0),		\
+		 __builtin_return_address(0)))
+# endif
 #else
-#define	jit_get_return_address(frame)	\
-		(_jit_get_return_address((frame), 0, 0))
+# define jit_get_return_address(frame)	\
+	(_jit_get_return_address((frame), 0, 0))
 #endif
 
 /*
@@ -85,10 +109,19 @@ void *_jit_get_return_address(void *frame, void *frame0, void *return0);
  * than using "jit_get_return_address(0)".
  */
 #if defined(__GNUC__)
-#define	jit_get_current_return()	(__builtin_return_address(0))
+# if defined(_JIT_ARCH_GET_CURRENT_RETURN)
+#  define jit_get_current_return()			\
+	({						\
+		void *address;				\
+		_JIT_ARCH_GET_CURRENT_RETURN(address);	\
+		address;				\
+	})
+# else
+#  define jit_get_current_return()	(__builtin_return_address(0))
+# endif
 #else
-#define	jit_get_current_return()	\
-			(jit_get_return_address(jit_get_current_frame()))
+# define jit_get_current_return()	\
+	(jit_get_return_address(jit_get_current_frame()))
 #endif
 
 /*

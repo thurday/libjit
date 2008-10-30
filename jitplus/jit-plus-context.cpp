@@ -3,19 +3,21 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of the libjit library.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #include <jit/jit-plus.h>
@@ -43,12 +45,12 @@ jit_context::jit_context()
 }
 
 /*@
- * @defop Constructor jit_context jit_context (jit_context_t context)
+ * @defop Constructor jit_context jit_context (jit_context_t @var{context})
  * Construct a new JIT context by wrapping up an existing raw C context.
  * This is useful for importing a context from third party C code
  * into a program that prefers to use C++.
  *
- * When you this form of construction, @code{jit_context_destroy}
+ * When you use this form of construction, @code{jit_context_destroy}
  * will not be called on the context when the @code{jit_context}
  * object is destructed.  You will need to arrange for that manually.
  * @end defop
@@ -73,6 +75,15 @@ jit_context::~jit_context()
 }
 
 /*@
+ * @deftypemethod jit_context void build_start ()
+ * Start an explicit build process.  Not needed if you will be using
+ * on-demand compilation.
+ * @end deftypemethod
+ *
+ * @deftypemethod jit_context void build_end ()
+ * End an explicit build process.
+ * @end deftypemethod
+ *
  * @deftypemethod jit_context jit_context_t raw () const
  * Get the raw C context pointer that underlies this object.
  * @end deftypemethod

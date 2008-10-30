@@ -3,19 +3,19 @@
  *
  * Copyright (C) 2004  Southern Storm Software, Pty Ltd.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * The libjit library is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 2.1 of
+ * the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * The libjit library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with the libjit library.  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 #ifndef	_JIT_FUNCTION_H
@@ -48,7 +48,6 @@ jit_block_t jit_function_get_entry(jit_function_t func) JIT_NOTHROW;
 jit_block_t jit_function_get_current(jit_function_t func) JIT_NOTHROW;
 jit_function_t jit_function_get_nested_parent(jit_function_t func) JIT_NOTHROW;
 int jit_function_compile(jit_function_t func) JIT_NOTHROW;
-int jit_function_recompile(jit_function_t func) JIT_NOTHROW;
 int jit_function_is_compiled(jit_function_t func) JIT_NOTHROW;
 void jit_function_set_recompilable(jit_function_t func) JIT_NOTHROW;
 void jit_function_clear_recompilable(jit_function_t func) JIT_NOTHROW;
@@ -75,10 +74,8 @@ void jit_function_set_optimization_level
 unsigned int jit_function_get_optimization_level
 	(jit_function_t func) JIT_NOTHROW;
 unsigned int jit_function_get_max_optimization_level(void) JIT_NOTHROW;
-jit_function_t jit_function_create_cdecl_trampoline
-	(jit_context_t context, jit_type_t signature) JIT_NOTHROW;
-jit_abi_t jit_function_get_abi(jit_function_t func) JIT_NOTHROW;
-int jit_function_extended_compiler_is_enabled(jit_function_t func) JIT_NOTHROW;
+jit_label_t jit_function_reserve_label(jit_function_t func) JIT_NOTHROW;
+
 #ifdef	__cplusplus
 };
 #endif
