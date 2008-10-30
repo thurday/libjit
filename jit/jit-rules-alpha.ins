@@ -450,6 +450,11 @@ JIT_OP_RETURN_REG: manual
 		/* Nothing to do here */;
 	}
 
+JIT_OP_TAIL_CALL: manual
+        [] -> {
+	       /* Nothing to do here */
+	}
+
 JIT_OP_PUSH_INT: note
 	[imm] -> {
 		alpha_li(inst,ALPHA_AT,$1);

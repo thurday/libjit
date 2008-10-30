@@ -288,8 +288,8 @@ jit_insn_t _jit_block_add_insn(jit_block_t block)
 		insns = builder->insns;
 	}
 	insns[builder->num_insns] = insn;
+	insn->insn_num = builder->num_insns;
 	block->last_insn = (builder->num_insns)++;
-
 	/* Return the instruction, which is now ready to fill in */
 	return insn;
 }

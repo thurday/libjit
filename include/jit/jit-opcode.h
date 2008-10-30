@@ -526,9 +526,14 @@ extern	"C" {
 #define JIT_OP_JUMP_TABLE					0x01A5
 
 /*
+ * Perform a tail call
+ */
+#define JIT_OP_TAIL_CALL					0x01A6
+
+/*
  * The number of opcodes in the above list.
  */
-#define	JIT_OP_NUM_OPCODES					0x01A6
+#define	JIT_OP_NUM_OPCODES					0x01A7
 
 /*
  * Opcode information.

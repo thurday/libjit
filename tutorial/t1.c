@@ -49,7 +49,6 @@ int main(int argc, char **argv)
 	temp1 = jit_insn_mul(function, x, y);
 	temp2 = jit_insn_add(function, temp1, z);
 	jit_insn_return(function, temp2);
-
 	/* Compile the function */
 	jit_function_compile(function);
 

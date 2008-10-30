@@ -20,6 +20,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+
 #include "jit-internal.h"
 #include "jit-rules.h"
 #include "jit-apply-rules.h"
@@ -402,7 +403,7 @@ int _jit_create_call_return_insns
 	return 1;
 }
 
-int _jit_opcode_is_supported(int opcode)
+int _jit_opcode_is_supported(jit_function_t func, int opcode)
 {
 	switch(opcode)
 	{

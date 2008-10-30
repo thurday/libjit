@@ -19,7 +19,6 @@
  * License along with the libjit library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-
 %inst_type arm_inst_buf
 
 /*
@@ -995,6 +994,10 @@ JIT_OP_ADDRESS_OF: manual
 
 JIT_OP_RETURN_REG: manual
 	[] -> { /* Nothing to do here */ }
+
+
+JIT_OP_TAIL_CALL: manual
+        [] -> { /* Nothing to do here */ }
 
 JIT_OP_PUSH_INT: unary_note
 	[reg] -> {

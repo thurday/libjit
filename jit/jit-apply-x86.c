@@ -27,6 +27,7 @@
 #if defined(__i386) || defined(__i386__) || defined(_M_IX86)
 
 #include "jit-gen-x86.h"
+#include "jit-gen-i486-simd.h"
 
 void _jit_create_closure(unsigned char *buf, void *func,
                          void *closure, void *_type)
@@ -171,7 +172,6 @@ void *_jit_create_redirector(unsigned char *buf, void *func,
 							 void *user_data, int abi)
 {
 	void *start = (void *)buf;
-
 	/* Save the fastcall registers, if necessary */
 #if JIT_APPLY_X86_FASTCALL == 1
 	if(abi == (int)jit_abi_fastcall)
@@ -180,13 +180,22 @@ void *_jit_create_redirector(unsigned char *buf, void *func,
 		x86_push_reg(buf, X86_ECX);
 	}
 #endif
+	if(abi == (int)jit_abi_internal)
+	{
+		x86_alu_reg_imm(buf, X86_SUB, X86_ESP, 36);
+		x86_mov_membase_reg(buf, X86_ESP, 32, X86_EAX, 4);
+		x86_mov_membase_reg(buf, X86_ESP, 28, X86_EDX, 4);
+		x86_mov_membase_reg(buf, X86_ESP, 24, X86_ECX, 4);
+		sse2_movsd_membase_xmreg(buf, X86_ESP, 16, XMM0);
+		sse2_movsd_membase_xmreg(buf, X86_ESP, 8, XMM1);
+		sse2_movsd_membase_xmreg(buf, X86_ESP, 0, XMM2);
+	}
+	
 
 	/* Push the user data onto the stack */
 	x86_push_imm(buf, (int)user_data);
-
 	/* Call "func" (the pointer result will be in EAX) */
 	x86_call_code(buf, func);
-
 	/* Remove the user data from the stack */
 	x86_pop_reg(buf, X86_ECX);
 
@@ -198,10 +207,26 @@ void *_jit_create_redirector(unsigned char *buf, void *func,
 		x86_pop_reg(buf, X86_EDX);
 	}
 #endif
-
+	if(abi == (int)jit_abi_internal)
+	{
+		x86_mov_membase_reg(buf, X86_ESP, -4, X86_EAX, 4);
+		sse2_movsd_xmreg_membase(buf, XMM2, X86_ESP, 0);
+		sse2_movsd_xmreg_membase(buf, XMM1, X86_ESP, 8);
+		sse2_movsd_xmreg_membase(buf, XMM0, X86_ESP, 16);
+		x86_mov_reg_membase(buf, X86_ECX, X86_ESP, 24, 4);
+		x86_mov_reg_membase(buf, X86_EDX, X86_ESP, 28, 4);
+		x86_mov_reg_membase(buf, X86_EAX, X86_ESP, 32, 4);
+		x86_alu_reg_imm(buf, X86_ADD, X86_ESP, 36);
+	}
 	/* Jump to the function that the redirector indicated */
-	x86_jump_reg(buf, X86_EAX);
-
+	if(abi != (int)jit_abi_internal)
+	{
+		x86_jump_reg(buf, X86_EAX);
+	}
+	else
+	{
+		x86_jump_membase(buf, X86_ESP, -40);
+	}
 	/* Return the start of the buffer as the redirector entry point */
 	return start;
 }

@@ -28,6 +28,36 @@ extern	"C" {
 #endif
 
 /*
+ * Pseudo register numbers for the x86 registers.  These are not the
+ * same as the CPU instruction register numbers.  The order of these
+ * values must match the order in "JIT_REG_INFO".
+ */
+#define	X86_REG_EAX			0
+#define	X86_REG_ECX			1
+#define	X86_REG_EDX			2
+#define	X86_REG_EBX			3
+#define	X86_REG_ESI			4
+#define	X86_REG_EDI			5
+#define	X86_REG_EBP			6
+#define	X86_REG_ESP			7
+#define	X86_REG_ST0			8
+#define	X86_REG_ST1			9
+#define	X86_REG_ST2			10
+#define	X86_REG_ST3			11
+#define	X86_REG_ST4			12
+#define	X86_REG_ST5			13
+#define	X86_REG_ST6			14
+#define	X86_REG_ST7			15
+#define	X86_REG_XMM0			16
+#define	X86_REG_XMM1			17
+#define	X86_REG_XMM2			18
+#define	X86_REG_XMM3			19
+#define	X86_REG_XMM4			20
+#define	X86_REG_XMM5			21
+#define	X86_REG_XMM6			22
+#define	X86_REG_XMM7			23
+
+/*
  * Information about all of the registers, in allocation order.
  */
 #define	JIT_REG_X86_FLOAT	\
@@ -48,8 +78,17 @@ extern	"C" {
 	{"st4", 4, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED | JIT_REG_IN_STACK}, \
 	{"st5", 5, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED | JIT_REG_IN_STACK}, \
 	{"st6", 6, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED | JIT_REG_IN_STACK}, \
-	{"st7", 7, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED | JIT_REG_IN_STACK},
-#define	JIT_NUM_REGS		16
+	{"st7", 7, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED | JIT_REG_IN_STACK}, \
+	{"xmm0", 0, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED}, \
+	{"xmm1", 1, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED}, \
+	{"xmm2", 2, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED}, \
+	{"xmm3", 3, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED}, \
+	{"xmm4", 4, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED}, \
+	{"xmm5", 5, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED}, \
+	{"xmm6", 6, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED}, \
+	{"xmm7", 7, -1, JIT_REG_X86_FLOAT | JIT_REG_CALL_USED},
+
+#define	JIT_NUM_REGS		24
 #define	JIT_NUM_GLOBAL_REGS	3
 
 #define JIT_REG_STACK		1
@@ -67,7 +106,7 @@ extern	"C" {
  * The maximum number of bytes to allocate for the prolog.
  * This may be shortened once we know the true prolog size.
  */
-#define	JIT_PROLOG_SIZE			32
+#define	JIT_PROLOG_SIZE			256
 
 /*
  * Preferred alignment for the start of functions.
@@ -84,9 +123,14 @@ extern	"C" {
 /*
  * Parameter passing rules.
  */
-#define	JIT_CDECL_WORD_REG_PARAMS		{-1}
-#define	JIT_FASTCALL_WORD_REG_PARAMS	{1, 2, -1}	/* ecx, edx */
-#define	JIT_MAX_WORD_REG_PARAMS			2
+#define	JIT_CDECL_WORD_REG_PARAMS		{-1, -1, -1, -1}
+#define	JIT_CDECL_FLOAT_REG_PARAMS		{-1, -1, -1, -1}
+#define	JIT_FASTCALL_WORD_REG_PARAMS	{1, 2, -1, -1}	/* ecx, edx */
+#define	JIT_FASTCALL_FLOAT_REG_PARAMS	{-1, -1, -1, -1}
+#define JIT_INTERNAL_WORD_REG_PARAMS    {0, 2, 1, -1}   /* eax, edx, ecx */
+#define JIT_INTERNAL_FLOAT_REG_PARAMS   {16, 17, 18, -1}   /* xmm0, xmm1, xmm2 */
+#define	JIT_MAX_WORD_REG_PARAMS			3
+#define	JIT_MAX_FLOAT_REG_PARAMS		3
 #define	JIT_INITIAL_STACK_OFFSET		(2 * sizeof(void *))
 #define	JIT_INITIAL_FRAME_SIZE			0
 

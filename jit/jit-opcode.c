@@ -542,6 +542,7 @@ jit_opcode_info_t const jit_opcodes[JIT_OP_NUM_OPCODES] = {
 	 * Switch statement support.
 	 */
 	{"jump_table",				F_(ANY, PTR, INT)|JIT_OPCODE_IS_JUMP_TABLE},
+	{"tail_call",                           F_(EMPTY, EMPTY, EMPTY)},
 };
 
 #if defined(JIT_BACKEND_INTERP)

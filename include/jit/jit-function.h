@@ -75,6 +75,10 @@ unsigned int jit_function_get_optimization_level
 	(jit_function_t func) JIT_NOTHROW;
 unsigned int jit_function_get_max_optimization_level(void) JIT_NOTHROW;
 jit_label_t jit_function_reserve_label(jit_function_t func) JIT_NOTHROW;
+jit_function_t jit_function_create_cdecl_trampoline
+        (jit_context_t context, jit_type_t signature) JIT_NOTHROW;
+jit_abi_t jit_function_get_abi(jit_function_t func) JIT_NOTHROW;
+int jit_function_extended_compiler_is_enabled(jit_function_t func) JIT_NOTHROW;
 
 #ifdef	__cplusplus
 };

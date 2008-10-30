@@ -127,7 +127,8 @@ typedef enum
 	jit_abi_cdecl,			/* Native C calling conventions */
 	jit_abi_vararg,			/* Native C with optional variable arguments */
 	jit_abi_stdcall,		/* Win32 STDCALL (same as cdecl if not Win32) */
-	jit_abi_fastcall		/* Win32 FASTCALL (same as cdecl if not Win32) */
+	jit_abi_fastcall,		/* Win32 FASTCALL (same as cdecl if not Win32) */
+	jit_abi_internal                /* Special libjit optimizing calling convention (platform specific) */
 
 } jit_abi_t;
 
