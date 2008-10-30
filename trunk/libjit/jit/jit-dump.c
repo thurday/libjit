@@ -374,7 +374,6 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 	name = jit_opcodes[opcode].name;
 	flags = jit_opcodes[opcode].flags;
 	infix_name = 0;
-
 	/* Dump branch, call, or register information */
 	if((flags & JIT_OPCODE_IS_BRANCH) != 0)
 	{
@@ -385,24 +384,79 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 		}
 		fprintf(stream, "if ");
 	}
-	else if((flags & JIT_OPCODE_IS_CALL) != 0)
-	{
-		if(insn->value1)
-			fprintf(stream, "%s %s", name, (const char *)(insn->value1));
-		else
-			fprintf(stream, "%s 0x08%lx", name, (long)(jit_nuint)(insn->dest));
-		return;
+	else if((flags & JIT_OPCODE_IS_CALL) != 0 ||
+		    (jit_function_extended_compiler_is_enabled(func) && (insn->opcode == JIT_OP_CALL_INDIRECT
+			|| insn->opcode == JIT_OP_CALL_INDIRECT_TAIL
+			|| insn->opcode == JIT_OP_CALL_VTABLE_PTR
+			|| insn->opcode == JIT_OP_CALL_VTABLE_PTR_TAIL)))
+        {
+	    if(insn->call_params)
+	    {
+		    if(insn->value2)
+		    {
+			    jit_type_t type = jit_value_get_type(insn->value2);
+			    jit_dump_type(stream, type);
+			    fprintf(stream, " ");
+			    if(type != jit_type_void) 
+			    {
+				    jit_dump_value(stream, func, insn->value2, 0);
+				    fprintf(stream, " = ");
+			    }
+		    }
+		    if(insn->flags & JIT_INSN_VALUE1_IS_NAME)
+		    {
+			    if(insn->value1)
+				    fprintf(stream, "%s", (const char *)(insn->value1));
+			    else
+				    fprintf(stream, "%s 0x08%lx", name, (long)(jit_nuint)(insn->dest));
+		    }
+		    else
+		    {
+			    printf("call_indirect(");
+			    jit_dump_value(stdout, func, insn->value1, 0);
+			    printf(")");
+		    }
+	    }
+	    else
+	    {
+		    if(insn->value1)
+			    fprintf(stream, "%s %s", name, (const char *)(insn->value1));
+		    else
+			    fprintf(stream, "%s 0x08%lx", name, (long)(jit_nuint)(insn->dest));
+		    return;
+	    }
 	}
 	else if((flags & JIT_OPCODE_IS_CALL_EXTERNAL) != 0)
 	{
-		if(insn->value1)
-			fprintf(stream, "%s %s (0x%08lx)", name,
-					(const char *)(insn->value1),
-					(long)(jit_nuint)(insn->dest));
-		else
-			fprintf(stream, "%s 0x08%lx", name,
-					(long)(jit_nuint)(insn->dest));
-		return;
+	    if(insn->call_params)
+	    {
+		    if(insn->value2)
+		    {
+			    jit_type_t type = jit_value_get_type(insn->value2);
+			    jit_dump_type(stream, type);
+			    fprintf(stream, " ");
+			    if(type != jit_type_void)
+			    {
+				    jit_dump_value(stream, func, insn->value2, 0);
+				    fprintf(stream, " = ");
+			    }
+		    }
+		    if(insn->value1)
+			    fprintf(stream, "%s", (const char *)(insn->value1));
+		    else
+			    fprintf(stream, "%s 0x08%lx", name, (long)(jit_nuint)(insn->dest));
+	    }
+	    else
+	    {
+		    if(insn->value1)
+			    fprintf(stream, "%s %s (0x%08lx)", name,
+				    	    (const char *)(insn->value1),
+					    (long)(jit_nuint)(insn->dest));
+		    else
+			    fprintf(stream, "%s 0x08%lx", name,
+					    (long)(jit_nuint)(insn->dest));
+		    return;
+	    }
 	}
 	else if((flags & JIT_OPCODE_IS_REG) != 0)
 	{
@@ -438,6 +492,23 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 		return;
 	}
 
+	if(insn->call_params)
+	{
+		jite_call_params_t params = *(insn->call_params);
+		unsigned int num = params->num;
+		int index;
+		jit_value_t *args = (jit_value_t*)(params->args);
+		printf("(");
+		for(index = 0; index < num; index++)
+		{
+		    jit_dump_type(stream, jit_value_get_type(args[index]));
+		    fprintf(stream, " ");
+		    jit_dump_value(stream, func, args[index], 0);
+		    if(index < (num - 1)) fprintf(stream, ", ");
+		}
+		printf(")");
+		return;
+	}
 	/* Output the destination information */
 	if((flags & JIT_OPCODE_DEST_MASK) != JIT_OPCODE_DEST_EMPTY &&
 	   !jit_insn_dest_is_value(insn))
@@ -771,6 +842,36 @@ void jit_dump_function(FILE *stream, jit_function_t func, const char *name)
 	}
 
 	/* Output the function header */
+	jit_abi_t func_abi = jit_type_get_abi(func->signature);
+	switch(func_abi)
+	{
+		case jit_abi_vararg:
+		{
+			fprintf(stream, "vararg ");
+		}
+		break;
+		case jit_abi_stdcall:
+		{
+			fprintf(stream, "stdcall ");
+		}
+		break;
+		case jit_abi_fastcall:
+		{
+			fprintf(stream, "fastcall ");
+		}
+		break;
+		case jit_abi_cdecl:
+		{
+			fprintf(stream, "cdecl ");
+		}
+		break;
+		case jit_abi_internal:
+		{
+			fprintf(stream, "internal ");
+		}
+		break;
+	}
+	fprintf(stream, "-O%d ", jit_function_get_optimization_level(func));
 	if(name)
 		fprintf(stream, "function %s(", name);
 	else

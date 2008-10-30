@@ -205,6 +205,7 @@ static jit_value_t alloc_value(jit_function_t func, jit_type_t type)
 	value->reg = -1;
 	value->frame_offset = JIT_INVALID_FRAME_OFFSET;
 	value->index = -1;
+	value->vreg  = 0;
 	return value;
 }
 
@@ -634,6 +635,7 @@ void jit_value_ref(jit_function_t func, jit_value_t value)
 			value->is_temporary = 0;
 			value->is_local = 1;
 			value->is_addressable = 1;
+			value->live = 1;
 
 			/* Mark the two functions as not leaves because we will need
 			   them to set up proper frame pointers to allow us to access
@@ -646,6 +648,7 @@ void jit_value_ref(jit_function_t func, jit_value_t value)
 			/* Reference from another block in same function: local */
 			value->is_temporary = 0;
 			value->is_local = 1;
+			value->live = 1;
 			if(_jit_gen_is_global_candidate(value->type))
 			{
 				value->global_candidate = 1;

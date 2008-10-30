@@ -178,3 +178,12 @@ void *jit_memchr(const void *str, int ch, unsigned int len)
 	return (void *)0;
 #endif
 }
+
+void _jit_memory_free(void *_value)
+{
+        void **value = (void **)_value;
+	if(value && *value)
+	{
+	        jit_free(*value);
+	}
+}

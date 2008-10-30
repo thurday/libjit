@@ -122,6 +122,7 @@ extern	"C" {
    r8, r7, r6, r5, and r4 need to be saved in the local frame.
  */
 #define	JIT_CDECL_WORD_REG_PARAMS		{0, 1, 2, 3, -1}
+#define	JIT_CDECL_FLOAT_REG_PARAMS		{-1, -1, -1, -1, -1}
 #define	JIT_MAX_WORD_REG_PARAMS			4
 #define	JIT_INITIAL_STACK_OFFSET		(sizeof(void *))
 #define	JIT_INITIAL_FRAME_SIZE			(8 * sizeof(void *))

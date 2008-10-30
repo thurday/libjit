@@ -650,7 +650,7 @@ static jit_value_t apply_unary_arith
 		func->builder->may_throw = 1;
 	}
 	value1 = jit_insn_convert(func, value1, result_type, overflow_check);
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_unary(func, oper, value1, result_type);
 	}
@@ -719,7 +719,7 @@ static jit_value_t apply_arith
 	}
 	value1 = jit_insn_convert(func, value1, result_type, overflow_check);
 	value2 = jit_insn_convert(func, value2, result_type, overflow_check);
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_binary(func, oper, value1, value2, result_type);
 	}
@@ -773,7 +773,7 @@ static jit_value_t apply_shift
 	}
 	value1 = jit_insn_convert(func, value1, result_type, 0);
 	value2 = jit_insn_convert(func, value2, count_type, 0);
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_binary(func, oper, value1, value2, result_type);
 	}
@@ -828,7 +828,7 @@ static jit_value_t apply_compare
 	}
 	value1 = jit_insn_convert(func, value1, result_type, 0);
 	value2 = jit_insn_convert(func, value2, result_type, 0);
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_binary(func, oper, value1, value2, jit_type_int);
 	}
@@ -872,7 +872,7 @@ test_float_value(jit_function_t func, const jit_opcode_descr *descr, jit_value_t
 		return jit_value_create_nint_constant(func, jit_type_int, 0);
 	}
 
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_unary(func, oper, value1, jit_type_int);
 	}
@@ -2233,7 +2233,7 @@ jit_value_t jit_insn_neg
 	}
 
 	value1 = jit_insn_convert(func, value1, result_type, 0);
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_unary(func, oper, value1, result_type);
 	}
@@ -3391,7 +3391,7 @@ jit_value_t jit_insn_abs(jit_function_t func, jit_value_t value1)
 		/* Absolute value of an unsigned value */
 		return value1;
 	}
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_unary(func, oper, value1, result_type);
 	}
@@ -3510,7 +3510,7 @@ jit_value_t jit_insn_sign(jit_function_t func, jit_value_t value1)
 	}
 
 	value1 = jit_insn_convert(func, value1, result_type, 0);
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_unary(func, oper, value1, jit_type_int);
 	}
@@ -4085,6 +4085,7 @@ jit_value_t jit_insn_address_of(jit_function_t func, jit_value_t value1)
 	}
 	jit_value_set_addressable(value1);
 	result = apply_unary(func, JIT_OP_ADDRESS_OF, value1, type);
+	value1->address_of = result;
 	jit_type_free(type);
 	return result;
 }
@@ -4224,7 +4225,7 @@ static jit_value_t apply_unary_conversion
 	}
 
 	/* Bail out early if the conversion opcode is supported by the back end */
-	if(_jit_opcode_is_supported(oper))
+	if(_jit_opcode_is_supported(func, oper))
 	{
 		return apply_unary(func, oper, value1, result_type);
 	}
@@ -5313,6 +5314,7 @@ static int signature_identical(jit_type_t type1, jit_type_t type2)
 /*
  * Create call setup instructions, taking tail calls into effect.
  */
+
 static int create_call_setup_insns
 	(jit_function_t func, jit_function_t callee, jit_type_t signature,
 	 jit_value_t *args, unsigned int num_args,
@@ -5322,43 +5324,205 @@ static int create_call_setup_insns
 	jit_value_t value;
 	unsigned int arg_num;
 
-	/* If we are performing a tail call, then duplicate the argument
-	   values so that we don't accidentally destroy parameters in
-	   situations like func(x, y) -> func(y, x) */
-	if((flags & JIT_CALL_TAIL) != 0 && num_args > 0)
+        /* If the extended compiler is enabled we cannot just copy parameters to registers
+	   or locals where are the input values. As this could copy them to different registers and locals */
+
+	if(!jit_function_extended_compiler_is_enabled(func))
 	{
-		new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
-		for(arg_num = 0; arg_num < num_args; ++arg_num)
+		/* If we are performing a tail call, then duplicate the argument
+		   values so that we don't accidentally destroy parameters in
+		   situations like func(x, y) -> func(y, x) */
+		if((flags & JIT_CALL_TAIL) != 0 && num_args > 0)
 		{
-			value = args[arg_num];
-			if(value && value->is_parameter)
+			new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
+			for(arg_num = 0; arg_num < num_args; ++arg_num)
 			{
-				value = jit_insn_dup(func, value);
-				if(!value)
+				value = args[arg_num];
+				if(value && value->is_parameter)
+				{
+					value = jit_insn_dup(func, value);
+					if(!value)
+					{
+						return 0;
+					}
+				}
+				new_args[arg_num] = value;
+			}
+			args = new_args;
+		}
+
+		/* If we are performing a tail call, then store back to our own parameters */
+		if((flags & JIT_CALL_TAIL) != 0)
+		{
+			for(arg_num = 0; arg_num < num_args; ++arg_num)
+			{
+				if(!jit_insn_store(func, jit_value_get_param(func, arg_num),
+							   args[arg_num]))
+				{
+				return 0;
+				}
+    			}
+			*struct_return = 0;
+			return 1;
+		}
+	}
+	else
+	{
+		if((flags & JIT_CALL_TAIL) != 0 && func == callee)
+		{
+			int index;
+			for(index = 0; index < num_args; index++)
+			{
+				jit_value_t value = jit_value_get_param(func, index);
+				jit_insn_store(func, value, args[index]);
+			}
+			return 1;
+		}
+		
+		if((flags & JIT_CALL_TAIL) && signature_identical(signature, jit_function_get_signature(func)))
+		{
+			create_noarg_note(func, JIT_OP_TAIL_CALL);
+		}
+
+		jit_type_t returnType = jit_type_get_return(signature);
+		returnType = jit_type_normalize(returnType);
+		jit_value_t return_ptr = 0;
+
+		jit_abi_t caller_abi = jit_type_get_abi(jit_function_get_signature(func));
+		jit_abi_t called_abi = jit_type_get_abi(signature);
+		
+		/* At the moment we need to handle a special case if the called function has an internal abi */
+		if(called_abi == jit_abi_internal)
+		{
+			if(jit_type_is_struct(returnType) || jit_type_is_union(returnType))
+			{
+				*struct_return = jit_value_create(func, returnType);
+				return_ptr = jit_insn_address_of(func, *struct_return);
+				if(!return_ptr)
 				{
 					return 0;
 				}
 			}
-			new_args[arg_num] = value;
-		}
-		args = new_args;
-	}
 
-	/* If we are performing a tail call, then store back to our own parameters */
-	if((flags & JIT_CALL_TAIL) != 0)
-	{
-		for(arg_num = 0; arg_num < num_args; ++arg_num)
-		{
-			if(!jit_insn_store(func, jit_value_get_param(func, arg_num),
-							   args[arg_num]))
+			int dword_params_used = 0;
+			int float_params_used = 0;
+			int index = 0;
+	                int dword_param = 0;
+    		        int float_param = 0;
+			new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
+			for(index = (num_args - 1); index >= 0; index--)
 			{
-				return 0;
+				jit_type_t type = jit_type_get_param(signature, index);
+				new_args[index] = jit_insn_convert(func, args[index], type, 0);
+				type = jit_type_remove_tags(type);
+				int typeKind = jit_type_get_kind(type);
+				switch(typeKind)
+				{
+					CASE_USE_WORD
+					{
+						dword_params_used++;
+					}
+					break;
+					CASE_USE_FLOAT
+					{
+			   			float_params_used++;
+			    		}
+					break;
+				}
 			}
-		}
-		*struct_return = 0;
-		return 1;
-	}
 
+			if(jit_type_is_struct(returnType) || jit_type_is_union(returnType))
+			{
+				dword_params_used++;
+			}
+
+	                dword_param = dword_params_used;
+	                float_param = float_params_used;
+
+			for(index = (num_args - 1); index >= 0; index--)
+			{
+				jit_type_t type = jit_type_get_param(signature, index);
+				type = jit_type_remove_tags(type);
+				int typeKind = jit_type_get_kind(type);
+				switch(typeKind)
+				{
+				    CASE_USE_WORD
+				    {
+					    if(caller_abi != jit_abi_internal || dword_param > 3)
+					    {
+						    jit_insn_push(func, new_args[index]);
+					    }
+					    dword_param--;
+				    }
+				    break;
+				    CASE_USE_FLOAT
+				    {
+					    if(caller_abi != jit_abi_internal || float_param > 3)
+					    {
+						    jit_insn_push(func, new_args[index]);
+					    }
+					    float_param--;
+				    }
+				    break;
+				    default:
+				    {
+					    jit_insn_push(func, new_args[index]);
+				    }
+				    break;
+				}
+			}
+
+			if(jit_type_is_struct(returnType) || jit_type_is_union(returnType))
+			{
+				if(caller_abi != jit_abi_internal)
+				{
+					jit_insn_push(func, return_ptr);
+				}
+			}
+
+	                dword_param = dword_params_used;
+	                float_param = float_params_used;
+
+			for(index = (num_args - 1); index >= 0; index--)
+			{
+				jit_type_t type = jit_type_get_param(signature, index);
+				type = jit_type_remove_tags(type);
+				int typeKind = jit_type_get_kind(type);
+				switch(typeKind)
+				{
+				    CASE_USE_WORD
+				    {
+					    if(caller_abi == jit_abi_internal && dword_param <= 3)
+					    {
+						    jit_insn_outgoing_reg(func, new_args[index], jite_regIndex2reg(func, dword_param - 1, type));
+					    }
+					    dword_param--;
+				    }
+				    break;
+				    CASE_USE_FLOAT
+				    {
+					    if(caller_abi == jit_abi_internal && float_param <= 3)
+					    {
+						    jit_insn_outgoing_reg(func, new_args[index], jite_regIndex2reg(func, float_param - 1, type));
+					    }
+					    float_param--;
+				    }
+				    break;
+				}
+			}
+
+
+			if(jit_type_is_struct(returnType) || jit_type_is_union(returnType))
+			{
+				if(caller_abi == jit_abi_internal)
+				{
+					jit_insn_outgoing_reg(func, return_ptr, 0);
+				}
+			}
+
+			return 1;
+		}
+	}
 	/* Let the back end do the work */
 	return _jit_create_call_setup_insns
 		(func, signature, args, num_args,
@@ -5398,214 +5562,241 @@ static int create_call_setup_insns
  * to local variables.
  * @end table
  *
- * If @var{jit_func} has already been compiled, then @code{jit_insn_call}
+ * If @code{jit_func} has already been compiled, then @code{jit_insn_call}
  * may be able to intuit some of the above flags for itself.  Otherwise
  * it is up to the caller to determine when the flags may be appropriate.
  * @end deftypefun
 @*/
 jit_value_t jit_insn_call
-	(jit_function_t func, const char *name, jit_function_t jit_func,
-	 jit_type_t signature, jit_value_t *args, unsigned int num_args, int flags)
+    (jit_function_t func, const char *name, jit_function_t jit_func,
+     jit_type_t signature, jit_value_t *args, unsigned int num_args, int flags)
 {
-	int is_nested;
-	int nesting_level;
-	jit_function_t temp_func;
-	jit_value_t *new_args;
-	jit_value_t return_value;
-	jit_insn_t insn;
-	jit_label_t entry_point;
-	jit_label_t label_end;
+    int is_nested;
+    int nesting_level;
+    jit_function_t temp_func;
+    jit_value_t *new_args;
+    jit_value_t return_value = 0;
+    jit_value_t return_ptr   = 0;
+    jit_insn_t insn = 0;
+    jit_label_t entry_point;
+    jit_label_t label_end;
 
-	/* Bail out if there is something wrong with the parameters */
-	if(!_jit_function_ensure_builder(func) || !jit_func)
-	{
-		return 0;
-	}
+    /* Bail out if there is something wrong with the parameters */
+    if(!_jit_function_ensure_builder(func) || !jit_func)
+    {
+        return 0;
+    }
+    /* Get the default signature from "jit_func" */
+    if(!signature)
+    {
+        signature = jit_func->signature;
+    }
 
-	/* Get the default signature from "jit_func" */
-	if(!signature)
-	{
-		signature = jit_func->signature;
-	}
 
-	/* Verify that tail calls are possible to the destination */
-	if((flags & JIT_CALL_TAIL) != 0)
-	{
-		if(func->nested_parent || jit_func->nested_parent)
-		{
-			/* Cannot use tail calls with nested function calls */
-			flags &= ~JIT_CALL_TAIL;
-		}
-		else if(!signature_identical(signature, func->signature))
-		{
-			/* The signatures are not the same, so tail calls not allowed */
-			flags &= ~JIT_CALL_TAIL;
-		}
-	}
+    /* Verify that tail calls are possible to the destination */
+    if((flags & JIT_CALL_TAIL) != 0)
+    {
+        if(func->nested_parent || jit_func->nested_parent)
+        {
+            /* Cannot use tail calls with nested function calls */
+            flags &= ~JIT_CALL_TAIL;
+        }
+        else if(!signature_identical(signature, func->signature))
+        {
+            /* The signatures are not the same, so tail calls not allowed */
+            flags &= ~JIT_CALL_TAIL;
+        }
+    }
 
-	/* Determine the nesting relationship with the current function */
-	if(jit_func->nested_parent)
-	{
-		is_nested = 1;
-		if(jit_func->nested_parent == func)
-		{
-			/* We are calling one of our children */
-			nesting_level = -1;
-		}
-		else if(jit_func->nested_parent == func->nested_parent)
-		{
-			/* We are calling one of our direct siblings */
-			nesting_level = 0;
-		}
-		else
-		{
-			/* Search up to find the actual nesting level */
-			temp_func = func->nested_parent;
-			nesting_level = 1;
-			while(temp_func != 0 && temp_func != jit_func)
-			{
-				++nesting_level;
-				temp_func = temp_func->nested_parent;
-			}
-		}
-	}
-	else
-	{
-		is_nested = 0;
-		nesting_level = 0;
-	}
+    /* Determine the nesting relationship with the current function */
+    if(jit_func->nested_parent)
+    {
+        is_nested = 1;
+        if(jit_func->nested_parent == func)
+        {
+            /* We are calling one of our children */
+            nesting_level = -1;
+        }
+        else if(jit_func->nested_parent == func->nested_parent)
+        {
+            /* We are calling one of our direct siblings */
+            nesting_level = 0;
+        }
+        else
+        {
+            /* Search up to find the actual nesting level */
+            temp_func = func->nested_parent;
+            nesting_level = 1;
+            while(temp_func != 0 && temp_func != jit_func)
+            {
+                ++nesting_level;
+                temp_func = temp_func->nested_parent;
+            }
+        }
+    }
+    else
+    {
+        is_nested = 0;
+        nesting_level = 0;
+    }
 
-	/* Convert the arguments to the actual parameter types */
-	if(num_args > 0)
-	{
-		new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
-		if(!convert_call_parameters(func, signature, args, num_args, new_args))
-		{
-			return 0;
-		}
-	}
-	else
-	{
-		new_args = args;
-	}
+    /* Convert the arguments to the actual parameter types */
+    if(num_args > 0)
+    {
+        new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
+        if(!convert_call_parameters(func, signature, args, num_args, new_args))
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        new_args = args;
+    }
 
-	/* Intuit additional flags from "jit_func" if it was already compiled */
-	if(func->no_throw)
-	{
-		flags |= JIT_CALL_NOTHROW;
-	}
-	if(func->no_return)
-	{
-		flags |= JIT_CALL_NORETURN;
-	}
+    /* Intuit additional flags from "jit_func" if it was already compiled */
+    if(func->no_throw)
+    {
+        flags |= JIT_CALL_NOTHROW;
+    }
+    if(func->no_return)
+    {
+        flags |= JIT_CALL_NORETURN;
+    }
 
-	/* Set up exception frame information for the call */
-	if(!setup_eh_frame_for_call(func, flags))
-	{
-		return 0;
-	}
+    /* Set up exception frame information for the call */
+    if(!setup_eh_frame_for_call(func, flags))
+    {
+        return 0;
+    }
 
-	/* Create the instructions to push the parameters onto the stack */
-	if(!create_call_setup_insns
-			(func, jit_func, signature, new_args, num_args,
-			 is_nested, nesting_level, &return_value, flags))
-	{
-		return 0;
-	}
 
-	/* Start a new block and output the "call" instruction */
-	if((flags & JIT_CALL_TAIL) != 0 && func == jit_func)
-	{
-		/* We are performing a tail call to ourselves, which we can
-		   turn into an unconditional branch back to our entry point */
-		entry_point = jit_label_undefined;
-		label_end = jit_label_undefined;
-		if(!jit_insn_branch(func, &entry_point))
-		{
-			return 0;
-		}
-		if(!jit_insn_label(func, &entry_point))
-		{
-			return 0;
-		}
-		if(!jit_insn_label(func, &label_end))
-		{
-			return 0;
-		}
-		if(!jit_insn_move_blocks_to_start(func, entry_point, label_end))
-		{
-			return 0;
-		}
-	}
-	else
-	{
-		/* Functions that call out are not leaves */
-		func->builder->non_leaf = 1;
+    /* Create the instructions to push the parameters onto the stack */
+    if(!create_call_setup_insns
+            (func, jit_func, signature, new_args, num_args,
+             is_nested, nesting_level, &return_value, flags))
+    {
+        return 0;
+    }
 
-		/* Performing a regular call, or a tail call to someone else */
-		if(!jit_insn_new_block(func))
-		{
-			return 0;
-		}
-		insn = _jit_block_add_insn(func->builder->current_block);
-		if(!insn)
-		{
-			return 0;
-		}
-		if((flags & JIT_CALL_TAIL) != 0)
-		{
-			func->builder->has_tail_call = 1;
-			insn->opcode = JIT_OP_CALL_TAIL;
-		}
-		else
-		{
-			insn->opcode = JIT_OP_CALL;
-		}
-		insn->flags = JIT_INSN_DEST_IS_FUNCTION | JIT_INSN_VALUE1_IS_NAME;
-		insn->dest = (jit_value_t)jit_func;
-		insn->value1 = (jit_value_t)name;
-	}
+    if(jit_type_return_via_pointer(jit_type_get_return(signature))) return_ptr = return_value->address_of;
 
-	/* If the function does not return, then end the current block.
-	   The next block does not have "entered_via_top" set so that
-	   it will be eliminated during later code generation */
-	if((flags & (JIT_CALL_NORETURN | JIT_CALL_TAIL)) != 0)
-	{
-		func->builder->current_block->ends_in_dead = 1;
-		if(!jit_insn_new_block(func))
-		{
-			return 0;
-		}
-	}
+    /* Start a new block and output the "call" instruction */
+    if((flags & JIT_CALL_TAIL) != 0 && func == jit_func)
+    {
+        /* We are performing a tail call to ourselves, which we can
+           turn into an unconditional branch back to our entry point */
+        entry_point = jit_label_undefined;
+        label_end = jit_label_undefined;
+        if(!jit_insn_branch(func, &entry_point))
+        {
+            return 0;
+        }
+        if(!jit_insn_label(func, &entry_point))
+        {
+            return 0;
+        }
+        if(!jit_insn_label(func, &label_end))
+        {
+            return 0;
+        }
+        if(!jit_insn_move_blocks_to_start(func, entry_point, label_end))
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        /* Functions that call out are not leaves */
+        func->builder->non_leaf = 1;
 
-	/* Create space for the return value, if we don't already have one */
-	if(!return_value)
-	{
-		return_value = jit_value_create(func, jit_type_get_return(signature));
-		if(!return_value)
-		{
-			return 0;
-		}
-	}
+        /* Performing a regular call, or a tail call to someone else */
+        if(!jit_function_extended_compiler_is_enabled(func))
+        { // with the extended compiler we do not need to make a new block
+            if(!jit_insn_new_block(func))
+            {
+                return 0;
+            }
+        }
+        insn = _jit_block_add_insn(func->builder->current_block);
+        if(!insn)
+        {
+            return 0;
+        }
+        if((flags & JIT_CALL_TAIL) != 0)
+        {
+            func->builder->has_tail_call = 1;
+            insn->opcode = JIT_OP_CALL_TAIL;
+        }
+        else
+        {
+            insn->opcode = JIT_OP_CALL;
+        }
+        insn->flags = JIT_INSN_DEST_IS_FUNCTION | JIT_INSN_VALUE1_IS_NAME;
+        insn->dest = (jit_value_t) jit_func;
+        insn->value1 = (jit_value_t) name;
+        insn->value2 = (jit_value_t) return_value;
 
-	/* Create the instructions necessary to move the return value into place */
-	if((flags & JIT_CALL_TAIL) == 0)
-	{
-		if(!_jit_create_call_return_insns
-				(func, signature, new_args, num_args, return_value, is_nested))
-		{
-			return 0;
-		}
-	}
+        insn->call_params = (void *)(jit_memory_pool_alloc(&(func->builder->memory_pool), void **));
 
-	/* Restore exception frame information after the call */
-	if(!restore_eh_frame_after_call(func, flags))
-	{
-		return 0;
-	}
+        *(insn->call_params) = jit_malloc(sizeof(jit_value_t) * num_args + sizeof(struct _jite_call_params));
 
-	/* Return the value containing the result to the caller */
-	return return_value;
+        (*insn->call_params)->abi = jit_type_get_abi(signature);
+        (*insn->call_params)->num = jite_type_num_params(signature);
+        if(jit_type_return_via_pointer(jit_type_get_return(signature)))
+        {
+            jit_memmove((void*)((*insn->call_params)->args),
+                        &return_ptr, sizeof(jit_value_t));
+            jit_memmove((void*)&((*insn->call_params)->args[1]),
+                    new_args, sizeof(jit_value_t) * num_args);
+        }
+        else
+        {
+            jit_memmove((void*)((*insn->call_params)->args), new_args, sizeof(jit_value_t) * num_args);
+        }
+    }    
+
+    /* If the function does not return, then end the current block.
+       The next block does not have "entered_via_top" set so that
+       it will be eliminated during later code generation */
+    if((flags & (JIT_CALL_NORETURN | JIT_CALL_TAIL)) != 0)
+    {
+        func->builder->current_block->ends_in_dead = 1;
+        if(!jit_insn_new_block(func))
+        {
+            return 0;
+        }
+    }
+
+    /* Create space for the return value, if we don't already have one */
+    if(!return_value)
+    {
+        return_value = jit_value_create(func, jit_type_get_return(signature));
+        if(!return_value)
+        {
+            return 0;
+        }
+    }
+    if(insn) insn->value2 = (jit_value_t) return_value;
+
+    /* Create the instructions necessary to move the return value into place */
+    if((flags & JIT_CALL_TAIL) == 0)
+    {
+        if(!_jit_create_call_return_insns
+                (func, signature, new_args, num_args, return_value, is_nested))
+        {
+            return 0;
+        }
+    }
+
+    /* Restore exception frame information after the call */
+    if(!restore_eh_frame_after_call(func, flags))
+    {
+        return 0;
+    }
+    
+    /* Return the value containing the result to the caller */
+    return return_value;
 }
 
 /*@
@@ -5614,139 +5805,168 @@ jit_value_t jit_insn_call
  * @end deftypefun
 @*/
 jit_value_t jit_insn_call_indirect
-		(jit_function_t func, jit_value_t value, jit_type_t signature,
-		 jit_value_t *args, unsigned int num_args, int flags)
+        (jit_function_t func, jit_value_t value, jit_type_t signature,
+         jit_value_t *args, unsigned int num_args, int flags)
 {
-	jit_value_t *new_args;
-	jit_value_t return_value;
-	jit_insn_t insn;
+    jit_value_t *new_args;
+    jit_value_t return_value = 0;
+    jit_value_t return_ptr   = 0;
+    jit_insn_t insn;
 
-	/* Bail out if there is something wrong with the parameters */
-	if(!_jit_function_ensure_builder(func) || !value || !signature)
-	{
-		return 0;
-	}
+    /* Bail out if there is something wrong with the parameters */
+    if(!_jit_function_ensure_builder(func) || !value || !signature)
+    {
+        return 0;
+    }
 
-	/* Verify that tail calls are possible to the destination */
+    /* Verify that tail calls are possible to the destination */
 #if defined(JIT_BACKEND_INTERP)
-	flags &= ~JIT_CALL_TAIL;
+    flags &= ~JIT_CALL_TAIL;
 #else
-	if((flags & JIT_CALL_TAIL) != 0)
-	{
-		if(func->nested_parent)
-		{
-			flags &= ~JIT_CALL_TAIL;
-		}
-		else if(!signature_identical(signature, func->signature))
-		{
-			flags &= ~JIT_CALL_TAIL;
-		}
-	}
+    if((flags & JIT_CALL_TAIL) != 0)
+       {
+        if(func->nested_parent)
+        {
+            flags &= ~JIT_CALL_TAIL;
+        }
+        else if(!signature_identical(signature, func->signature))
+        {
+            flags &= ~JIT_CALL_TAIL;
+        }
+    }
 #endif
 
-	/* We are making a native call */
-	flags |= JIT_CALL_NATIVE;
+    /* We are making a native call */
+    flags |= JIT_CALL_NATIVE;
 
-	/* Convert the arguments to the actual parameter types */
-	if(num_args > 0)
-	{
-		new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
-		if(!convert_call_parameters(func, signature, args, num_args, new_args))
-		{
-			return 0;
-		}
-	}
-	else
-	{
-		new_args = args;
-	}
+    /* Convert the arguments to the actual parameter types */
+    if(num_args > 0)
+    {
+        new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
+        if(!convert_call_parameters(func, signature, args, num_args, new_args))
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        new_args = args;
+    }
 
-	/* Set up exception frame information for the call */
-	if(!setup_eh_frame_for_call(func, flags))
-	{
-		return 0;
-	}
+    /* Set up exception frame information for the call */
+    if(!setup_eh_frame_for_call(func, flags))
+    {
+        return 0;
+    }
 
-	/* Create the instructions to push the parameters onto the stack */
-	if(!create_call_setup_insns
-		(func, 0, signature, new_args, num_args, 0, 0, &return_value, flags))
-	{
-		return 0;
-	}
+    /* Create the instructions to push the parameters onto the stack */
+    if(!create_call_setup_insns
+        (func, 0, signature, new_args, num_args, 0, 0, &return_value, flags))
+    {
+        return 0;
+    }
 
-	/* Move the indirect pointer value into an appropriate register */
-	if(!_jit_setup_indirect_pointer(func, value))
-	{
-		return 0;
-	}
 
-	/* Functions that call out are not leaves */
-	func->builder->non_leaf = 1;
+        if(jit_type_return_via_pointer(jit_type_get_return(signature))) return_ptr = return_value->address_of;
 
-	/* Start a new block and output the "call_indirect" instruction */
-	if(!jit_insn_new_block(func))
-	{
-		return 0;
-	}
-	insn = _jit_block_add_insn(func->builder->current_block);
-	if(!insn)
-	{
-		return 0;
-	}
-	jit_value_ref(func, value);
-	if((flags & JIT_CALL_TAIL) != 0)
-	{
-		func->builder->has_tail_call = 1;
-		insn->opcode = JIT_OP_CALL_INDIRECT_TAIL;
-	}
-	else
-	{
-		insn->opcode = JIT_OP_CALL_INDIRECT;
-	}
-	insn->flags = JIT_INSN_VALUE2_IS_SIGNATURE;
-	insn->value1 = value;
-	insn->value2 = (jit_value_t)jit_type_copy(signature);
 
-	/* If the function does not return, then end the current block.
-	   The next block does not have "entered_via_top" set so that
-	   it will be eliminated during later code generation */
-	if((flags & (JIT_CALL_NORETURN | JIT_CALL_TAIL)) != 0)
-	{
-		func->builder->current_block->ends_in_dead = 1;
-		if(!jit_insn_new_block(func))
-		{
-			return 0;
-		}
-	}
+    /* Functions that call out are not leaves */
+    func->builder->non_leaf = 1;
 
-	/* Create space for the return value, if we don't already have one */
-	if(!return_value)
-	{
-		return_value = jit_value_create(func, jit_type_get_return(signature));
-		if(!return_value)
-		{
-			return 0;
-		}
-	}
+    /* Start a new block and output the "call_indirect" instruction */
+    if(!jit_function_extended_compiler_is_enabled(func))
+    {
+        /* Move the indirect pointer value into an appropriate register */
+        if(!_jit_setup_indirect_pointer(func, value))
+        {
+            return 0;
+        }
 
-	/* Create the instructions necessary to move the return value into place */
-	if((flags & JIT_CALL_TAIL) == 0)
-	{
-		if(!_jit_create_call_return_insns
-				(func, signature, new_args, num_args, return_value, 0))
-		{
-			return 0;
-		}
-	}
+        /* With the extended compiler we do not need to make a new block */
+        if(!jit_insn_new_block(func))
+        {
+            return 0;
+        }
+    }
 
-	/* Restore exception frame information after the call */
-	if(!restore_eh_frame_after_call(func, flags))
-	{
-		return 0;
-	}
+    insn = _jit_block_add_insn(func->builder->current_block);
+    if(!insn)
+    {
+        return 0;
+    }
+    jit_value_ref(func, value);
+    if((flags & JIT_CALL_TAIL) != 0)
+    {
+        func->builder->has_tail_call = 1;
+        insn->opcode = JIT_OP_CALL_INDIRECT_TAIL;
+    }
+    else
+    {
+        insn->opcode = JIT_OP_CALL_INDIRECT;
+    }
 
-	/* Return the value containing the result to the caller */
-	return return_value;
+    insn->value1 = value;
+    insn->value2 = return_value;
+
+
+    insn->call_params = (void *)(jit_memory_pool_alloc(&(func->builder->memory_pool), void **));
+
+    *(insn->call_params) = jit_malloc(sizeof(jit_value_t) * num_args + sizeof(struct _jite_call_params));
+
+    (*insn->call_params)->abi = jit_type_get_abi(signature);
+    (*insn->call_params)->num = jite_type_num_params(signature);
+    if(jit_type_return_via_pointer(jit_type_get_return(signature)))
+    {
+        jit_memmove((void*)((*insn->call_params)->args),
+                    &return_ptr, sizeof(jit_value_t));
+        jit_memmove((void*)&((*insn->call_params)->args[1]),
+                new_args, sizeof(jit_value_t) * num_args);
+    }
+    else
+    {
+        jit_memmove((void*)((*insn->call_params)->args), new_args, sizeof(jit_value_t) * num_args);
+    }
+
+    /* If the function does not return, then end the current block.
+       The next block does not have "entered_via_top" set so that
+       it will be eliminated during later code generation */
+    if((flags & (JIT_CALL_NORETURN | JIT_CALL_TAIL)) != 0)
+    {
+        func->builder->current_block->ends_in_dead = 1;
+        if(!jit_insn_new_block(func))
+        {
+            return 0;
+        }
+    }
+
+    /* Create space for the return value, if we don't already have one */
+    if(!return_value)
+    {
+        return_value = jit_value_create(func, jit_type_get_return(signature));
+        if(!return_value)
+        {
+            return 0;
+        }
+    }
+    if(insn) insn->value2 = (jit_value_t) return_value;
+
+    /* Create the instructions necessary to move the return value into place */
+    if((flags & JIT_CALL_TAIL) == 0)
+    {
+        if(!_jit_create_call_return_insns
+                (func, signature, new_args, num_args, return_value, 0))
+        {
+            return 0;
+        }
+    }
+
+    /* Restore exception frame information after the call */
+    if(!restore_eh_frame_after_call(func, flags))
+    {
+        return 0;
+    }
+    /* Return the value containing the result to the caller */
+    return return_value;
 }
 
 /*@
@@ -5759,130 +5979,159 @@ jit_value_t jit_insn_call_indirect
  * @end deftypefun
 @*/
 jit_value_t jit_insn_call_indirect_vtable
-	(jit_function_t func, jit_value_t value, jit_type_t signature,
-	 jit_value_t *args, unsigned int num_args, int flags)
+    (jit_function_t func, jit_value_t value, jit_type_t signature,
+     jit_value_t *args, unsigned int num_args, int flags)
 {
-	jit_value_t *new_args;
-	jit_value_t return_value;
-	jit_insn_t insn;
+    jit_value_t *new_args;
+    jit_value_t return_value = 0;
+    jit_value_t return_ptr   = 0;
+    jit_insn_t insn;
 
-	/* Bail out if there is something wrong with the parameters */
-	if(!_jit_function_ensure_builder(func) || !value || !signature)
-	{
-		return 0;
-	}
+    /* Bail out if there is something wrong with the parameters */
+    if(!_jit_function_ensure_builder(func) || !value || !signature)
+    {
+        return 0;
+    }
 
-	/* Verify that tail calls are possible to the destination */
-	if((flags & JIT_CALL_TAIL) != 0)
-	{
-		if(func->nested_parent)
-		{
-			flags &= ~JIT_CALL_TAIL;
-		}
-		else if(!signature_identical(signature, func->signature))
-		{
-			flags &= ~JIT_CALL_TAIL;
-		}
-	}
+    /* Verify that tail calls are possible to the destination */
+    if((flags & JIT_CALL_TAIL) != 0)
+    {
+        if(func->nested_parent)
+        {
+            flags &= ~JIT_CALL_TAIL;
+        }
+        else if(!signature_identical(signature, func->signature))
+        {
+            flags &= ~JIT_CALL_TAIL;
+        }
+    }
 
-	/* Convert the arguments to the actual parameter types */
-	if(num_args > 0)
-	{
-		new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
-		if(!convert_call_parameters(func, signature, args, num_args, new_args))
-		{
-			return 0;
-		}
-	}
-	else
-	{
-		new_args = args;
-	}
+    /* Convert the arguments to the actual parameter types */
+    if(num_args > 0)
+    {
+        new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
+        if(!convert_call_parameters(func, signature, args, num_args, new_args))
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        new_args = args;
+    }
 
-	/* Set up exception frame information for the call */
-	if(!setup_eh_frame_for_call(func, flags))
-	{
-		return 0;
-	}
+    /* Set up exception frame information for the call */
+    if(!setup_eh_frame_for_call(func, flags))
+    {
+        return 0;
+    }
 
-	/* Create the instructions to push the parameters onto the stack */
-	if(!create_call_setup_insns
-		(func, 0, signature, new_args, num_args, 0, 0, &return_value, flags))
-	{
-		return 0;
-	}
+    /* Create the instructions to push the parameters onto the stack */
+    if(!create_call_setup_insns
+        (func, 0, signature, new_args, num_args, 0, 0, &return_value, flags))
+    {
+        return 0;
+    }
 
-	/* Move the indirect pointer value into an appropriate register */
-	if(!_jit_setup_indirect_pointer(func, value))
-	{
-		return 0;
-	}
 
-	/* Functions that call out are not leaves */
-	func->builder->non_leaf = 1;
+        if(jit_type_return_via_pointer(jit_type_get_return(signature))) return_ptr = return_value->address_of;
 
-	/* Start a new block and output the "call_vtable_ptr" instruction */
-	if(!jit_insn_new_block(func))
-	{
-		return 0;
-	}
-	insn = _jit_block_add_insn(func->builder->current_block);
-	if(!insn)
-	{
-		return 0;
-	}
-	jit_value_ref(func, value);
-	if((flags & JIT_CALL_TAIL) != 0)
-	{
-		func->builder->has_tail_call = 1;
-		insn->opcode = JIT_OP_CALL_VTABLE_PTR_TAIL;
-	}
-	else
-	{
-		insn->opcode = JIT_OP_CALL_VTABLE_PTR;
-	}
-	insn->value1 = value;
 
-	/* If the function does not return, then end the current block.
-	   The next block does not have "entered_via_top" set so that
-	   it will be eliminated during later code generation */
-	if((flags & (JIT_CALL_NORETURN | JIT_CALL_TAIL)) != 0)
-	{
-		func->builder->current_block->ends_in_dead = 1;
-		if(!jit_insn_new_block(func))
-		{
-			return 0;
-		}
-	}
+    /* Functions that call out are not leaves */
+    func->builder->non_leaf = 1;
 
-	/* Create space for the return value, if we don't already have one */
-	if(!return_value)
-	{
-		return_value = jit_value_create(func, jit_type_get_return(signature));
-		if(!return_value)
-		{
-			return 0;
-		}
-	}
+    /* Start a new block and output the "call_vtable_ptr" instruction */
+    if(!jit_function_extended_compiler_is_enabled(func))
+    { 
+    
+        /* Move the indirect pointer value into an appropriate register */
+        if(!_jit_setup_indirect_pointer(func, value))
+        {
+            return 0;
+        }
 
-	/* Create the instructions necessary to move the return value into place */
-	if((flags & JIT_CALL_TAIL) == 0)
-	{
-		if(!_jit_create_call_return_insns
-				(func, signature, new_args, num_args, return_value, 0))
-		{
-			return 0;
-		}
-	}
+            /* With the extended compiler we do not need to make a new block */
+        if(!jit_insn_new_block(func))
+        {
+            return 0;
+        }
+    }
+    insn = _jit_block_add_insn(func->builder->current_block);
+    if(!insn)
+    {
+        return 0;
+    }
+    jit_value_ref(func, value);
+    if((flags & JIT_CALL_TAIL) != 0)
+    {
+        func->builder->has_tail_call = 1;
+        insn->opcode = JIT_OP_CALL_VTABLE_PTR_TAIL;
+    }
+    else
+    {
+        insn->opcode = JIT_OP_CALL_VTABLE_PTR;
+    }
+    insn->value1 = value;
+    insn->value2 = return_value;
 
-	/* Restore exception frame information after the call */
-	if(!restore_eh_frame_after_call(func, flags))
-	{
-		return 0;
-	}
 
-	/* Return the value containing the result to the caller */
-	return return_value;
+    insn->call_params = (void *)(jit_memory_pool_alloc(&(func->builder->memory_pool), void **));
+
+    *(insn->call_params) = jit_malloc(sizeof(jit_value_t) * num_args + sizeof(struct _jite_call_params));
+
+    (*insn->call_params)->abi = jit_type_get_abi(signature);
+    (*insn->call_params)->num = jite_type_num_params(signature);
+    if(jit_type_return_via_pointer(jit_type_get_return(signature)))
+    {
+        jit_memmove((void*)((*insn->call_params)->args),
+                    &return_ptr, sizeof(jit_value_t));
+        jit_memmove((void*)&((*insn->call_params)->args[1]),
+                new_args, sizeof(jit_value_t) * num_args);
+    }
+    else
+    {
+        jit_memmove((void*)((*insn->call_params)->args), new_args, sizeof(jit_value_t) * num_args);
+    }
+    /* If the function does not return, then end the current block.
+       The next block does not have "entered_via_top" set so that
+       it will be eliminated during later code generation */
+    if((flags & (JIT_CALL_NORETURN | JIT_CALL_TAIL)) != 0)
+    {
+        func->builder->current_block->ends_in_dead = 1;
+        if(!jit_insn_new_block(func))
+        {
+            return 0;
+        }
+    }
+
+    /* Create space for the return value, if we don't already have one */
+    if(!return_value)
+    {
+        return_value = jit_value_create(func, jit_type_get_return(signature));
+        if(!return_value)
+        {
+            return 0;
+        }
+    }
+        if(insn) insn->value2 = (jit_value_t) return_value;
+
+    /* Create the instructions necessary to move the return value into place */
+    if((flags & JIT_CALL_TAIL) == 0)
+    {
+        if(!_jit_create_call_return_insns
+                (func, signature, new_args, num_args, return_value, 0))
+        {
+            return 0;
+        }
+    }
+
+    /* Restore exception frame information after the call */
+    if(!restore_eh_frame_after_call(func, flags))
+    {
+        return 0;
+    }
+    /* Return the value containing the result to the caller */
+    return return_value;
 }
 
 /*@
@@ -5892,136 +6141,162 @@ jit_value_t jit_insn_call_indirect_vtable
  * @end deftypefun
 @*/
 jit_value_t jit_insn_call_native
-	(jit_function_t func, const char *name, void *native_func,
-	 jit_type_t signature, jit_value_t *args, unsigned int num_args, int flags)
+    (jit_function_t func, const char *name, void *native_func,
+     jit_type_t signature, jit_value_t *args, unsigned int num_args, int flags)
 {
-	jit_value_t *new_args;
-	jit_value_t return_value;
-	jit_insn_t insn;
+    jit_value_t return_value = 0;
+    jit_value_t return_ptr   = 0;
+    jit_insn_t insn;
+    /* Bail out if there is something wrong with the parameters */
+    if(!_jit_function_ensure_builder(func) || !native_func || !signature)
+    {
+        return 0;
+    }
 
-	/* Bail out if there is something wrong with the parameters */
-	if(!_jit_function_ensure_builder(func) || !native_func || !signature)
-	{
-		return 0;
-	}
-
-	/* Verify that tail calls are possible to the destination */
+    /* Verify that tail calls are possible to the destination */
 #if defined(JIT_BACKEND_INTERP)
-	flags &= ~JIT_CALL_TAIL;
+    flags &= ~JIT_CALL_TAIL;
 #else
-	if((flags & JIT_CALL_TAIL) != 0)
-	{
-		if(func->nested_parent)
-		{
-			flags &= ~JIT_CALL_TAIL;
-		}
-		else if(!signature_identical(signature, func->signature))
-		{
-			flags &= ~JIT_CALL_TAIL;
-		}
-	}
+    if((flags & JIT_CALL_TAIL) != 0)
+    {
+        if(func->nested_parent)
+        {
+            flags &= ~JIT_CALL_TAIL;
+        }
+        else if(!signature_identical(signature, func->signature))
+        {
+            flags &= ~JIT_CALL_TAIL;
+        }
+    }
 #endif
 
-	/* We are making a native call */
-	flags |= JIT_CALL_NATIVE;
+    /* We are making a native call */
+    flags |= JIT_CALL_NATIVE;
+    jit_value_t *new_args;
+    /* Convert the arguments to the actual parameter types */
+    if(num_args > 0)
+    {
+        new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
+        if(!convert_call_parameters(func, signature, args, num_args, new_args))
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        new_args = args;
+    }
 
-	/* Convert the arguments to the actual parameter types */
-	if(num_args > 0)
-	{
-		new_args = (jit_value_t *)alloca(sizeof(jit_value_t) * num_args);
-		if(!convert_call_parameters(func, signature, args, num_args, new_args))
-		{
-			return 0;
-		}
-	}
-	else
-	{
-		new_args = args;
-	}
+    /* Set up exception frame information for the call */
+    if(!setup_eh_frame_for_call(func, flags))
+    {
+        return 0;
+    }
 
-	/* Set up exception frame information for the call */
-	if(!setup_eh_frame_for_call(func, flags))
-	{
-		return 0;
-	}
+    /* Create the instructions to push the parameters onto the stack */
+    if(!create_call_setup_insns
+        (func, 0, signature, new_args, num_args, 0, 0, &return_value, flags))
+    {
+        return 0;
+    }
 
-	/* Create the instructions to push the parameters onto the stack */
-	if(!create_call_setup_insns
-		(func, 0, signature, new_args, num_args, 0, 0, &return_value, flags))
-	{
-		return 0;
-	}
+    if(jit_type_return_via_pointer(jit_type_get_return(signature))) return_ptr = return_value->address_of;
 
-	/* Functions that call out are not leaves */
-	func->builder->non_leaf = 1;
 
-	/* Start a new block and output the "call_external" instruction */
-	if(!jit_insn_new_block(func))
-	{
-		return 0;
-	}
-	insn = _jit_block_add_insn(func->builder->current_block);
-	if(!insn)
-	{
-		return 0;
-	}
-	if((flags & JIT_CALL_TAIL) != 0)
-	{
-		func->builder->has_tail_call = 1;
-		insn->opcode = JIT_OP_CALL_EXTERNAL_TAIL;
-	}
-	else
-	{
-		insn->opcode = JIT_OP_CALL_EXTERNAL;
-	}
-	insn->flags = JIT_INSN_DEST_IS_NATIVE | JIT_INSN_VALUE1_IS_NAME;
-	insn->dest = (jit_value_t)native_func;
-	insn->value1 = (jit_value_t)name;
+    /* Functions that call out are not leaves */
+    func->builder->non_leaf = 1;
+
+    /* Start a new block and output the "call_external" instruction */
+    if(!jit_function_extended_compiler_is_enabled(func))
+    {
+            /* With the extended compiler we do not need to make a new block */
+        if(!jit_insn_new_block(func))
+        {
+            return 0;
+        }
+    }
+
+    insn = _jit_block_add_insn(func->builder->current_block);
+    if(!insn)
+    {
+        return 0;
+    }
+    if((flags & JIT_CALL_TAIL) != 0)
+    {
+        func->builder->has_tail_call = 1;
+        insn->opcode = JIT_OP_CALL_EXTERNAL_TAIL;
+    }
+    else
+    {
+        insn->opcode = JIT_OP_CALL_EXTERNAL;
+    }
+    insn->flags = JIT_INSN_DEST_IS_NATIVE | JIT_INSN_VALUE1_IS_NAME;
+    insn->dest = (jit_value_t)native_func;
+    insn->value1 = (jit_value_t)name;
 #ifdef JIT_BACKEND_INTERP
-	insn->flags |= JIT_INSN_VALUE2_IS_SIGNATURE;
-	insn->value2 = (jit_value_t)jit_type_copy(signature);
+    insn->flags |= JIT_INSN_VALUE2_IS_SIGNATURE;
+    insn->value2 = (jit_value_t)jit_type_copy(signature);
 #endif
 
-	/* If the function does not return, then end the current block.
-	   The next block does not have "entered_via_top" set so that
-	   it will be eliminated during later code generation */
-	if((flags & (JIT_CALL_NORETURN | JIT_CALL_TAIL)) != 0)
-	{
-		func->builder->current_block->ends_in_dead = 1;
-		if(!jit_insn_new_block(func))
-		{
-			return 0;
-		}
-	}
+    insn->value2 = (jit_value_t) return_value;
 
-	/* Create space for the return value, if we don't already have one */
-	if(!return_value)
-	{
-		return_value = jit_value_create(func, jit_type_get_return(signature));
-		if(!return_value)
-		{
-			return 0;
-		}
-	}
+    insn->call_params = (void *)(jit_memory_pool_alloc(&(func->builder->memory_pool), void **));
 
-	/* Create the instructions necessary to move the return value into place */
-	if((flags & JIT_CALL_TAIL) == 0)
-	{
-		if(!_jit_create_call_return_insns
-				(func, signature, new_args, num_args, return_value, 0))
-		{
-			return 0;
-		}
-	}
+    *(insn->call_params) = jit_malloc(sizeof(jit_value_t) * num_args + sizeof(struct _jite_call_params));
 
-	/* Restore exception frame information after the call */
-	if(!restore_eh_frame_after_call(func, flags))
-	{
-		return 0;
-	}
+    (*insn->call_params)->abi = jit_type_get_abi(signature);
+    (*insn->call_params)->num = jite_type_num_params(signature);
+    if(jit_type_return_via_pointer(jit_type_get_return(signature)))
+    {
+        jit_memmove((void*)((*insn->call_params)->args),
+                    &return_ptr, sizeof(jit_value_t));
+        jit_memmove((void*)&((*insn->call_params)->args[1]),
+                new_args, sizeof(jit_value_t) * num_args);
+    }
+    else
+    {
+        jit_memmove((void*)((*insn->call_params)->args), new_args, sizeof(jit_value_t) * num_args);
+    }
+    /* If the function does not return, then end the current block.
+       The next block does not have "entered_via_top" set so that
+       it will be eliminated during later code generation */
+    if((flags & (JIT_CALL_NORETURN | JIT_CALL_TAIL)) != 0)
+    {
+        func->builder->current_block->ends_in_dead = 1;
+        if(!jit_insn_new_block(func))
+        {
+            return 0;
+        }
+    }
 
-	/* Return the value containing the result to the caller */
-	return return_value;
+    /* Create space for the return value, if we don't already have one */
+    if(!return_value)
+    {
+        return_value = jit_value_create(func, jit_type_get_return(signature));
+        if(!return_value)
+        {
+            return 0;
+        }
+    }
+    if(insn) insn->value2 = (jit_value_t) return_value;
+
+    /* Create the instructions necessary to move the return value into place */
+    if((flags & JIT_CALL_TAIL) == 0)
+    {
+        if(!_jit_create_call_return_insns
+                (func, signature, new_args, num_args, return_value, 0))
+        {
+            return 0;
+        }
+    }
+
+    /* Restore exception frame information after the call */
+    if(!restore_eh_frame_after_call(func, flags))
+    {
+        return 0;
+    }
+    /* Return the value containing the result to the caller */
+    return return_value;
 }
 
 /*@
@@ -6473,11 +6748,14 @@ int jit_insn_push(jit_function_t func, jit_value_t value)
 		case JIT_TYPE_STRUCT:
 		case JIT_TYPE_UNION:
 		{
-			/* We need the address of the value for "push_struct" */
-			value = jit_insn_address_of(func, value);
-			if(!value)
+			if(!jit_function_extended_compiler_is_enabled(func))
 			{
-				return 0;
+			        /* We need the address of the value for "push_struct" */
+	    	         	value = jit_insn_address_of(func, value);
+			        if(!value)
+		        	{
+	        			return 0;
+		        	}
 			}
 			return create_note
 				(func, JIT_OP_PUSH_STRUCT, value,
@@ -7752,11 +8030,24 @@ jit_value_t jit_insn_call_filter
  * @end deftypefun
 @*/
 int jit_insn_memcpy
-	(jit_function_t func, jit_value_t dest,
-	 jit_value_t src, jit_value_t size)
+    (jit_function_t func, jit_value_t dest,
+     jit_value_t src, jit_value_t size)
 {
-	size = jit_insn_convert(func, size, jit_type_nint, 0);
-	return apply_ternary(func, JIT_OP_MEMCPY, dest, src, size);
+    if(jit_function_extended_compiler_is_enabled(func) && (!jit_value_is_constant(size) || jit_value_is_constant(dest) || jit_value_is_constant(src)))
+    {
+        jit_type_t params[3];
+        jit_value_t args[3];
+        params[0] = jit_type_void_ptr;
+        params[1] = jit_type_void_ptr;
+        params[2] = jit_type_uint;
+        args[0] = dest;
+        args[1] = src;
+        args[2] = size;
+        jit_type_t signature = jit_type_create_signature(jit_abi_cdecl, jit_type_int, params, 3, 1);
+        jit_insn_call_native(func, "jit_memcpy", jit_memcpy, signature, args, 3, JIT_CALL_NOTHROW);
+        return 1;
+    }
+    return apply_ternary(func, JIT_OP_MEMCPY, dest, src, size);
 }
 
 /*@
@@ -7766,11 +8057,25 @@ int jit_insn_memcpy
  * @end deftypefun
 @*/
 int jit_insn_memmove
-	(jit_function_t func, jit_value_t dest,
-	 jit_value_t src, jit_value_t size)
+    (jit_function_t func, jit_value_t dest,
+     jit_value_t src, jit_value_t size)
 {
-	size = jit_insn_convert(func, size, jit_type_nint, 0);
-	return apply_ternary(func, JIT_OP_MEMMOVE, dest, src, size);
+    if(jit_function_extended_compiler_is_enabled(func))
+    {
+        jit_type_t params[3];
+        jit_value_t args[3];
+        params[0] = jit_type_void_ptr;
+        params[1] = jit_type_void_ptr;
+        params[2] = jit_type_uint;
+        args[0] = dest;
+        args[1] = src;
+        args[2] = size;
+        jit_type_t signature = jit_type_create_signature(jit_abi_cdecl, jit_type_int, params, 3, 1);
+        jit_insn_call_native(func, "jit_memmove", jit_memmove, signature, args, 3, JIT_CALL_NOTHROW);  
+        return 1;
+    }
+    size = jit_insn_convert(func, size, jit_type_nint, 0);
+    return apply_ternary(func, JIT_OP_MEMMOVE, dest, src, size);
 }
 
 /*@
@@ -7779,12 +8084,26 @@ int jit_insn_memmove
  * @end deftypefun
 @*/
 int jit_insn_memset
-	(jit_function_t func, jit_value_t dest,
-	 jit_value_t value, jit_value_t size)
+    (jit_function_t func, jit_value_t dest,
+     jit_value_t value, jit_value_t size)
 {
-	value = jit_insn_convert(func, value, jit_type_int, 0);
-	size = jit_insn_convert(func, size, jit_type_nint, 0);
-	return apply_ternary(func, JIT_OP_MEMSET, dest, value, size);
+    if(jit_function_extended_compiler_is_enabled(func))
+    {
+        jit_type_t params[3];
+        jit_value_t args[3];
+        params[0] = jit_type_void_ptr;
+        params[1] = jit_type_uint;
+        params[2] = jit_type_uint;
+        args[0] = dest;
+        args[1] = value;
+        args[2] = size;
+        jit_type_t signature = jit_type_create_signature(jit_abi_cdecl, jit_type_int, params, 3, 1);
+        jit_insn_call_native(func, "jit_memset", jit_memset, signature, args, 3, JIT_CALL_NOTHROW);  
+        return 1;
+    }
+    value = jit_insn_convert(func, value, jit_type_int, 0);
+    size = jit_insn_convert(func, size, jit_type_nint, 0);
+    return apply_ternary(func, JIT_OP_MEMSET, dest, value, size);
 }
 
 /*@

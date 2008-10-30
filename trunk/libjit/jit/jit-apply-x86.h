@@ -354,7 +354,7 @@
  * The number of bytes that are needed for a redirector stub.
  * This includes any extra bytes that are needed for alignment.
  */
-#define	jit_redirector_size		24
+#define	jit_redirector_size		256
 
 /*
  * The number of bytes that are needed for a indirector stub.
