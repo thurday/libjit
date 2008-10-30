@@ -1,5 +1,5 @@
 /*
- * jit-gen-i486-masm.h: Macro assembler for generating machine code.
+ * jite-gen-i486-masm.h: Macro assembler for generating machine code.
  *
  */
 
