@@ -2575,7 +2575,7 @@ void jite_allocate_frame(jit_function_t func, jite_frame_t frame)
 
 unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t func, jite_vreg_t vreg, jite_vreg_t vreg1, jite_vreg_t vreg2, unsigned char bUsage, unsigned int fRegCond, int typeKind, unsigned int *foundReg)
 {
-    if((vreg && vreg->in_frame) || bUsage == LOCAL_ALLOCATE_FOR_TEMP)
+    if(vreg && vreg->in_frame || bUsage == LOCAL_ALLOCATE_FOR_TEMP)
     {
         jit_type_t type;
         unsigned char bRegFound = 0;
