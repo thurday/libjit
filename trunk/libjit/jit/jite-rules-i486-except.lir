@@ -75,6 +75,8 @@ JIT_OP_LEAVE_FINALLY:
 
 JIT_OP_CALL_FINALLY:
     [] -> {
+        inst = jite_restore_local_registers(inst, func, 0xffffffff);
+
         jit_block_t block;
 
         block = jit_block_from_label(func, (jit_label_t)(insn->dest));
@@ -106,6 +108,7 @@ JIT_OP_LEAVE_FILTER:
 
 JIT_OP_CALL_FILTER:
     [] -> {
+        inst = jite_restore_local_registers(inst, func, 0xffffffff);
         /* TODO */
     }
 

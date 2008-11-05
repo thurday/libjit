@@ -250,6 +250,8 @@ unsigned char* jite_allocate_registers_and_frames(unsigned char *inst, jit_funct
 
 unsigned char* jite_allocate_local_registers_for_input(unsigned char *inst, jit_function_t func, jite_vreg_t vreg, jite_vreg_t vreg1, jite_vreg_t vreg2);
 
+unsigned char* jite_restore_temporary_frame(unsigned char *inst, jit_function_t func, unsigned int regMask);
+
 unsigned char* jite_restore_local_registers(unsigned char *inst, jit_function_t func, unsigned int regMask);
 
 unsigned char* jite_restore_local_frame(unsigned char *inst, jit_function_t func, jite_vreg_t vreg);

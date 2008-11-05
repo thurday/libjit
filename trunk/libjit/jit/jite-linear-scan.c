@@ -14,6 +14,7 @@ unsigned int jite_value_in_reg(jit_value_t value)
     return 0;
 }
 
+
 unsigned int jite_value_in_frame(jit_value_t value)
 {
     if(value && value->vreg && value->vreg->in_frame && value->vreg->frame)
@@ -525,7 +526,6 @@ unsigned char jite_update_liveness_for_branch(jit_function_t func, jit_insn_t in
                     updated = 1;
                 }
             }
-
         }
     }
     return updated;
