@@ -344,10 +344,12 @@ JIT_OP_RETURN_REG:
         }
     }
     [local, imm] -> {
+        /* This local allocation should move this variable locally to a register */
         int sourceX86Reg = (int)jit_value_get_nint_constant(insn->value2);
         int sourceReg = jite_x86reg_to_reg(sourceX86Reg);
         if(sourceX86Reg >= X86_REG_EAX && sourceX86Reg <= X86_REG_ESP)
-        {
+        {            
+	    inst = jite_allocate_local_register(inst, func, insn->value1->vreg, 0, 0, LOCAL_ALLOCATE_FOR_ALIASING, ~(jite_reg2object(func, X86_EAX, sourceType)->hash_code), JIT_TYPE_UINT, 0);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, sourceReg, sourceType);
         }
         else if(sourceX86Reg >= X86_REG_ST0 && sourceX86Reg <= X86_REG_ST7)
@@ -356,6 +358,7 @@ JIT_OP_RETURN_REG:
         }
         else if(sourceX86Reg >= X86_REG_XMM0 && sourceX86Reg <= X86_REG_XMM7)
         {
+            inst = jite_allocate_local_register(inst, func, insn->value1->vreg, 0, 0, LOCAL_ALLOCATE_FOR_ALIASING, ~(jite_reg2object(func, XMM0, sourceType)->hash_code), JIT_TYPE_FLOAT64, 0);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, sourceReg, sourceType);
         }
     }

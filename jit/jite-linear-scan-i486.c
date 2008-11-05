@@ -247,57 +247,6 @@ unsigned int jite_type_get_size(jit_type_t type)
     return ROUND_STACK(jit_type_get_size(type));
 }
 
-unsigned char jite_regIndex_CanBeUsedOnInput(jit_function_t func, unsigned int regIndex, jit_value_t value)
-{
-    jit_type_t signature = jit_function_get_signature(func);
-    unsigned int num = jite_type_num_params(signature);
-    int count;
-    int index = 0;
-    jit_abi_t abi = jit_function_get_abi(func);
-    if(!jite_regIndex_is_free(func, regIndex, value)) return 0;
-    else if((regIndex > 2 || abi != jit_abi_internal) && !jite_vreg_is_in_register_hole(func, value->vreg, regIndex)) return 1;
-    else if(regIndex > 2 || abi != jit_abi_internal) return 0;
-    for(count = 0; (index <= regIndex) && (count < num); count++)
-    {
-        jit_type_t type = jite_type_get_param(signature, count);
-        type = jit_type_remove_tags(type);
-        int typeKind = jit_type_get_kind(type);
-        switch(typeKind)
-        {
-            CASE_USE_WORD
-            {
-                if(index == regIndex)
-                {
-                    jit_value_t param = jite_value_get_param(func, count);
-                    // We check if this register holds an input value passed to this function.
-                    // If so we cannot use it right now.
-                    if(param->vreg && param->vreg->min_range != param->vreg->max_range)
-                    {
-                        return 0;
-                    }
-                }
-                index++;
-            }
-            break;
-            CASE_USE_FLOAT
-            {
-                if(index == regIndex)
-                {
-                    jit_value_t param = jite_value_get_param(func, count);
-                    if(param->vreg && param->vreg->min_range != param->vreg->max_range)
-                    {
-                        return 0;
-                    }
-                }
-                index++;
-            }
-            break;
-        }
-    }
-    if(!jite_vreg_is_in_register_hole(func, value->vreg, regIndex)) return 1;
-    return 0;
-}
-
 void gen_insn(jit_gencode_t gen, jit_function_t func,
                    jit_block_t block, jit_insn_t insn)
 {
@@ -385,7 +334,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
         default:
         {
             unsigned char *inst = (unsigned char *)(gen->posn.ptr);
-            if(!jit_cache_check_for_n(&(gen->posn), 256)) // was 32
+            if(!jit_cache_check_for_n(&(gen->posn), 32))
             {
                 jit_cache_mark_full(&(gen->posn));
                 return;
@@ -510,6 +459,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                     }
                 }
                 break;
+
                 case JIT_OP_RETURN_SMALL_STRUCT:
                 {
                     inst = jite_allocate_local_register(inst, func, value1->vreg, 0, 0, LOCAL_ALLOCATE_FOR_INPUT, 0, 0, 0);
@@ -594,13 +544,49 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                     }
                 }
                 break;
+                case JIT_OP_IEQ:
+                case JIT_OP_INE:
+                case JIT_OP_ILT:
+                case JIT_OP_ILT_UN:
+                case JIT_OP_ILE:
+                case JIT_OP_ILE_UN:
+                case JIT_OP_IGT:
+                case JIT_OP_IGT_UN:
+                case JIT_OP_IGE:
+                case JIT_OP_IGE_UN:
+                case JIT_OP_DEQ:
+                case JIT_OP_DEQ_INV:
+                case JIT_OP_DNE:
+                case JIT_OP_DNE_INV:
+                case JIT_OP_DLT:
+                case JIT_OP_DLT_INV:
+                case JIT_OP_DLE:
+                case JIT_OP_DLE_INV:
+                case JIT_OP_DGT:
+                case JIT_OP_DGT_INV:
+                case JIT_OP_DGE:
+                case JIT_OP_DGE_INV:
+                case JIT_OP_FEQ:
+                case JIT_OP_FEQ_INV:
+                case JIT_OP_FNE:
+                case JIT_OP_FNE_INV:
+                case JIT_OP_FLT:
+                case JIT_OP_FLT_INV:
+                case JIT_OP_FLE:
+                case JIT_OP_FLE_INV:
+                case JIT_OP_FGT:
+                case JIT_OP_FGT_INV:
+                case JIT_OP_FGE:
+                case JIT_OP_FGE_INV:
+                {
+                    inst = jite_allocate_local_register(inst, func, dest->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_OUTPUT, 0, 0, 0);
+                }
+                break;
             }
 
-            // if the current opcode is a branch then restore all registers
-            if((insn->flags & JIT_INSN_DEST_IS_LABEL) != 0)
-            {
-                inst = jite_restore_local_registers(inst, func, 0xffffffff);
-            }
+            // if the current opcode is a branch then all local registers will be restored
+            // just before generation of a branch
+            
             jit_type_t sourceType = 0; // type of source value
 
             // Build current input state
@@ -723,7 +709,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
    	        inst = jite_restore_local_registers(inst, func, objectReg->hash_code);
 	    }
 
-            // LibJIT does not use true SSA form because jit-insn.c may transform a jit_insn_store
+            // At this point LibJIT does not use true SSA form because jit-insn.c may transform a jit_insn_store
             // to a change of the dest value in the previous opcode.
             // If a value is used for output then restore the frame which the value
             // uses locally.
@@ -795,15 +781,16 @@ void *gen_prolog(jit_gencode_t gen, jit_function_t func, void *buf)
 
     int stack_offset = func->jite->scratch_frame;
 
+    if(stack_offset > 0) x86_alu_reg_imm(inst, X86_SUB, X86_ESP, stack_offset);
+
     for(index = 3; index < JITE_N_GP_REGISTERS; index++)
     {
         if(func->jite->scratch_regs & jite_gp_regs_map[index].hash_code)
         {
-            stack_offset+=4;
-            x86_mov_membase_reg(inst, X86_EBP, -stack_offset, jite_gp_regs_map[index].reg, 4);
+	    /* Use of push to save registers seem to give better results than using mov. */
+	    x86_push_reg(inst, jite_gp_regs_map[index].reg);
         }
     }
-    if(stack_offset > 0) x86_alu_reg_imm(inst, X86_SUB, X86_ESP, stack_offset);
 
 
     /* Copy the prolog into place and return the adjusted entry position */
@@ -911,10 +898,8 @@ void gen_start_block(jit_gencode_t gen, jit_block_t block)
         fixup = next;
     }
     block->fixup_absolute_list = 0;
-}
 
-void gen_end_block(jit_gencode_t gen, jit_block_t block)
-{
+
     unsigned char *inst = (unsigned char *)(gen->posn.ptr);
     
     if(!jit_cache_check_for_n(&(gen->posn), 32))
@@ -922,10 +907,17 @@ void gen_end_block(jit_gencode_t gen, jit_block_t block)
         jit_cache_mark_full(&(gen->posn));
         return;
     }
+    
+    if(!block->entered_via_top || block->entered_via_branch)
+    {
+        inst = jite_restore_local_registers(inst, block->func, 0xffffffff);
+        gen->posn.ptr = (unsigned char *)inst;
+    }
+}
 
-    inst = jite_restore_local_registers(inst, block->func, 0xffffffff);
+void gen_end_block(jit_gencode_t gen, jit_block_t block)
+{
 
-    gen->posn.ptr = (unsigned char *)inst;
 }
 
 void jite_free_reg(jit_function_t func, jite_vreg_t vreg)
@@ -1041,7 +1033,51 @@ unsigned char *jite_restore_local_frame(unsigned char *inst, jit_function_t func
     return inst;
 }
 
+/* This function is called before any branch to restore temporary spilled registers */
+unsigned char *jite_restore_temporary_frame(unsigned char *inst, jit_function_t func, unsigned int regMask)
+{
+    unsigned int index;
+    for(index = 0; index < JITE_N_GP_REGISTERS; index++)
+    {
+        jite_vreg_t local_vreg = jite_gp_regs_map[index].local_vreg;
+        if(local_vreg && (jite_gp_regs_map[index].hash_code & regMask))
+        {
+            if(jite_gp_regs_map[index].temp_frame)
+            {
+                local_vreg->in_reg = 0;
+                local_vreg->in_frame = 1;
+                jite_gp_regs_map[index].local_vreg = 0;
+                x86_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_gp_regs_map[index].temp_frame->frame_offset, 4);
+		local_vreg->reg = 0;
+                jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
+            }
+            jite_gp_regs_map[index].temp_frame = 0;
+        }
+    }
 
+    for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
+    {
+        jite_vreg_t local_vreg = jite_xmm_regs_map[index].local_vreg;
+        if(local_vreg && (jite_xmm_regs_map[index].hash_code & regMask))
+        {
+            if(jite_xmm_regs_map[index].temp_frame)
+            {
+                local_vreg->in_reg = 0;
+                local_vreg->in_frame = 1;
+                jite_xmm_regs_map[index].local_vreg = 0;
+                jit_type_t type = jit_value_get_type(local_vreg->value);
+                type = jit_type_remove_tags(type);
+                inst = masm_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_xmm_regs_map[index].temp_frame->frame_offset, type);
+                local_vreg->reg = 0;
+                jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
+            }
+            jite_xmm_regs_map[index].temp_frame = 0;
+        }
+    }
+    return inst;
+}
+
+/* This function is called to restore locally used registers */
 unsigned char *jite_restore_local_registers(unsigned char *inst, jit_function_t func, unsigned int regMask)
 {
     unsigned int index;
@@ -2381,9 +2417,9 @@ void jite_allocate_large_frame(jit_function_t func, jite_frame_t frame, int size
                                 flag = 1;
                             }
                             else if(flag)
-                                {
-                                    state_end = temp;
-                                    segment_end = 1;
+                            {
+                                state_end = temp;
+                                segment_end = 1;
                                 offset_end = offset;
                                 flag++;
                             }
@@ -2575,7 +2611,7 @@ void jite_allocate_frame(jit_function_t func, jite_frame_t frame)
 
 unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t func, jite_vreg_t vreg, jite_vreg_t vreg1, jite_vreg_t vreg2, unsigned char bUsage, unsigned int fRegCond, int typeKind, unsigned int *foundReg)
 {
-    if(vreg && vreg->in_frame || bUsage == LOCAL_ALLOCATE_FOR_TEMP)
+    if((vreg && vreg->in_frame) || bUsage == LOCAL_ALLOCATE_FOR_TEMP)
     {
         jit_type_t type;
         unsigned char bRegFound = 0;
@@ -2717,7 +2753,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                          }
                     }
                 }
-                if(!bRegFound) // if we did not find any free register at all try to find one not saved yet locally
+                if(!bRegFound && (bUsage != LOCAL_ALLOCATE_FOR_ALIASING)) // if we did not find any free register at all try to find one not saved yet locally
                 {
                     for(count = 0; count < JITE_N_GP_REGISTERS; count++)
                     {
@@ -2747,7 +2783,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             }
 
                             if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
-            
+
                             jite_vreg_t local_vreg = jite_gp_regs_map[count].local_vreg;
                             if(local_vreg)
                             {
@@ -2935,6 +2971,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
             break;
         }
     }
+
     return inst;
 }
 
@@ -3431,7 +3468,6 @@ unsigned int jite_stack_depth_used(jit_function_t func)
 }
 
 
-
 void jite_compute_register_holes(jit_function_t func)
 {
     jit_block_t block = 0;
@@ -3674,7 +3710,6 @@ void jite_compute_register_holes(jit_function_t func)
     func->jite->reg_holes[X86_REG_XMM6] = allFunctions;
     func->jite->reg_holes[X86_REG_XMM7] = allFunctions;
 }
-
 
 
 unsigned char jite_vreg_is_in_register_hole(jit_function_t func, jite_vreg_t vreg, unsigned int regIndex)

@@ -516,8 +516,6 @@ unsigned int jite_stack_depth_used(jit_function_t func);
 
 void jite_compute_registers_holes(jit_function_t func);
 
-unsigned char jite_regIndex_CanBeUsedOnInput(jit_function_t func, unsigned int regIndex, jit_value_t value);
-
 unsigned char jite_vreg_is_in_register_hole(jit_function_t func, jite_vreg_t vreg, unsigned int regIndex);
 
 unsigned int jite_register_pair(unsigned int reg);

@@ -13,8 +13,7 @@ JIT_OP_TRUNC_SBYTE:
         {
             find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
             x86_mov_reg_reg(inst, gpreg1, $2, 4);
-            x86_widen_reg(inst, $1, gpreg1, 1, 0);
-            
+            x86_widen_reg(inst, $1, gpreg1, 1, 0);            
         }
     }
     [=reg, local] -> {
@@ -31,7 +30,6 @@ JIT_OP_TRUNC_SBYTE:
             find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
             x86_mov_reg_imm(inst, gpreg1, $2);
             x86_widen_reg(inst, $1, gpreg1, 1, 0);
-            
         }
     }
     [=local, reg] -> {
@@ -40,7 +38,6 @@ JIT_OP_TRUNC_SBYTE:
             find_one_gp_reg(inst);
             x86_widen_reg(inst, gpreg1, $2, 1, 0);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else
         {
@@ -62,7 +59,6 @@ JIT_OP_TRUNC_SBYTE:
         x86_mov_reg_imm(inst, gpreg1, $2);
         x86_widen_reg(inst, gpreg1, gpreg1, 1, 0);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
 
 JIT_OP_TRUNC_UBYTE:
@@ -98,7 +94,6 @@ JIT_OP_TRUNC_UBYTE:
             find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
             x86_mov_reg_imm(inst, gpreg1, $2);
             x86_widen_reg(inst, $1, gpreg1, 0, 0);
-            
         }
     }
     [=local, reg] -> {
@@ -122,14 +117,12 @@ JIT_OP_TRUNC_UBYTE:
         find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
         x86_widen_membase(inst, gpreg1, X86_EBP, $2, 0, 0);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, imm] -> {
         find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
         x86_mov_reg_imm(inst, gpreg1, $2);
         x86_widen_reg(inst, gpreg1, gpreg1, 0, 0);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
 
 JIT_OP_TRUNC_USHORT:
@@ -658,17 +651,15 @@ JIT_OP_NFLOAT_TO_FLOAT32:
         }
         else
         {
-                find_one_xmm_reg(inst);
-                sse_cvtsd2ss_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-                    sse_movss_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
+            find_one_xmm_reg(inst);
+            sse_cvtsd2ss_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
+            sse_movss_membase_xmreg(inst, X86_EBP, $1, xmmreg1);    
         }
     }
     [=local, freg] -> {
         find_one_xmm_reg(inst);
         sse_cvtsd2ss_xmreg_xmreg(inst, xmmreg1, $2);
-            sse_movss_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-        
+        sse_movss_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
     }
 
 
@@ -774,7 +765,6 @@ JIT_OP_FLOAT32_TO_NFLOAT:
             find_one_xmm_reg(inst);
             sse2_cvtss2sd_xmreg_xmreg(inst, xmmreg1, $2);
             sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
         }
     }
 
@@ -815,7 +805,7 @@ JIT_OP_FLOAT64_TO_NFLOAT:
 
     }
     [=local, local] -> {
-            if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
         {
             x86_fld_membase(inst, X86_EBP, $2, 1);
             x86_fst80_membase(inst, X86_EBP, $1);
@@ -878,7 +868,6 @@ JIT_OP_INT_TO_NFLOAT:
             find_one_xmm_reg(inst);
             sse2_cvtsi2sd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
             sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
         }
     }
     [=local, reg] -> {
@@ -893,7 +882,6 @@ JIT_OP_INT_TO_NFLOAT:
             find_one_xmm_reg(inst);
             sse2_cvtsi2sd_xmreg_reg(inst, xmmreg1, $2);
             sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
         }
     }
 
@@ -931,21 +919,18 @@ JIT_OP_NFLOAT_TO_INT:
             find_one_gp_reg(inst);
             sse2_cvttsd2si_reg_membase(inst, gpreg1, X86_ESP, -32);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else
         {
             find_one_gp_reg(inst);
             sse2_cvttsd2si_reg_membase(inst, gpreg1, X86_EBP, $2);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
     }
     [=local, freg] -> {
-            find_one_gp_reg(inst);
+        find_one_gp_reg(inst);
         sse2_cvttsd2si_reg_xmreg(inst, gpreg1, $2);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
 
 JIT_OP_UINT_TO_NFLOAT:
@@ -999,8 +984,8 @@ JIT_OP_UINT_TO_NFLOAT:
         else
         {
             unsigned int value = 0x43300000;
-                find_one_gp_reg(inst);
-                find_one_xmm_reg(inst);
+            find_one_gp_reg(inst);
+            find_one_xmm_reg(inst);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_mov_membase_imm(inst, X86_ESP, -44, value, 4);
             x86_mov_membase_reg(inst, X86_ESP, -48, gpreg1, 4);
@@ -1008,8 +993,6 @@ JIT_OP_UINT_TO_NFLOAT:
             x86_mov_membase_imm(inst, X86_ESP, -48, 0, 4);
             sse2_subsd_xmreg_membase(inst, xmmreg1, X86_ESP, -48);
             sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
-            
         }
     }
     [=local, reg] -> {
@@ -1053,7 +1036,6 @@ JIT_OP_NFLOAT_TO_UINT:
             x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
             sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
             sse2_movd_reg_xmreg(inst, gpreg1, xmmreg1);
-                    
         }
         else
         {
@@ -1061,7 +1043,7 @@ JIT_OP_NFLOAT_TO_UINT:
             sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
             unsigned int value = 0x43300000;
             x86_mov_membase_imm(inst, X86_ESP, -28, value, 4);
-                x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
+            x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
             sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
             sse2_movd_reg_xmreg(inst, gpreg1, xmmreg1);
             
@@ -1105,7 +1087,6 @@ JIT_OP_NFLOAT_TO_UINT:
             x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
             sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
             sse2_movd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
         }
     }
     [=local, freg] -> {
@@ -1116,7 +1097,6 @@ JIT_OP_NFLOAT_TO_UINT:
         x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
         sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
         sse2_movd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-        
     }
 
 JIT_OP_LONG_TO_NFLOAT:

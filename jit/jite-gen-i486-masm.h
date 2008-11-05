@@ -17,9 +17,10 @@
 #define JITE_N_GP_REGISTERS     6
 #define JITE_N_XMM_REGISTERS    8
 
-#define LOCAL_ALLOCATE_FOR_INPUT  0x0
-#define LOCAL_ALLOCATE_FOR_OUTPUT 0x1
-#define LOCAL_ALLOCATE_FOR_TEMP   0x2
+#define LOCAL_ALLOCATE_FOR_INPUT    0x1
+#define LOCAL_ALLOCATE_FOR_OUTPUT   0x2
+#define LOCAL_ALLOCATE_FOR_TEMP     0x4
+#define LOCAL_ALLOCATE_FOR_ALIASING 0x8
 
 unsigned char jite_gp_reg_index_is_free(void *handler, int index);
 unsigned char jite_xmm_reg_index_is_free(void *handler, int index);
@@ -28,6 +29,7 @@ unsigned char jite_xmm_reg_is_free(jit_function_t func, int index);
 
 
 unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t func, jite_vreg_t vreg, jite_vreg_t vreg1, jite_vreg_t vreg2, unsigned char bUsage, unsigned int fRegCond, int typeKind, unsigned int *regFound);
+unsigned char *jite_restore_temporary_frame(unsigned char *inst, jit_function_t func, unsigned int regMask);
 
 // Maps which general-purpose register represents which index from 0 to 5
 // (not using EBP, and ESP, which are 5, and 4, respectively).
@@ -296,6 +298,7 @@ static int long_form_branch(int opcode)
 static unsigned char *output_branch
     (jit_function_t func, unsigned char *inst, int opcode, jit_insn_t insn)
 {
+    inst = jite_restore_temporary_frame(inst, func, 0xffffffff);
     jit_block_t block;
     int offset;
     if((insn->flags & JIT_INSN_VALUE1_IS_LABEL) != 0)
@@ -2452,8 +2455,8 @@ unsigned char *__masm_irem_un_reg_reg_imm(unsigned char *inst, jit_function_t fu
                 if(dreg != sreg) x86_mov_reg_reg(inst, dreg, sreg, 4);
                 x86_mov_reg_reg(inst, X86_EAX, sreg, 4);
                 x86_shift_reg_imm(inst, X86_SHR, X86_EAX, 31);
-                    x86_mov_reg_imm(inst, X86_EDX, imm);
-                    x86_mul_reg(inst, X86_EDX, 0);
+                x86_mov_reg_imm(inst, X86_EDX, imm);
+                x86_mul_reg(inst, X86_EDX, 0);
                 x86_alu_reg_reg(inst, X86_SUB, dreg, X86_EAX);
             }
             else

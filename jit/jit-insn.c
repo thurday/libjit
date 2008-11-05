@@ -5711,12 +5711,9 @@ jit_value_t jit_insn_call
         func->builder->non_leaf = 1;
 
         /* Performing a regular call, or a tail call to someone else */
-        if(!jit_function_extended_compiler_is_enabled(func))
-        { // with the extended compiler we do not need to make a new block
-            if(!jit_insn_new_block(func))
-            {
-                return 0;
-            }
+        if(!jit_insn_new_block(func))
+        {
+            return 0;
         }
         insn = _jit_block_add_insn(func->builder->current_block);
         if(!insn)
@@ -5881,12 +5878,11 @@ jit_value_t jit_insn_call_indirect
         {
             return 0;
         }
+    }
 
-        /* With the extended compiler we do not need to make a new block */
-        if(!jit_insn_new_block(func))
-        {
-            return 0;
-        }
+    if(!jit_insn_new_block(func))
+    {
+        return 0;
     }
 
     insn = _jit_block_add_insn(func->builder->current_block);
@@ -6043,19 +6039,18 @@ jit_value_t jit_insn_call_indirect_vtable
     /* Start a new block and output the "call_vtable_ptr" instruction */
     if(!jit_function_extended_compiler_is_enabled(func))
     { 
-    
         /* Move the indirect pointer value into an appropriate register */
         if(!_jit_setup_indirect_pointer(func, value))
         {
             return 0;
         }
-
-            /* With the extended compiler we do not need to make a new block */
-        if(!jit_insn_new_block(func))
-        {
-            return 0;
-        }
     }
+
+    if(!jit_insn_new_block(func))
+    {
+        return 0;
+    }
+
     insn = _jit_block_add_insn(func->builder->current_block);
     if(!insn)
     {
@@ -6207,13 +6202,9 @@ jit_value_t jit_insn_call_native
     func->builder->non_leaf = 1;
 
     /* Start a new block and output the "call_external" instruction */
-    if(!jit_function_extended_compiler_is_enabled(func))
+    if(!jit_insn_new_block(func))
     {
-            /* With the extended compiler we do not need to make a new block */
-        if(!jit_insn_new_block(func))
-        {
-            return 0;
-        }
+        return 0;
     }
 
     insn = _jit_block_add_insn(func->builder->current_block);
