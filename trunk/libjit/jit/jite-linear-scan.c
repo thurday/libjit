@@ -809,179 +809,181 @@ void jite_compute_liveness(jit_function_t func)
     // Step 1. Compute vregs liveness without branches.
     block = 0;
 
-    if(!func->has_try)
+    while((block = jit_block_next(func, block)) != 0)
     {
-        while((block = jit_block_next(func, block)) != 0)
+        if(!(block->entered_via_top) && !(block->entered_via_branch))
         {
-            if(!(block->entered_via_top) && !(block->entered_via_branch))
-            {
-                continue;
-            }
-            if(block->entered_via_branch)
-            {    
-                jit_insn_iter_init(&iter, block);
-                insn = jit_insn_iter_next(&iter);
-                jite_create_critical_point(func, insn); // Points to which there exist branches.
-            }
+            continue;
+        }
+        if(block->entered_via_branch)
+        {    
             jit_insn_iter_init(&iter, block);
-            while((insn = jit_insn_iter_next(&iter)) != 0)
+            insn = jit_insn_iter_next(&iter);
+            jite_create_critical_point(func, insn); // Points to which there exist branches.
+        }
+        jit_insn_iter_init(&iter, block);
+        while((insn = jit_insn_iter_next(&iter)) != 0)
+        {
+            jit_value_t dest = insn->dest;
+            jit_value_t value1 = insn->value1;
+            jit_value_t value2 = insn->value2;
+	    if(insn && insn->opcode == JIT_OP_NOP)
+	    {
+	        continue;
+            }
+
+            if(insn && (insn->flags & JIT_INSN_DEST_IS_LABEL) !=0)
             {
-                jit_value_t dest = insn->dest;
-                jit_value_t value1 = insn->value1;
-                jit_value_t value2 = insn->value2;
-		if(insn && insn->opcode == JIT_OP_NOP)
-		{
-		    continue;
-		}
-
-                if(insn && (insn->flags & JIT_INSN_DEST_IS_LABEL) !=0)
-                {
-                    jite_create_critical_point(func, insn); // Point from which there is a branch.
-                    jite_add_branch_target(func, insn, (jit_label_t)dest);
-                }
+                jite_create_critical_point(func, insn); // Point from which there is a branch.
+                jite_add_branch_target(func, insn, (jit_label_t)dest);
+            }
 
 
-                // constants are not considered to be associated with virtual registers,
-                // though in the future we may store the low and high ranges that are 
-                // applicable for the virtual registers as it walks thru code.
-                // This might be used for optimization. In that sense a constant
-                // is a very special case of it, but we avoid this abstraction as
-                // it simplifies things.
-                if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
-                    && !(dest->is_constant)
-                    && !(dest->is_nint_constant)
-                    && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
-                    && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
+            // constants are not considered to be associated with virtual registers,
+            // though in the future we may store the low and high ranges that are 
+            // applicable for the virtual registers as it walks thru code.
+            // This might be used for optimization. In that sense a constant
+            // is a very special case of it, but we avoid this abstraction as
+            // it simplifies things.
+            if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
+                && !(dest->is_constant)
+                && !(dest->is_nint_constant)
+                && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
+                && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
+            {
+                if(!jite_value_is_in_vreg(func, dest))
                 {
-                    if(!jite_value_is_in_vreg(func, dest))
-                    {
-                        jite_create_vreg(func, dest);
-                    }
-                    if(!dest->vreg->min_range)
-                    {
-                        dest->vreg->min_range = insn;
-                    }
-                    if(!dest->vreg->max_range ||
-                        (dest->vreg->max_range && (dest->vreg->max_range->insn_num < insn->insn_num)))
-                    {
-                        dest->vreg->max_range = insn;
-                    }                    
+                    jite_create_vreg(func, dest);
                 }
-                if(insn && value1 && !(insn->flags & JIT_INSN_VALUE1_IS_NAME)
-                    && !(insn->flags & JIT_INSN_VALUE1_IS_LABEL) && !value1->is_constant
-                    && !value1->is_nint_constant)
+                if(!dest->vreg->min_range)
                 {
-                    if(!jite_value_is_in_vreg(func, value1))
-                    {
-                        jite_create_vreg(func, value1);
-                    }
-                    if(!value1->vreg->min_range)
-                    {
-                        value1->vreg->min_range = insn;
-                    }
-                    if(!value1->vreg->max_range ||
-                        (value1->vreg->max_range && (value1->vreg->max_range->insn_num < insn->insn_num)))
-                    {
-                        value1->vreg->max_range = insn;
-                    }    
+                    dest->vreg->min_range = insn;
                 }
-                if(insn && value2 && !(insn->flags & JIT_INSN_VALUE2_IS_SIGNATURE)
-                    && !value2->is_constant && !value2->is_nint_constant)
+                if(!dest->vreg->max_range ||
+                    (dest->vreg->max_range && (dest->vreg->max_range->insn_num < insn->insn_num)))
                 {
-                    if(!jite_value_is_in_vreg(func, value2))
-                    {
-                        jite_create_vreg(func, value2);
-                    }
-                    if(!value2->vreg->min_range)
-                    {
-                        value2->vreg->min_range = insn;
-                    }
-                    if(!value2->vreg->max_range ||
-                        (value2->vreg->max_range && (value2->vreg->max_range->insn_num < insn->insn_num)))
-                    {
-                        value2->vreg->max_range = insn;
-                    }
+                    dest->vreg->max_range = insn;
+                }                    
+            }
+            if(insn && value1 && !(insn->flags & JIT_INSN_VALUE1_IS_NAME)
+                && !(insn->flags & JIT_INSN_VALUE1_IS_LABEL) && !value1->is_constant
+                && !value1->is_nint_constant)
+            {
+                if(!jite_value_is_in_vreg(func, value1))
+                {
+                    jite_create_vreg(func, value1);
                 }
-                if(insn && insn->opcode != JIT_OP_INCOMING_REG && insn->opcode != JIT_OP_INCOMING_FRAME_POSN
-                    && insn->opcode != JIT_OP_MARK_OFFSET)
+                if(!value1->vreg->min_range)
                 {
-                    if(min_insn == 0) min_insn = insn;
-                    max_insn = insn;
+                    value1->vreg->min_range = insn;
                 }
-                if(insn && insn->opcode == JIT_OP_JUMP_TABLE)
+                if(!value1->vreg->max_range ||
+                    (value1->vreg->max_range && (value1->vreg->max_range->insn_num < insn->insn_num)))
                 {
-                    // Process every possible target label.
-                    jite_create_critical_point(func, insn);
-                    jit_label_t *labels = (jit_label_t*)(insn->value1->address);
-                    jit_nint num_labels = (jit_nint)(insn->value2->address);
-                    int index;
-                    for(index = 0; index < num_labels; index++)
-                    {
-                        jite_add_branch_target(func, insn, labels[index]);
-                    }
+                    value1->vreg->max_range = insn;
+                }    
+            }
+            if(insn && value2 && !(insn->flags & JIT_INSN_VALUE2_IS_SIGNATURE)
+                && !value2->is_constant && !value2->is_nint_constant)
+            {
+                if(!jite_value_is_in_vreg(func, value2))
+                {
+                    jite_create_vreg(func, value2);
+                }
+                if(!value2->vreg->min_range)
+                {
+                    value2->vreg->min_range = insn;
+                }
+                if(!value2->vreg->max_range ||
+                    (value2->vreg->max_range && (value2->vreg->max_range->insn_num < insn->insn_num)))
+                {
+                    value2->vreg->max_range = insn;
+                }
+            }
+            if(insn && insn->opcode != JIT_OP_INCOMING_REG && insn->opcode != JIT_OP_INCOMING_FRAME_POSN
+                && insn->opcode != JIT_OP_MARK_OFFSET)
+            {
+                if(min_insn == 0) min_insn = insn;
+                max_insn = insn;
+            }
+            if(insn && insn->opcode == JIT_OP_JUMP_TABLE)
+            {
+                // Process every possible target label.
+                jite_create_critical_point(func, insn);
+                jit_label_t *labels = (jit_label_t*)(insn->value1->address);
+                jit_nint num_labels = (jit_nint)(insn->value2->address);
+                int index;
+                for(index = 0; index < num_labels; index++)
+                {
+                    jite_add_branch_target(func, insn, labels[index]);
                 }
             }
         }
+    }
 
-        // Step 2. Mark critical points in opcodes of where new vregs are born and are destroyed.
-        linked_list = func->jite->vregs_list;
-        while(linked_list)
+    // Step 2. Mark critical points in opcodes of where new vregs are born and are destroyed.
+    linked_list = func->jite->vregs_list;
+    while(linked_list)
+    {
+        jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
+        linked_list = linked_list->next;
+        if(jit_value_is_addressable(vreg->value))
         {
-            jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
-            linked_list = linked_list->next;
-            if(jit_value_is_addressable(vreg->value))
-            {
-                if(!vreg->min_range
-                    || (vreg->min_range && vreg->min_range->insn_num > min_insn->insn_num))
-                {
-                    vreg->min_range = min_insn;
-                }
-                vreg->max_range = max_insn;
-            }
-            if(vreg->min_range == 0) // Remove this later.
+            if(!vreg->min_range
+                || (vreg->min_range && vreg->min_range->insn_num > min_insn->insn_num))
             {
                 vreg->min_range = min_insn;
-                vreg->max_range = min_insn;
             }
-
-            if(vreg->min_range != vreg->max_range)
-            {
-                jite_create_critical_point(func, vreg->min_range);
-                jite_add_vreg_to_complex_list(func, vreg, vreg->min_range->cpoint->vregs_born);
-                jite_create_critical_point(func, vreg->max_range);
-                jite_add_vreg_to_complex_list(func, vreg, vreg->max_range->cpoint->vregs_die);
-            }
+            vreg->max_range = max_insn;
+        }
+        if(vreg->min_range == 0) // Remove this later.
+        {
+            vreg->min_range = min_insn;
+            vreg->max_range = min_insn;
         }
 
-        // Step 3. Compute vregs liveness with branches.
-
-        do
+        if(vreg->min_range != vreg->max_range)
         {
-            updated = 0;
-            jite_list_t last_item = func->jite->branch_list;
-            list = func->jite->branch_list;
-            while(list)
-            {
-                unsigned char new_update = jite_update_liveness_for_branch(func, (jit_insn_t)(list->item1), (jit_insn_t)(list->item2));
-                updated = updated || new_update;
-                list = list->next;
-                if(list) last_item = list;
-            }
-            if(!updated) break;
-            updated = 0;
-            list = last_item;
-            while(list)
-            {
-                unsigned char new_update = jite_update_liveness_for_branch(func, (jit_insn_t)(list->item1), (jit_insn_t)(list->item2));
-                updated = updated || new_update;
-                list = list->prev;
-            }
-        } while(updated);
-
-        // At this point all critical points and vregs liveness should be ready.
+            jite_create_critical_point(func, vreg->min_range);
+            jite_add_vreg_to_complex_list(func, vreg, vreg->min_range->cpoint->vregs_born);
+            jite_create_critical_point(func, vreg->max_range);
+            jite_add_vreg_to_complex_list(func, vreg, vreg->max_range->cpoint->vregs_die);
+        }
     }
-    else // The function has a try/catch/finally block, we need to set all variables the maximum liveness range.
+
+    // Step 3. Compute vregs liveness with branches.
+
+    do
     {
+        updated = 0;
+        jite_list_t last_item = func->jite->branch_list;
+        list = func->jite->branch_list;
+        while(list)
+        {
+            unsigned char new_update = jite_update_liveness_for_branch(func, (jit_insn_t)(list->item1), (jit_insn_t)(list->item2));
+            updated = updated || new_update;
+            list = list->next;
+            if(list) last_item = list;
+        }
+        if(!updated) break;
+        updated = 0;
+        list = last_item;
+        while(list)
+        {
+            unsigned char new_update = jite_update_liveness_for_branch(func, (jit_insn_t)(list->item1), (jit_insn_t)(list->item2));
+            updated = updated || new_update;
+            list = list->prev;
+        }
+    } while(updated);
+
+    // At this point all critical points and vregs liveness should be ready.
+    // If the function has a try/catch/finally block, we need to set all variables the maximum liveness range
+    // which intersect with the sigsetjmp/__sigsetjmp method.
+    if(func->has_try)
+    {
+        jite_linked_list_t sigsetjmps = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+	                                        struct _jite_linked_list);
+
         while((block = jit_block_next(func, block)) != 0)
         {
             jit_insn_iter_init(&iter, block);
@@ -991,102 +993,51 @@ void jite_compute_liveness(jit_function_t func)
 		{
 		    continue;
 		}
+		if(insn && insn->opcode == JIT_OP_CALL_EXTERNAL)
+		{
+#if defined(HAVE___SIGSETJMP)
+		    if((void*) insn->dest == (void *) __sigsetjmp)
+#else
+                    if((void *) insn->dest == (void *) sigsetjmp)
+#endif
+                    {
+		        jite_add_item_to_linked_list(func, insn, sigsetjmps);
+		    }
+		}
 
-                jit_value_t dest = insn->dest;
-                jit_value_t value1 = insn->value1;
-                jit_value_t value2 = insn->value2;
-                jite_vreg_t vreg = 0;
-                if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
-                    && !(dest->is_constant)
-                    && !(dest->is_nint_constant)
-                    && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
-                    && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
-                {
-                    if(!jite_value_is_in_vreg(func, dest))
-                    {
-                        vreg = jite_create_vreg(func, dest);                    
-                    }
-                    if(!dest->vreg->min_range) dest->vreg->min_range = insn;
-                    if(!dest->vreg->max_range
-                        || (dest->vreg->max_range && dest->vreg->max_range->insn_num < insn->insn_num))
-                    {
-                        dest->vreg->max_range = insn;
-                    }
-                }
-                if(insn && value1 && !(insn->flags & JIT_INSN_VALUE1_IS_NAME)
-                    && !(insn->flags & JIT_INSN_VALUE1_IS_LABEL) && !value1->is_constant
-                    && !value1->is_nint_constant)
-                {
-                    if(!jite_value_is_in_vreg(func, value1))
-                    {
-                        vreg = jite_create_vreg(func, value1);
-                    }
-                    if(!value1->vreg->min_range) value1->vreg->min_range = insn;
-                    if(!value1->vreg->max_range
-                        || (value1->vreg->max_range && value1->vreg->max_range->insn_num < insn->insn_num))
-                    {
-                        value1->vreg->max_range = insn;
-                    }
-                }
-                if(insn && value2 && !(insn->flags & JIT_INSN_VALUE2_IS_SIGNATURE)
-                    && !value2->is_constant && !value2->is_nint_constant)
-                {
-                    if(!jite_value_is_in_vreg(func, value2))
-                    {
-                        vreg = jite_create_vreg(func, value2);
-                    }
-                    if(!value2->vreg->min_range) value2->vreg->min_range = insn;
-                    if(!value2->vreg->max_range
-                        || (value2->vreg->max_range && value2->vreg->max_range->insn_num < insn->insn_num))
-                    {
-                        value2->vreg->max_range = insn;
-                    }
-                }
-
-                if(insn && insn->opcode != JIT_OP_INCOMING_REG && insn->opcode != JIT_OP_INCOMING_FRAME_POSN
-                    && insn->opcode != JIT_OP_MARK_OFFSET)
-                {            
-                    if(min_insn == 0) min_insn = insn;
-                    max_insn = insn;
-                }
             }
         }
         jite_create_critical_point(func, min_insn);
         jite_create_critical_point(func, max_insn);
-        // Set the maximum liveness range to all variables.
+
         linked_list = func->jite->vregs_list;
         while(linked_list)
         {
             jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
             linked_list = linked_list->next;
-            if(vreg->min_range != vreg->max_range || jit_value_is_addressable(vreg->value))
-            {
-                if(vreg->min_range->insn_num >= min_insn->insn_num)
+	    jite_linked_list_t insns = sigsetjmps;
+	    while(insns)
+	    {
+    	        jit_insn_t insn = (jit_insn_t)(insns->item);
+    	        insns = (jite_linked_list_t) insn->next;
+		if(vreg->min_range->insn_num < insn->insn_num && vreg->max_range->insn_num > insn->insn_num)
                 {
-                    if(jit_value_is_temporary(vreg->value) && !jit_value_is_addressable(vreg->value))
-                    {
-                        jite_create_critical_point(func, vreg->min_range);
-                    }
-                    else
-                    {
-                        vreg->min_range = min_insn;
-                    }
-                    jite_add_vreg_to_complex_list(func, vreg, vreg->min_range->cpoint->vregs_born);
-                }
-                if(jit_value_is_temporary(vreg->value) && !jit_value_is_addressable(vreg->value))
-                {
-                    jite_create_critical_point(func, vreg->max_range);
-                }
-                else
-                {
+		    jit_value_set_addressable(vreg->value);
+                    if(vreg->min_range->insn_num > min_insn->insn_num)
+		    {
+		        vreg->min_range = min_insn;
+                        jite_add_vreg_to_complex_list(func, vreg, vreg->min_range->cpoint->vregs_born);
+		    }
                     vreg->max_range = max_insn;
+                    jite_add_vreg_to_complex_list(func, vreg, vreg->max_range->cpoint->vregs_die);
                 }
-                jite_add_vreg_to_complex_list(func, vreg, vreg->max_range->cpoint->vregs_die);
-            }
+	    }
         }
-        // At this point all critical points and vregs liveness should be ready.
+	jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), sigsetjmps);
     }
+
     jite_compute_register_holes(func);
+
 }
 
 #ifdef JITE_DEBUG_ENABLED
