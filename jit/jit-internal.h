@@ -262,12 +262,9 @@ struct _jit_insn
     jit_value_t            dest;
     jit_value_t            value1;
     jit_value_t            value2;
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+#if defined(JITE_ENABLED)
     unsigned int            insn_num;
     jite_critical_point_t        cpoint;
-//    jite_linked_list_t        prev_insn;
-//    jit_insn_t            prev;
-//    jit_insn_t            next;
     jit_type_t             signature;
 #endif
 };
