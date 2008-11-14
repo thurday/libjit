@@ -283,10 +283,10 @@ unsigned int jite_value_in_frame(jit_value_t value);
 int jite_regIndex2reg(jit_function_t func, int regIndex, jit_type_t type);
 
 unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned char *buf,
-                unsigned int num, jit_value_t *args, void *func_address, jit_value_t return_value, int call_type);
+                jit_type_t signature, void *func_address, int call_type);
 
 unsigned char *jite_emit_function_call(jit_gencode_t gen, unsigned char *buf, jit_function_t func,
-                unsigned int num, void *func_address, jit_value_t indirect_ptr, jit_value_t *args, jit_value_t return_value, int call_type);
+                                       void *func_address, jit_value_t indirect_ptr, int call_type);
 
 #define NORMAL_CALL              1
 #define INDIRECT_CALL            2

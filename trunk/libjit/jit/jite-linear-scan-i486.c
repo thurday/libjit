@@ -2975,7 +2975,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
     return inst;
 }
 
-unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned char *buf, unsigned int num, jit_value_t *args, void *func_address, jit_value_t return_value, int call_type)
+unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned char *buf, jit_type_t signature, void *func_address, int call_type)
 {
     int index;
     int long_index = 0;
@@ -2985,6 +2985,7 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
     unsigned int n_frames = 0;
     unsigned int stack_size = 0;
     unsigned int stack_offset = 0;
+    unsigned int num = jite_type_num_params(signature);
 
     if(call_type == INDIRECT_CALL)
     {
@@ -2993,8 +2994,7 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
     }
     for(index = 0; index < num; index++)
     {
-        jit_value_t value = args[index];
-        jit_type_t type = jit_value_get_type(value);
+        jit_type_t type = jite_type_get_param(signature, index);
         type = jit_type_remove_tags(type);
         int typeKind = jit_type_get_kind(type);
         switch(typeKind)
@@ -3038,7 +3038,7 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
             break;
             default:
             {
-                stack_offset+=jit_type_get_size(jit_value_get_type(value));
+                stack_offset+=jit_type_get_size(type);
             }
             break;
         }
@@ -3051,9 +3051,8 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
         {
             jit_cache_mark_full(&(gen->posn));
             return buf;
-        }
-        jit_value_t value = args[index];
-        jit_type_t type = jit_value_get_type(value);
+	}
+        jit_type_t type = jite_type_get_param(signature, index);
         type = jit_type_remove_tags(type);
         int typeKind = jit_type_get_kind(type);
         switch(typeKind)
@@ -3211,7 +3210,6 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
             break;
             default:
             {
-	        jit_type_t type = jit_value_get_type(value);
                 stack_offset -= jit_type_get_size(type);
 		int num_frames = jite_type_get_size(type) / 4;
                 n_frames += num_frames;
@@ -3219,7 +3217,7 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
                 offset += (num_frames * 4);
                 buf = (unsigned char*)jite_memory_copy_with_reg(buf, X86_ESP, 0,
                             X86_ESP, (stack_offset + offset),
-                            (jit_type_get_size(jit_value_get_type(value))), X86_EAX);
+                            (jit_type_get_size(type)), X86_EAX);
             }
             break;
         }
@@ -3230,7 +3228,7 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
     /* We do not need to restore the stack. As an internal abi restores stack itself.
        The items which were pushed on stack to perform the function call will be poped back by the cdecl -O0 engine. */
 
-    jit_type_t type = jit_value_get_type(return_value);
+    jit_type_t type = jit_type_get_return(signature);
     type = jit_type_remove_tags(type);
     int typeKind = jit_type_get_kind(type);
     switch(typeKind)
@@ -3263,7 +3261,7 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
 
 
 unsigned char *jite_emit_function_call(jit_gencode_t gen, unsigned char *buf, jit_function_t func,
-                unsigned int num, void *func_address, jit_value_t indirect_ptr, jit_value_t *args, jit_value_t return_value, int call_type)
+                                       void *func_address, jit_value_t indirect_ptr, int call_type)
 {
     if(!jit_cache_check_for_n(&(gen->posn), 32))
     {
@@ -3476,8 +3474,6 @@ void jite_compute_register_holes(jit_function_t func)
     jite_linked_list_t allFunctions = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
                                         struct _jite_linked_list);
 
-    jite_linked_list_t nativeFunctions = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
-                                        struct _jite_linked_list);                
     jite_linked_list_t holes[32];
 
     holes[X86_REG_EAX] = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
@@ -3525,28 +3521,13 @@ void jite_compute_register_holes(jit_function_t func)
                     case JIT_OP_CALL_EXTERNAL:
                     case JIT_OP_CALL_EXTERNAL_TAIL:
                     {
-                        jit_abi_t abi = (*insn->call_params)->abi;
-                        if(abi == jit_abi_internal)
-                        {
-                            jite_add_item_to_linked_list(func, insn, allFunctions);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM0]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM1]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM2]);
-                        }
-                        else
-                        {
-                            jite_add_item_to_linked_list(func, insn, allFunctions);
-                            jite_add_item_to_linked_list(func, insn, nativeFunctions);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM0]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM1]);
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM2]);
-                        }
+                        jite_add_item_to_linked_list(func, insn, allFunctions);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM0]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM1]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM2]);
                     }
                     break;
                     case JIT_OP_IDIV:

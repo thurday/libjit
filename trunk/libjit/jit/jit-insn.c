@@ -5732,26 +5732,7 @@ jit_value_t jit_insn_call
         insn->flags = JIT_INSN_DEST_IS_FUNCTION | JIT_INSN_VALUE1_IS_NAME;
         insn->dest = (jit_value_t) jit_func;
         insn->value1 = (jit_value_t) name;
-        insn->value2 = (jit_value_t) return_value;
-
-        insn->call_params = (void *)(jit_memory_pool_alloc(&(func->builder->memory_pool), void **));
-
-        *(insn->call_params) = jit_malloc(sizeof(jit_value_t) * num_args + sizeof(struct _jite_call_params));
-
-        (*insn->call_params)->abi = jit_type_get_abi(signature);
-        (*insn->call_params)->num = jite_type_num_params(signature);
-        if(jit_type_return_via_pointer(jit_type_get_return(signature)))
-        {
-            jit_memmove((void*)((*insn->call_params)->args),
-                        &return_ptr, sizeof(jit_value_t));
-            jit_memmove((void*)&((*insn->call_params)->args[1]),
-                    new_args, sizeof(jit_value_t) * num_args);
-        }
-        else
-        {
-            jit_memmove((void*)((*insn->call_params)->args), new_args, sizeof(jit_value_t) * num_args);
-        }
-    }    
+    }
 
     /* If the function does not return, then end the current block.
        The next block does not have "entered_via_top" set so that
@@ -5774,7 +5755,6 @@ jit_value_t jit_insn_call
             return 0;
         }
     }
-    if(insn) insn->value2 = (jit_value_t) return_value;
 
     /* Create the instructions necessary to move the return value into place */
     if((flags & JIT_CALL_TAIL) == 0)
@@ -5864,7 +5844,7 @@ jit_value_t jit_insn_call_indirect
     }
 
 
-        if(jit_type_return_via_pointer(jit_type_get_return(signature))) return_ptr = return_value->address_of;
+    if(jit_type_return_via_pointer(jit_type_get_return(signature))) return_ptr = return_value->address_of;
 
 
     /* Functions that call out are not leaves */
@@ -5902,26 +5882,7 @@ jit_value_t jit_insn_call_indirect
     }
 
     insn->value1 = value;
-    insn->value2 = return_value;
-
-
-    insn->call_params = (void *)(jit_memory_pool_alloc(&(func->builder->memory_pool), void **));
-
-    *(insn->call_params) = jit_malloc(sizeof(jit_value_t) * num_args + sizeof(struct _jite_call_params));
-
-    (*insn->call_params)->abi = jit_type_get_abi(signature);
-    (*insn->call_params)->num = jite_type_num_params(signature);
-    if(jit_type_return_via_pointer(jit_type_get_return(signature)))
-    {
-        jit_memmove((void*)((*insn->call_params)->args),
-                    &return_ptr, sizeof(jit_value_t));
-        jit_memmove((void*)&((*insn->call_params)->args[1]),
-                new_args, sizeof(jit_value_t) * num_args);
-    }
-    else
-    {
-        jit_memmove((void*)((*insn->call_params)->args), new_args, sizeof(jit_value_t) * num_args);
-    }
+    insn->signature = jit_type_copy(signature);
 
     /* If the function does not return, then end the current block.
        The next block does not have "entered_via_top" set so that
@@ -5944,7 +5905,6 @@ jit_value_t jit_insn_call_indirect
             return 0;
         }
     }
-    if(insn) insn->value2 = (jit_value_t) return_value;
 
     /* Create the instructions necessary to move the return value into place */
     if((flags & JIT_CALL_TAIL) == 0)
@@ -6030,7 +5990,7 @@ jit_value_t jit_insn_call_indirect_vtable
     }
 
 
-        if(jit_type_return_via_pointer(jit_type_get_return(signature))) return_ptr = return_value->address_of;
+    if(jit_type_return_via_pointer(jit_type_get_return(signature))) return_ptr = return_value->address_of;
 
 
     /* Functions that call out are not leaves */
@@ -6067,26 +6027,8 @@ jit_value_t jit_insn_call_indirect_vtable
         insn->opcode = JIT_OP_CALL_VTABLE_PTR;
     }
     insn->value1 = value;
-    insn->value2 = return_value;
+    insn->signature = jit_type_copy(signature);
 
-
-    insn->call_params = (void *)(jit_memory_pool_alloc(&(func->builder->memory_pool), void **));
-
-    *(insn->call_params) = jit_malloc(sizeof(jit_value_t) * num_args + sizeof(struct _jite_call_params));
-
-    (*insn->call_params)->abi = jit_type_get_abi(signature);
-    (*insn->call_params)->num = jite_type_num_params(signature);
-    if(jit_type_return_via_pointer(jit_type_get_return(signature)))
-    {
-        jit_memmove((void*)((*insn->call_params)->args),
-                    &return_ptr, sizeof(jit_value_t));
-        jit_memmove((void*)&((*insn->call_params)->args[1]),
-                new_args, sizeof(jit_value_t) * num_args);
-    }
-    else
-    {
-        jit_memmove((void*)((*insn->call_params)->args), new_args, sizeof(jit_value_t) * num_args);
-    }
     /* If the function does not return, then end the current block.
        The next block does not have "entered_via_top" set so that
        it will be eliminated during later code generation */
@@ -6108,7 +6050,6 @@ jit_value_t jit_insn_call_indirect_vtable
             return 0;
         }
     }
-        if(insn) insn->value2 = (jit_value_t) return_value;
 
     /* Create the instructions necessary to move the return value into place */
     if((flags & JIT_CALL_TAIL) == 0)
@@ -6229,25 +6170,8 @@ jit_value_t jit_insn_call_native
     insn->value2 = (jit_value_t)jit_type_copy(signature);
 #endif
 
-    insn->value2 = (jit_value_t) return_value;
+    insn->signature = jit_type_copy(signature);
 
-    insn->call_params = (void *)(jit_memory_pool_alloc(&(func->builder->memory_pool), void **));
-
-    *(insn->call_params) = jit_malloc(sizeof(jit_value_t) * num_args + sizeof(struct _jite_call_params));
-
-    (*insn->call_params)->abi = jit_type_get_abi(signature);
-    (*insn->call_params)->num = jite_type_num_params(signature);
-    if(jit_type_return_via_pointer(jit_type_get_return(signature)))
-    {
-        jit_memmove((void*)((*insn->call_params)->args),
-                    &return_ptr, sizeof(jit_value_t));
-        jit_memmove((void*)&((*insn->call_params)->args[1]),
-                new_args, sizeof(jit_value_t) * num_args);
-    }
-    else
-    {
-        jit_memmove((void*)((*insn->call_params)->args), new_args, sizeof(jit_value_t) * num_args);
-    }
     /* If the function does not return, then end the current block.
        The next block does not have "entered_via_top" set so that
        it will be eliminated during later code generation */
@@ -6269,8 +6193,6 @@ jit_value_t jit_insn_call_native
             return 0;
         }
     }
-    if(insn) insn->value2 = (jit_value_t) return_value;
-
     /* Create the instructions necessary to move the return value into place */
     if((flags & JIT_CALL_TAIL) == 0)
     {
