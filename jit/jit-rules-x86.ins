@@ -1541,11 +1541,11 @@ JIT_OP_CALL:
     [] -> {
 #if defined(JITE_ENABLED)
         jit_function_t func = (jit_function_t)(insn->dest);
-        if(insn->call_params && (*insn->call_params)->abi == jit_abi_internal)
+	jit_type_t signature = jit_function_get_signature(func);
+	jit_abi_t abi = jit_type_get_abi(signature);
+        if(abi == jit_abi_internal)
         {
-            unsigned int num = (*insn->call_params)->num;
-            jit_value_t *args = (*insn->call_params)->args;
-            inst = jite_emit_trampoline_for_internal_abi(gen, inst, num, args, jit_function_to_closure(func), insn->value2, NORMAL_CALL);
+            inst = jite_emit_trampoline_for_internal_abi(gen, inst, signature, jit_function_to_closure(func), NORMAL_CALL);
         }
         else
 #endif
@@ -1557,32 +1557,30 @@ JIT_OP_CALL:
 JIT_OP_CALL_TAIL:
     [] -> {
 #if defined(JITE_ENABLED)
-        if(insn->call_params && (*insn->call_params)->abi == jit_abi_internal)
-                {
-            // unsigned int num = *((unsigned int **)(*insn->args));
-            // jit_value_t *args = (jit_value_t *)(*insn->args + sizeof(unsigned int));
-            unsigned int num = (*insn->call_params)->num;
-            jit_value_t *args = (*insn->call_params)->args;
-            inst = jite_emit_trampoline_for_internal_abi(gen, inst, num, args, jit_function_to_closure(func), insn->value2, NORMAL_CALL);
-                }
-                else
+        jit_function_t func = (jit_function_t)(insn->dest);
+	jit_type_t signature = jit_function_get_signature(func);
+	jit_abi_t abi = jit_type_get_abi(signature);
+        if(abi == jit_abi_internal)
+        {
+            inst = jite_emit_trampoline_for_internal_abi(gen, inst, signature, jit_function_to_closure(func), NORMAL_CALL);
+        }
+        else
 #endif
-                {
+        {
             x86_mov_reg_reg(inst, X86_ESP, X86_EBP, sizeof(void *));
             x86_pop_reg(inst, X86_EBP);
             x86_jump_code(inst, jit_function_to_closure(func));
-                }
+        }
     }
 
 JIT_OP_CALL_INDIRECT:
     [] -> {
 #if defined(JITE_ENABLED)
-        if(insn->call_params && (*insn->call_params)->abi == jit_abi_internal)
+        jit_abi_t abi = jit_type_get_abi(insn->signature);
+        if(abi == jit_abi_internal)
         {
-            unsigned int num = (*insn->call_params)->num;
-            jit_value_t *args = (*insn->call_params)->args;
             // Assume the pointer to address is in EAX.
-            inst = jite_emit_trampoline_for_internal_abi(gen, inst, num, args, 0, insn->value2, INDIRECT_CALL);
+            inst = jite_emit_trampoline_for_internal_abi(gen, inst, insn->signature, 0, INDIRECT_CALL);
         }
         else
 #endif
@@ -1594,12 +1592,11 @@ JIT_OP_CALL_INDIRECT:
 JIT_OP_CALL_INDIRECT_TAIL:
     [] -> {
 #if defined(JITE_ENABLED)
-        if(insn->call_params && (*insn->call_params)->abi == jit_abi_internal)
+        jit_abi_t abi = jit_type_get_abi(insn->signature);
+        if(abi == jit_abi_internal)
         {
-            unsigned int num = (*insn->call_params)->num;
-            jit_value_t *args = (*insn->call_params)->args;
             // Assume the pointer to address is in EAX.
-            inst = jite_emit_trampoline_for_internal_abi(gen, inst, num, args, 0, insn->value2, INDIRECT_CALL);
+            inst = jite_emit_trampoline_for_internal_abi(gen, inst, insn->signature, 0, INDIRECT_CALL);
         }
         else
 #endif
@@ -1613,11 +1610,10 @@ JIT_OP_CALL_INDIRECT_TAIL:
 JIT_OP_CALL_VTABLE_PTR:
     [] -> {
 #if defined(JITE_ENABLED)
-        if(insn->call_params && (*insn->call_params)->abi == jit_abi_internal)
+        jit_abi_t abi = jit_type_get_abi(insn->signature);
+        if(abi == jit_abi_internal)
         {
-            unsigned int num = (*insn->call_params)->num;
-            jit_value_t *args = (*insn->call_params)->args;
-            inst = jite_emit_trampoline_for_internal_abi(gen, inst, num, args, 0, insn->value2, INDIRECT_CALL);
+            inst = jite_emit_trampoline_for_internal_abi(gen, inst, insn->signature, 0, INDIRECT_CALL);
         }
         else
 #endif
@@ -1629,29 +1625,27 @@ JIT_OP_CALL_VTABLE_PTR:
 JIT_OP_CALL_VTABLE_PTR_TAIL:
     [] -> {
 #if defined(JITE_ENABLED)
-        if(insn->call_params && (*insn->call_params)->abi == jit_abi_internal)
+        jit_abi_t abi = jit_type_get_abi(insn->signature);
+        if(abi == jit_abi_internal)
         {
-            unsigned int num = (*insn->call_params)->num;
-            jit_value_t *args = (*insn->call_params)->args;
-            inst = jite_emit_trampoline_for_internal_abi(gen, inst, num, args, 0, insn->value2, INDIRECT_CALL);
+            inst = jite_emit_trampoline_for_internal_abi(gen, inst, insn->signature, 0, INDIRECT_CALL);
         }
         else
 #endif
-                {
+        {
             x86_mov_reg_reg(inst, X86_ESP, X86_EBP, sizeof(void *));
             x86_pop_reg(inst, X86_EBP);
             x86_jump_reg(inst, X86_EAX);
-                }
+        }
     }
 
 JIT_OP_CALL_EXTERNAL:
     [] -> {
 #if defined(JITE_ENABLED)
-        if(insn->call_params && (*insn->call_params)->abi == jit_abi_internal)
+        jit_abi_t abi = jit_type_get_abi(insn->signature);
+        if(abi == jit_abi_internal)
         {
-            unsigned int num = (*insn->call_params)->num;
-            jit_value_t *args = (*insn->call_params)->args;
-            inst = jite_emit_trampoline_for_internal_abi(gen, inst, num, args, (void *)(insn->dest), 0, NORMAL_CALL);
+            inst = jite_emit_trampoline_for_internal_abi(gen, inst, (jit_type_t)(insn->dest), 0, NORMAL_CALL);
         }
         else
 #endif
@@ -1663,11 +1657,10 @@ JIT_OP_CALL_EXTERNAL:
 JIT_OP_CALL_EXTERNAL_TAIL:
     [] -> {
 #if defined(JITE_ENABLED)
-        if(insn->call_params && (*insn->call_params)->abi == jit_abi_internal)
+        jit_abi_t abi = jit_type_get_abi(insn->signature);
+        if(abi == jit_abi_internal)
         {
-            unsigned int num = (*insn->call_params)->num;
-            jit_value_t *args = (*insn->call_params)->args;
-            inst = jite_emit_trampoline_for_internal_abi(gen, inst, num, args, (void *)(insn->dest), 0, NORMAL_CALL);
+            inst = jite_emit_trampoline_for_internal_abi(gen, inst, (jit_type_t)(insn->dest), 0, NORMAL_CALL);
         }
         else
 #endif

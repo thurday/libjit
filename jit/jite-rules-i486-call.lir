@@ -542,8 +542,6 @@ JIT_OP_FLUSH_SMALL_STRUCT:
 JIT_OP_CALL:
     [] -> {
         jit_function_t called_func = (jit_function_t)(insn->dest);
-        unsigned int num = (*insn->call_params)->num;
-        jit_value_t *args = (*insn->call_params)->args;
 
         if(func->jite->relative_sp_offset)
         {
@@ -551,46 +549,32 @@ JIT_OP_CALL:
         }
         func->jite->relative_sp_offset = 0;
 
-        inst = jite_emit_function_call(gen, inst, func, num,
+        inst = jite_emit_function_call(gen, inst, func,
                             jit_function_to_closure(called_func),
                             0,
-                            args,
-                            insn->value2,
                             NORMAL_CALL);
     }
 
 JIT_OP_CALL_TAIL:
     [] -> {
         jit_function_t called_func = (jit_function_t)(insn->dest);
-        jit_abi_t abi = (*insn->call_params)->abi;
-        unsigned int num = (*insn->call_params)->num;
-        jit_value_t *args = (*insn->call_params)->args;
-        int callType = NORMAL_CALL;
-        
-        if(abi == jit_function_get_abi(func))
-        {
-            callType = TAIL_CALL;
-        }
-        
+        int callType = TAIL_CALL;
+
         if(func->jite->relative_sp_offset)
         {
             x86_alu_reg_imm(inst, X86_SUB, X86_ESP, -func->jite->relative_sp_offset);
         }
         func->jite->relative_sp_offset = 0;
 
-        inst = jite_emit_function_call(gen, inst, func, num,
+        inst = jite_emit_function_call(gen, inst, func,
                             jit_function_to_closure(called_func),
                             0,
-                            args,
-                            insn->value2,
                             callType);
     }
 
 JIT_OP_CALL_EXTERNAL:
     [] -> {
         void *called_func = (void*)(insn->dest);
-        unsigned int num = (*insn->call_params)->num;
-        jit_value_t *args = (*insn->call_params)->args;
     
         if(func->jite->relative_sp_offset)
         {
@@ -598,25 +582,16 @@ JIT_OP_CALL_EXTERNAL:
         }
         func->jite->relative_sp_offset = 0;
 
-        inst = jite_emit_function_call(gen, inst, func, num,
+        inst = jite_emit_function_call(gen, inst, func,
                             called_func,
                             0,
-                            args,
-                            insn->value2,
                             NORMAL_CALL);
     }
     
 JIT_OP_CALL_EXTERNAL_TAIL:
     [] -> {
         void *called_func = (void*)(insn->dest);
-        jit_abi_t abi = (*insn->call_params)->abi;
-        unsigned int num = (*insn->call_params)->num;
-        jit_value_t *args = (*insn->call_params)->args;
-        int callType = NORMAL_CALL;
-        if(abi == jit_function_get_abi(func))
-        {
-            callType = TAIL_CALL;
-        }
+        int callType = TAIL_CALL;
         
         if(func->jite->relative_sp_offset)
         {
@@ -624,19 +599,15 @@ JIT_OP_CALL_EXTERNAL_TAIL:
         }
         func->jite->relative_sp_offset = 0;
         
-        inst = jite_emit_function_call(gen, inst, func, num,
+        inst = jite_emit_function_call(gen, inst, func,
                             called_func,
                             0,
-                            args,
-                            insn->value2,
                             callType);
     }
 
 JIT_OP_CALL_INDIRECT, JIT_OP_CALL_VTABLE_PTR:
     [] -> {    
         jit_value_t indirect_ptr = insn->value1;
-        unsigned int num = (*insn->call_params)->num;
-        jit_value_t *args = (*insn->call_params)->args;
 
         if(func->jite->relative_sp_offset)
         {
@@ -644,25 +615,16 @@ JIT_OP_CALL_INDIRECT, JIT_OP_CALL_VTABLE_PTR:
         }
         func->jite->relative_sp_offset = 0;
 
-        inst = jite_emit_function_call(gen, inst, func, num,
+        inst = jite_emit_function_call(gen, inst, func,
                             0,
                             indirect_ptr,
-                            args,
-                            insn->value2,
                             INDIRECT_CALL);
     }
 
 JIT_OP_CALL_INDIRECT_TAIL, JIT_OP_CALL_VTABLE_PTR_TAIL:
     [] -> {
         jit_value_t indirect_ptr = insn->value1;
-        jit_abi_t abi = (*insn->call_params)->abi;
-        unsigned int num = (*insn->call_params)->num;
-        jit_value_t *args = (*insn->call_params)->args;
-        int callType = INDIRECT_CALL;
-        if(abi == jit_function_get_abi(func))
-        {
-            callType = INDIRECT_TAIL_CALL;
-        }
+        int callType = INDIRECT_TAIL_CALL;
         
         if(func->jite->relative_sp_offset)
         {
@@ -670,11 +632,9 @@ JIT_OP_CALL_INDIRECT_TAIL, JIT_OP_CALL_VTABLE_PTR_TAIL:
         }
         func->jite->relative_sp_offset  = 0;
 
-        inst = jite_emit_function_call(gen, inst, func, num,
+        inst = jite_emit_function_call(gen, inst, func,
                             0,
                             indirect_ptr,
-                            args,
-                            insn->value2,
                             callType);
     }
 

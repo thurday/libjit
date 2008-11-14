@@ -1019,7 +1019,7 @@ void jite_compute_liveness(jit_function_t func)
 	    while(insns)
 	    {
     	        jit_insn_t insn = (jit_insn_t)(insns->item);
-    	        insns = (jite_linked_list_t) insn->next;
+    	        insns = (jite_linked_list_t) insns->next;
 		if(vreg->min_range->insn_num < insn->insn_num && vreg->max_range->insn_num > insn->insn_num)
                 {
 		    jit_value_set_addressable(vreg->value);
