@@ -120,6 +120,8 @@ static unsigned char *__find_one_gp_reg(jit_function_t func, local_regs_allocato
 
 #define find_one_gp_reg_cond1(inst, cond1) inst = __find_one_gp_reg_cond1(func, lrs, inst, cond1);
 
+#define find_one_gp_reg_cond1_vreg(inst, cond1) inst = __find_one_gp_reg_cond1_vreg(func, lrs, inst, cond1);
+
 static unsigned char* __find_one_gp_reg_cond1(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, unsigned char cond1)
 {
     unsigned int cond = jite_gp_regs_map[gp_reg_map[cond1]].hash_code;
@@ -127,8 +129,29 @@ static unsigned char* __find_one_gp_reg_cond1(jit_function_t func, local_regs_al
     return inst;
 }
 
+static unsigned char* __find_one_gp_reg_cond1_vreg(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, jite_vreg_t cond1)
+{
+//    if(vreg && vreg->in_reg && vreg->reg)
+//    {
+//        unsigned int cond = jite_gp_regs_map[gp_reg_map[cond1]].hash_code;
+//        inst = jite_allocate_local_register(inst, func, 0, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, cond, JIT_TYPE_PTR, &gpreg1);
+//    }
+//    else if(vreg && vreg->in_frame && vreg->frame)
+//    {
+        //unsigned int frame = vreg->frame->frame_offset;
+    inst = jite_allocate_local_register(inst, func, 0, cond1, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+//    }
+    return inst;
+}
+
 
 #define find_one_gp_reg_cond2(inst, cond1, cond2) inst = __find_one_gp_reg_cond2(func, lrs, inst, cond1, cond2);
+
+#define find_one_gp_reg_cond2_vreg(inst, cond1, cond2) inst = __find_one_gp_reg_cond2_vreg(func, lrs, inst, cond1, cond2);
+
+#define find_one_gp_reg_cond2_vreg_cond2(inst, cond1, cond2, cond3, cond4) inst = __find_one_gp_reg_cond2_vreg_cond2(func, lrs, inst, cond1, cond2, cond3, cond4);
+
+#define find_one_gp_reg_cond3_vreg(inst, cond1, cond2, cond3) inst = __find_one_gp_reg_cond3_vreg(func, lrs, inst, cond1, cond2, cond3);
 
 static unsigned char* __find_one_gp_reg_cond2(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, unsigned char cond1, unsigned char cond2)
 {
@@ -137,6 +160,21 @@ static unsigned char* __find_one_gp_reg_cond2(jit_function_t func, local_regs_al
     inst = jite_allocate_local_register(inst, func, 0, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, cond, JIT_TYPE_PTR, &gpreg1);
     return inst;
 }
+
+static unsigned char* __find_one_gp_reg_cond2_vreg(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, jite_vreg_t cond1, jite_vreg_t cond2)
+{
+    inst = jite_allocate_local_register(inst, func, 0, cond1, cond2, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+    return inst;
+}
+
+static unsigned char* __find_one_gp_reg_cond2_vreg_cond2(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, jite_vreg_t cond1, jite_vreg_t cond2, unsigned char cond3, unsigned char cond4)
+{
+    unsigned int cond = jite_gp_regs_map[gp_reg_map[cond3]].hash_code;
+    cond |= jite_gp_regs_map[gp_reg_map[cond4]].hash_code;
+    inst = jite_allocate_local_register(inst, func, 0, cond1, cond2, LOCAL_ALLOCATE_FOR_TEMP, cond, JIT_TYPE_PTR, &gpreg1);
+    return inst;
+}
+
 
 #define find_one_gp_reg_cond3(inst, cond1, cond2, cond3) inst = __find_one_gp_reg_cond3(func, lrs, inst, cond1, cond2, cond3);
 
@@ -148,6 +186,14 @@ static unsigned char* __find_one_gp_reg_cond3(jit_function_t func, local_regs_al
     inst = jite_allocate_local_register(inst, func, 0, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, cond, JIT_TYPE_PTR, &gpreg1);
     return inst;
 }
+
+
+static unsigned char* __find_one_gp_reg_cond3_vreg(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, jite_vreg_t cond1, jite_vreg_t cond2, jite_vreg_t cond3)
+{
+    inst = jite_allocate_local_register(inst, func, cond1, cond2, cond3, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+    return inst;
+}
+
 #define find_one_gp_reg_cond4(inst, cond1, cond2, cond3, cond4) inst = __find_one_gp_reg_cond4(func, lrs, inst, cond1, cond2, cond3, cond4);
 
 static unsigned char* __find_one_gp_reg_cond4(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, unsigned char cond1, unsigned char cond2, unsigned char cond3, unsigned char cond4)
@@ -226,12 +272,29 @@ static unsigned char *__find_one_xmm_reg(jit_function_t func, local_regs_allocat
 
 #define find_one_xmm_reg_cond1(inst, cond1) inst = __find_one_xmm_reg_cond1(func, lrs, inst, cond1);
 
+#define find_one_xmm_reg_cond1_vreg(inst, cond1) inst = __find_one_xmm_reg_cond1_vreg(func, lrs, inst, cond1);
+
+#define find_one_xmm_reg_cond2_vreg(inst, cond1, cond2) inst = __find_one_xmm_reg_cond2_vreg(func, lrs, inst, cond1, cond2);
+
 static unsigned char* __find_one_xmm_reg_cond1(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, unsigned char cond1)
 {
     unsigned int cond = jite_xmm_regs_map[cond1].hash_code;
     inst = jite_allocate_local_register(inst, func, 0, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, cond, JIT_TYPE_FLOAT64, &xmmreg1);
     return inst;
 }
+
+static unsigned char* __find_one_xmm_reg_cond1_vreg(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, jite_vreg_t cond1)
+{
+    inst = jite_allocate_local_register(inst, func, 0, cond1, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_FLOAT64, &xmmreg1);
+    return inst;
+}
+
+static unsigned char* __find_one_xmm_reg_cond2_vreg(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, jite_vreg_t cond1, jite_vreg_t cond2)
+{
+    inst = jite_allocate_local_register(inst, func, 0, cond1, cond2, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_FLOAT64, &xmmreg1);
+    return inst;
+}
+
 
 #define release_one_xmm_reg(inst) inst = jite_restore_local_registers(inst, func, jite_xmm_regs_map[xmmreg1].hash_code);
 
@@ -765,8 +828,8 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
             {
                 while(size >= sizeof(void*))
                 {
-                        x86_mov_reg_membase(inst, gpreg1, sreg, soffset, sizeof(void *));
-                        x86_mov_membase_reg(inst, dreg, doffset, gpreg1, sizeof(void *));
+                    x86_mov_reg_membase(inst, gpreg1, sreg, soffset, sizeof(void *));
+                    x86_mov_membase_reg(inst, dreg, doffset, gpreg1, sizeof(void *));
                     soffset += sizeof(void *);
                     doffset += sizeof(void *);
                     size -= sizeof(void *);
@@ -774,8 +837,8 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
 
                 while(size >= 4)
                 {
-                        x86_mov_reg_membase(inst, gpreg1, sreg, soffset, 4);
-                        x86_mov_membase_reg(inst, dreg, doffset, gpreg1, 4);
+                    x86_mov_reg_membase(inst, gpreg1, sreg, soffset, 4);
+                    x86_mov_membase_reg(inst, dreg, doffset, gpreg1, 4);
                     soffset += 4;
                     doffset += 4;
                     size -= 4;
@@ -783,8 +846,8 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
 
                 while(size >= 2)
                 {
-                        x86_mov_reg_membase(inst, gpreg1, sreg, soffset, 2);
-                        x86_mov_membase_reg(inst, dreg, doffset, gpreg1, 2);
+                    x86_mov_reg_membase(inst, gpreg1, sreg, soffset, 2);
+                    x86_mov_membase_reg(inst, dreg, doffset, gpreg1, 2);
                     soffset += 2;
                     doffset += 2;
                     size -= 2;
@@ -792,8 +855,8 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
 
                 while(size >= 1)
                 {
-                        x86_mov_reg_membase(inst, gpreg1, sreg, soffset, 1);
-                        x86_mov_membase_reg(inst, dreg, doffset, gpreg1, 1);
+                    x86_mov_reg_membase(inst, gpreg1, sreg, soffset, 1);
+                    x86_mov_membase_reg(inst, dreg, doffset, gpreg1, 1);
                     soffset ++;
                     doffset ++;
                     size--;
@@ -838,7 +901,7 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
         {
             x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 16);
         }
-        release_one_gp_reg(inst);
+//        release_one_gp_reg(inst);
     }
     
     return inst;

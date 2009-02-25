@@ -12,6 +12,8 @@
 
 // #define JITE_DEBUG_ENABLED 1
 
+// #define JITE_DUMP_LIVENESS_RANGES 1
+
 typedef struct _jite_vreg *jite_vreg_t;
 typedef struct _jite_instance *jite_instance_t;
 typedef struct _jite_critical_point *jite_critical_point_t;
@@ -19,6 +21,7 @@ typedef struct _jite_list *jite_list_t;
 typedef struct _jite_reg *jite_reg_t;
 typedef struct _jite_frame *jite_frame_t;
 typedef struct _jite_linked_list *jite_linked_list_t;
+
 typedef struct _jite_call_params *jite_call_params_t;
 
 struct _jite_call_params
@@ -48,14 +51,12 @@ struct _jite_reg
 {
     unsigned char reg;
     unsigned char index;
-    int min_life_range;
-    int max_life_range;
-    int min_weight_range;
-    int max_weight_range;
     unsigned int hash_code;
     jite_vreg_t vreg;
     jite_vreg_t local_vreg;
     jite_frame_t temp_frame;
+    jite_linked_list_t liveness;
+//  jite_linked_list_t sigsetjmps;
 };
 
 struct _jite_critical_point
@@ -107,6 +108,7 @@ struct _jite_vreg
     unsigned int in_frame : 1;
     short index;
     short weight;
+    jite_linked_list_t liveness;
 };
 
 struct _jite_linked_list
@@ -115,6 +117,7 @@ struct _jite_linked_list
     jite_linked_list_t prev;
     void *item;
 };
+
 
 #ifndef JIT_NATIVE64_INT64
 #define CASE_USE_WORD \
@@ -159,6 +162,7 @@ struct _jite_linked_list
 #endif
 
 
+void jite_debug_print_vregs_ranges(jit_function_t func);
 
 int jite_count_items(jit_function_t func, jite_linked_list_t list);
 
@@ -170,7 +174,7 @@ jit_value_t jite_value_get_param(jit_function_t func, int index);
 
 char jite_is_virtual_reference(jit_value_t value);
 
-jit_value_t jite_find_work_value(jit_insn_t insn, jit_value_t value);
+// jit_value_t jite_find_work_value(jit_insn_t insn, jit_value_t value);
 
 void jite_init(jit_function_t func);
 
@@ -190,6 +194,10 @@ void jite_add_branch_target(jit_function_t func, jit_insn_t insn, jit_label_t la
 
 // Compute values liveness period
 void jite_compute_liveness(jit_function_t func);
+
+void jite_compute_fast_liveness(jit_function_t func);
+
+void jite_compute_full_liveness(jit_function_t func);
 
 // Create a new jite instance.
 jite_instance_t jite_create_instance(jit_function_t func);
@@ -220,9 +228,15 @@ void jite_add_vreg_to_complex_list(jit_function_t func, jite_vreg_t vreg, jite_l
 
 void jite_remove_vreg_from_complex_list(jit_function_t func, jite_vreg_t vreg, jite_list_t list);
 
-unsigned char jite_add_item_to_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list);
+void jite_clear_linked_list(jit_function_t func, jite_linked_list_t linked_list);
 
-unsigned char jite_remove_item_from_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list);
+jite_linked_list_t jite_add_item_no_duplicate_to_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list);
+
+jite_linked_list_t jite_insert_item_after_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list);
+
+jite_linked_list_t jite_add_item_to_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list);
+
+jite_linked_list_t jite_remove_item_from_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list);
 
 jite_vreg_t jite_vregs_higher_criteria(jit_function_t func, jite_vreg_t vreg1, jite_vreg_t vreg2);
 
@@ -232,7 +246,8 @@ void jite_free_registers(jit_function_t func, jite_list_t list);
 
 void jite_free_reg(jit_function_t func, jite_vreg_t vreg);
 
-void jite_free_frames(jit_function_t func, jite_list_t list);
+//void jite_free_frames(jit_function_t func, jite_list_t list);
+void jite_free_frames(jit_function_t func, jit_insn_t insn);
 
 void jite_free_vreg_frame(jit_function_t func, jite_vreg_t vreg);
 
@@ -246,7 +261,9 @@ void jite_preallocate_global_registers(jit_function_t func);
 
 void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list);
 
-unsigned char* jite_allocate_registers_and_frames(unsigned char *inst, jit_function_t func, jite_linked_list_t list);
+void jite_allocate_registers(jit_function_t func, jite_linked_list_t list);
+
+void jite_allocate_registers_and_frames(jit_function_t func, jite_linked_list_t list);
 
 unsigned char* jite_allocate_local_registers_for_input(unsigned char *inst, jit_function_t func, jite_vreg_t vreg, jite_vreg_t vreg1, jite_vreg_t vreg2);
 

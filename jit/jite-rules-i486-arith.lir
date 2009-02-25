@@ -6,7 +6,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
     [=local, imm, local] -> {
         if($1 != $3)
         {
-            find_one_gp_reg(inst);
+            find_one_gp_reg_cond1_vreg(inst, value2->vreg);
             if(!machine_code2)
             {
                 x86_mov_reg_imm(inst, gpreg1, $2);
@@ -23,7 +23,6 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
                 x86_alu_reg_membase(inst, machine_code2, gpreg1, X86_EBP, $3 + 4);
                 x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
             }
-            
         }
         else
         {
@@ -33,7 +32,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
     [=local, local, imm] -> {
         if($1 != $2)
         {
-            find_one_gp_reg(inst);
+            find_one_gp_reg_cond1_vreg(inst, value1->vreg);
             if(!machine_code2)
             {
                 x86_mov_reg_imm(inst, gpreg1, $3);
@@ -50,7 +49,6 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
                 x86_alu_reg_membase(inst, machine_code2, gpreg1, X86_EBP, $2 + 4);
                 x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
             }
-            
         }
         else
         {
@@ -61,7 +59,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
         if(!jite_gp_reg_is_free(func, $3))
         {
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, $3, sourceType);
-                inst = masm_alu_membase_imm(inst, machine_code1, machine_code2, X86_EBP, $1, $2);
+            inst = masm_alu_membase_imm(inst, machine_code1, machine_code2, X86_EBP, $1, $2);
         }
         else
         {
@@ -70,7 +68,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
         }
     }
     [=local, local, local] -> {
-        find_one_gp_reg(inst);
+        find_one_gp_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
         if($1 != $2 && $1 != $3)
         {
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
@@ -89,8 +87,8 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
             x86_alu_membase_reg(inst, machine_code1, X86_EBP, $1, gpreg1);
             if(machine_code2)
             {
-                x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3, 4);
-                x86_alu_membase_reg(inst, machine_code2, X86_EBP, $1, gpreg1);
+                x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3 + 4, 4);
+                x86_alu_membase_reg(inst, machine_code2, X86_EBP, $1 + 4, gpreg1);
             }
         }
         else
@@ -99,11 +97,10 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
             x86_alu_membase_reg(inst, machine_code1, X86_EBP, $1, gpreg1);
             if(machine_code2)
             {
-                x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
-                x86_alu_membase_reg(inst, machine_code2, X86_EBP, $1, gpreg1);
+                x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 4, 4);
+                x86_alu_membase_reg(inst, machine_code2, X86_EBP, $1 + 4, gpreg1);
             }
         }
-        
     }
     [=local, local, reg] -> {
         if($1 != $2)
@@ -115,7 +112,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
             }
             else if(have_free_gpregs())
             {
-                find_one_gp_reg(inst);
+                find_one_gp_reg_cond1_vreg(inst, value1->vreg);
                 x86_mov_reg_reg(inst, gpreg1, $3, 4);
                 x86_alu_reg_membase(inst, machine_code1, gpreg1, X86_EBP, $2);
                 x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
@@ -124,9 +121,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
                     x86_mov_reg_reg(inst, gpreg1, jite_register_pair($3), 4);
                     x86_alu_reg_membase(inst, machine_code2, gpreg1, X86_EBP, $2 + 4);
                     x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
-                }
-
-                
+                }                
             }
             else
             {
@@ -163,7 +158,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
             }
             else if(have_free_gpregs())
             {
-                find_one_gp_reg(inst);
+                find_one_gp_reg_cond1_vreg(inst, value2->vreg);
                 x86_mov_reg_reg(inst, gpreg1, $2, 4);
                 x86_alu_reg_membase(inst, machine_code1, gpreg1, X86_EBP, $3);
                 x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
@@ -172,9 +167,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
                     x86_mov_reg_reg(inst, gpreg1, jite_register_pair($2), 4);
                     x86_alu_reg_membase(inst, machine_code2, gpreg1, X86_EBP, $3 + 4);
                     x86_mov_membase_reg(inst, X86_EBP, $1 + 4, gpreg1, 4);
-                }
-
-                
+                }    
             }
             else
             {
@@ -193,7 +186,7 @@ JIT_OP_IADD, JIT_OP_IOR, JIT_OP_IAND, JIT_OP_IXOR, JIT_OP_ADD_RELATIVE, JIT_OP_L
         if(!jite_gp_reg_is_free(func, $2) && !jite_gp_reg_is_free(func, $3))
         {
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, $2, sourceType);
-                inst = masm_alu_membase_reg(inst, machine_code1, machine_code2, X86_EBP, $1, $3);
+            inst = masm_alu_membase_reg(inst, machine_code1, machine_code2, X86_EBP, $1, $3);
         }
         else if(jite_gp_reg_is_free(func, $2))
         {
@@ -257,11 +250,10 @@ JIT_OP_ISUB:
         x86_mov_membase_imm(inst, X86_EBP, $1, $2 - $3, 4);
     }
     [=local, imm, local] -> {
-        find_one_gp_reg(inst);
+        find_one_gp_reg_cond1_vreg(inst, value2->vreg);
         x86_mov_reg_imm(inst, gpreg1, $2);
         x86_alu_reg_membase(inst, X86_SUB, gpreg1, X86_EBP, $3);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, imm, reg] -> {
         x86_mov_membase_imm(inst, X86_EBP, $1, $2, 4);
@@ -270,29 +262,26 @@ JIT_OP_ISUB:
     [=local, local, imm] -> {
         if($1 != $2)
         {
-            find_one_gp_reg(inst);
+            find_one_gp_reg_cond1_vreg(inst, value1->vreg);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_alu_reg_imm(inst, X86_SUB, gpreg1, $3);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else x86_alu_membase_imm(inst, X86_SUB, X86_EBP, $1, $3);
     }
     [=local, local, local] -> {
         if($1 != $2 && $2 != $3)
         {
-            find_one_gp_reg(inst);
+            find_one_gp_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_alu_reg_membase(inst, X86_SUB, gpreg1, X86_EBP, $3);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else if($1 == $2 && $2 != $3)
         {
-            find_one_gp_reg(inst);
+            find_one_gp_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3, 4);
             x86_alu_membase_reg(inst, X86_SUB, X86_EBP, $1, gpreg1);
-            
         }
         else
         {
@@ -302,11 +291,10 @@ JIT_OP_ISUB:
     [=local, local, reg] -> {
         if($1 != $2)
         {
-            find_one_gp_reg_cond1(inst, $3);
+            find_one_gp_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_alu_reg_reg(inst, X86_SUB, gpreg1, $3);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else
         {
@@ -325,11 +313,10 @@ JIT_OP_ISUB:
         }
         else if(have_free_gpregs())
         {
-            find_one_gp_reg(inst);
+            find_one_gp_reg_cond1_vreg(inst, value2->vreg);
             x86_mov_reg_reg(inst, gpreg1, $2, 4);
             x86_alu_reg_membase(inst, X86_SUB, gpreg1, X86_EBP, $3);
-            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);        
         }
         else
         {
@@ -370,7 +357,6 @@ JIT_OP_ISUB:
             x86_mov_reg_imm(inst, gpreg1, $2);
             x86_alu_reg_reg(inst, X86_SUB, gpreg1, $3);
             x86_mov_reg_reg(inst, $1, gpreg1, 4);
-            
         }
     }
     [=reg, local, imm] -> {
@@ -393,11 +379,10 @@ JIT_OP_ISUB:
         }
         else
         {
-            find_one_gp_reg_cond1(inst, $1);
+            find_one_gp_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_alu_reg_reg(inst, X86_SUB, gpreg1, $3);
             x86_mov_reg_reg(inst, $1, gpreg1, 4);
-            
         }
     }
     [=reg, reg, imm] -> {
@@ -407,8 +392,8 @@ JIT_OP_ISUB:
     [=reg, reg, local] -> {
         if($1 != $2)
         {
-                x86_mov_reg_reg(inst, $1, $2, 4);
-                x86_alu_reg_membase(inst, X86_SUB, $1, X86_EBP, $3);
+            x86_mov_reg_reg(inst, $1, $2, 4);
+            x86_alu_reg_membase(inst, X86_SUB, $1, X86_EBP, $3);
         }
         else x86_alu_reg_membase(inst, X86_SUB, $1, X86_EBP, $3);
     }
@@ -424,7 +409,6 @@ JIT_OP_ISUB:
             x86_mov_reg_reg(inst, gpreg1, $2, 4);
             x86_alu_reg_reg(inst, X86_SUB, gpreg1, $3);
             x86_mov_reg_reg(inst, $1, gpreg1, 4);
-            
         }
         else
         {
@@ -437,31 +421,27 @@ JIT_OP_IMUL:
         x86_mov_membase_imm(inst, X86_EBP, $1, $2 * $3, 4);
     }
     [=local, imm, local] -> {
-        find_one_gp_reg(inst);
+        find_one_gp_reg_cond1_vreg(inst, value2->vreg);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3, 4);
         inst = masm_imul_reg_reg_imm(inst, gpreg1, gpreg1, $2);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, imm, reg] -> {
         find_one_gp_reg(inst);
         inst = masm_imul_reg_reg_imm(inst, gpreg1, $3, $2);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, local, imm] -> {
-        find_one_gp_reg(inst);
+        find_one_gp_reg_cond1_vreg(inst, value1->vreg);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
         inst = masm_imul_reg_reg_imm(inst, gpreg1, gpreg1, $3);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, local, local] -> {
-        find_one_gp_reg(inst);
+        find_one_gp_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $3, 4);
         x86_imul_reg_membase(inst, gpreg1, X86_EBP, $2);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, local, reg] -> {
         if(jite_gp_reg_is_free(func, $3))
@@ -471,11 +451,10 @@ JIT_OP_IMUL:
         }
         else if(have_free_gpregs())
         {
-            find_one_gp_reg(inst);
+            find_one_gp_reg_cond1_vreg(inst, value1->vreg);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_imul_reg_membase(inst, gpreg1, X86_EBP, $2);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else
         {
@@ -489,7 +468,6 @@ JIT_OP_IMUL:
         find_one_gp_reg(inst);
         inst = masm_imul_reg_reg_imm(inst, gpreg1, $2, $3);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, reg, local] -> {
         if(jite_gp_reg_is_free(func, $2))
@@ -503,7 +481,6 @@ JIT_OP_IMUL:
             x86_mov_reg_reg(inst, gpreg1, $2, 4);
             x86_imul_reg_membase(inst, gpreg1, X86_EBP, $3);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else
         {
@@ -530,7 +507,6 @@ JIT_OP_IMUL:
             x86_mov_reg_reg(inst, gpreg1, $2, 4);
             x86_imul_reg_reg(inst, gpreg1, $3);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else
         {
@@ -654,16 +630,14 @@ JIT_OP_IDIV:
             x86_mov_reg_imm(inst, X86_EAX, $2);
             x86_cdq(inst);
             x86_div_reg(inst, gpreg1, 1);
-            
         }
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EAX, 4);
     }
-    [=local, local, imm] -> {    
-        find_one_gp_reg(inst);
+    [=local, local, imm] -> {
+        find_one_gp_reg_cond1_vreg(inst, value1->vreg);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
         inst = masm_idiv_reg_reg_imm(inst, gpreg1, gpreg1, $3);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, local, local] -> {
         #ifndef JIT_USE_SIGNALS
@@ -707,7 +681,7 @@ JIT_OP_IDIV:
         x86_patch(patch, inst);
         x86_patch(patch2, inst);
         #endif
-        
+
         if($3 != X86_EAX && $3 != X86_EDX)
         {
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
@@ -716,12 +690,12 @@ JIT_OP_IDIV:
         }
         else
         {
-            find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+            find_one_gp_reg_cond2_vreg_cond2(inst, value1->vreg, value2->vreg, X86_EAX, X86_EDX);
+
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
             x86_cdq(inst);
             x86_div_reg(inst, gpreg1, 1);
-            
         }
 
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EAX, 4);
@@ -732,7 +706,6 @@ JIT_OP_IDIV:
             find_one_gp_reg(inst);
             inst = masm_idiv_reg_reg_imm(inst, gpreg1, $2, $3);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else
         {
@@ -807,7 +780,6 @@ JIT_OP_IDIV:
             }
             x86_cdq(inst);
             x86_div_reg(inst, gpreg1, 1);
-            
         }
 
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EAX, 4);
@@ -957,12 +929,13 @@ JIT_OP_IDIV:
         }
         else
         {
-            find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+            // find_one_gp_reg_cond3_vreg(inst, dest->vreg, value1->vreg, value2->vreg);
+            find_one_gp_reg_cond2_vreg_cond2(inst, value1->vreg, value2->vreg, X86_EAX, X86_EDX);
+
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
             x86_cdq(inst);
-            x86_div_reg(inst, gpreg1, 1);
-            
+            x86_div_reg(inst, gpreg1, 1);            
         }
 
         if($1 != X86_EAX) x86_mov_reg_reg(inst, $1, X86_EAX, 4);
@@ -1109,17 +1082,15 @@ JIT_OP_IDIV_UN:
             x86_mov_reg_imm(inst, X86_EAX, $2);
             x86_clear_reg(inst, X86_EDX);
             x86_div_reg(inst, gpreg1, 0);
-            
         }
 
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EAX, 4);
     }
     [=local, local, imm] -> {
-        find_one_gp_reg(inst);
+        find_one_gp_reg_cond1_vreg(inst, value1->vreg);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
         inst = masm_idiv_un_reg_reg_imm(inst, gpreg1, gpreg1, $3);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, local, local] -> {
         #ifndef JIT_USE_SIGNALS
@@ -1149,17 +1120,16 @@ JIT_OP_IDIV_UN:
         if($3 != X86_EAX && $3 != X86_EDX)
         {
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
-                x86_clear_reg(inst, X86_EDX);
-                x86_div_reg(inst, $3, 0);
+            x86_clear_reg(inst, X86_EDX);
+            x86_div_reg(inst, $3, 0);
         }
         else
         {
-            find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+            find_one_gp_reg_cond2_vreg_cond2(inst, value1->vreg, value1->vreg, X86_EAX, X86_EDX);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
-                x86_clear_reg(inst, X86_EDX);
-                x86_div_reg(inst, gpreg1, 0);
-            
+            x86_clear_reg(inst, X86_EDX);
+            x86_div_reg(inst, gpreg1, 0);
         }
 
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EAX, 4);
@@ -1169,8 +1139,7 @@ JIT_OP_IDIV_UN:
         {
             find_one_gp_reg(inst);
             inst = masm_idiv_un_reg_reg_imm(inst, gpreg1, $2, $3);
-            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
+            x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);            
         }
         else
         {
@@ -1227,7 +1196,7 @@ JIT_OP_IDIV_UN:
             }
             x86_clear_reg(inst, X86_EDX);
             x86_div_reg(inst, gpreg1, 0);
-            
+
         }
 
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EAX, 4);
@@ -1281,7 +1250,6 @@ JIT_OP_IDIV_UN:
             x86_mov_reg_imm(inst, X86_EAX, $2);
             x86_clear_reg(inst, X86_EDX);
             x86_div_reg(inst, gpreg1, 0);
-            
         }
         if($1 != X86_EAX) x86_mov_reg_reg(inst, $1, X86_EAX, 4);
     }
@@ -1333,12 +1301,11 @@ JIT_OP_IDIV_UN:
         }
         else
         {
-            find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+            find_one_gp_reg_cond2_vreg_cond2(inst, value1->vreg, value1->vreg, X86_EAX, X86_EDX);
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_clear_reg(inst, X86_EDX);
             x86_div_reg(inst, gpreg1, 0);
-            
         }
 
         if($1 != X86_EAX) x86_mov_reg_reg(inst, $1, X86_EAX, 4);
@@ -1491,7 +1458,6 @@ JIT_OP_IREM:
             x86_mov_reg_imm(inst, X86_EAX, $2);
             x86_cdq(inst);
             x86_div_reg(inst, gpreg1, 1);
-            
         }
 
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EDX, 4);
@@ -1554,12 +1520,11 @@ JIT_OP_IREM:
         }
         else
         {
-            find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+            find_one_gp_reg_cond2_vreg_cond2(inst, value1->vreg, value1->vreg, X86_EAX, X86_EDX);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
             x86_cdq(inst);
             x86_div_reg(inst, gpreg1, 1);
-            
         }
 
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EDX, 4);
@@ -1570,7 +1535,6 @@ JIT_OP_IREM:
             find_one_gp_reg(inst);
             inst = masm_irem_reg_reg_imm(inst, gpreg1, $2, $3);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         else
         {
@@ -1680,7 +1644,7 @@ JIT_OP_IREM:
             x86_patch(patch, inst);
         }
         #endif
-        
+
         x86_mov_reg_imm(inst, X86_EAX, $2);
         x86_cdq(inst);
         x86_div_membase(inst, X86_EBP, $3, 1);
@@ -1724,7 +1688,6 @@ JIT_OP_IREM:
             x86_mov_reg_imm(inst, X86_EAX, $2);
             x86_cdq(inst);
             x86_div_reg(inst, gpreg1, 1);
-            
         }
         if($1!=X86_EDX) x86_mov_reg_reg(inst, $1, X86_EDX, 4);
     }
@@ -1794,12 +1757,11 @@ JIT_OP_IREM:
         }
         else
         {
-            find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+            find_one_gp_reg_cond2_vreg_cond2(inst, value1->vreg, value1->vreg, X86_EAX, X86_EDX);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
             x86_cdq(inst);
             x86_div_reg(inst, gpreg1, 1);
-            
         }
 
         if($1 != X86_EDX) x86_mov_reg_reg(inst, $1, X86_EDX, 4);
@@ -1948,17 +1910,15 @@ JIT_OP_IREM_UN:
             x86_mov_reg_imm(inst, X86_EAX, $2);
             x86_clear_reg(inst, X86_EDX);
             x86_div_reg(inst, gpreg1, 0);
-            
         }
-        
+
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EDX, 4);
     }
     [=local, local, imm] -> {
-        find_one_gp_reg(inst);
+        find_one_gp_reg_cond1_vreg(inst, value1->vreg);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
         inst = masm_irem_un_reg_reg_imm(inst, gpreg1, gpreg1, $3);
         x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-        
     }
     [=local, local, local] -> {
         #ifndef JIT_USE_SIGNALS
@@ -1993,12 +1953,11 @@ JIT_OP_IREM_UN:
         }
         else
         {
-            find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+            find_one_gp_reg_cond2_vreg_cond2(inst, value1->vreg, value1->vreg, X86_EAX, X86_EDX);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
             x86_clear_reg(inst, X86_EDX);
             x86_div_reg(inst, gpreg1, 0);
-            
         }
         
         x86_mov_membase_reg(inst, X86_EBP, $1, X86_EDX, 4);
@@ -2173,12 +2132,11 @@ JIT_OP_IREM_UN:
         }
         else
         {
-            find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+            find_one_gp_reg_cond2_vreg_cond2(inst, value1->vreg, value1->vreg, X86_EAX, X86_EDX);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_reg_membase(inst, X86_EAX, X86_EBP, $2, 4);
             x86_clear_reg(inst, X86_EDX);
-            x86_div_reg(inst, gpreg1, 0);
-            
+            x86_div_reg(inst, gpreg1, 0);            
         }
 
         if($1 != X86_EDX) x86_mov_reg_reg(inst, $1, X86_EDX, 4);
@@ -2317,11 +2275,10 @@ JIT_OP_FADD, JIT_OP_DADD, JIT_OP_FMUL, JIT_OP_DMUL, JIT_OP_FMAX, JIT_OP_DMAX, JI
         
     }
     [=local, imm, local] -> {
-        find_one_xmm_reg(inst);
+        find_one_xmm_reg_cond1_vreg(inst, value2->vreg);
         inst = masm_mov_reg_imm(inst, xmmreg1, $2, sourceType);
         emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_EBP, $3);
         inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
     }
     [=local, imm, freg] -> {
         inst = masm_mov_membase_imm(inst, X86_ESP, -32, $2, sourceType);
@@ -2345,23 +2302,20 @@ JIT_OP_FADD, JIT_OP_DADD, JIT_OP_FMUL, JIT_OP_DMUL, JIT_OP_FMAX, JIT_OP_DMAX, JI
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
         emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_ESP, -32);
         inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
     }
     [=local, local, local] -> {
-        find_one_xmm_reg(inst);
+        find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
         emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_EBP, $3);
         inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
     }
     [=local, local, freg] -> {
         if(!jite_xmm_reg_is_free(func, $3))
         {
-            find_one_xmm_reg(inst);
+            find_one_xmm_reg_cond1_vreg(inst, value1->vreg);
             if($3 != xmmreg1) inst = masm_mov_reg_reg(inst, xmmreg1, $3, sourceType);
             emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_EBP, $2);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-            
         }
         else
         {
@@ -2377,7 +2331,6 @@ JIT_OP_FADD, JIT_OP_DADD, JIT_OP_FMUL, JIT_OP_DMUL, JIT_OP_FMAX, JIT_OP_DMAX, JI
             if($2 != xmmreg1) inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_ESP, -32);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-            
         }
         else
         {
@@ -2392,7 +2345,6 @@ JIT_OP_FADD, JIT_OP_DADD, JIT_OP_FMUL, JIT_OP_DMUL, JIT_OP_FMAX, JIT_OP_DMAX, JI
             if($2 != xmmreg1) inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_EBP, $3);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-            
         }
         else
         {
@@ -2407,7 +2359,6 @@ JIT_OP_FADD, JIT_OP_DADD, JIT_OP_FMUL, JIT_OP_DMUL, JIT_OP_FMAX, JIT_OP_DMAX, JI
             inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-            
         }
         else if(jite_xmm_reg_is_free(func, $2))
         {
@@ -2479,21 +2430,18 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
         inst = masm_mov_membase_imm(inst, X86_ESP, -32, $3, sourceType);
         emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_ESP, -32);
         inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
     }
     [=local, imm, local] -> {
-        find_one_xmm_reg(inst);
+        find_one_xmm_reg_cond1_vreg(inst, value2->vreg);
         inst = masm_mov_reg_imm(inst, xmmreg1, $2, sourceType);
         emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_EBP, $3);
-        inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
+        inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);    
     }
     [=local, imm, freg] -> {
         find_one_xmm_reg(inst);
         inst = masm_mov_reg_imm(inst, xmmreg1, $2, sourceType);
         emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
-        inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
+        inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);        
     }
     [=local, local, imm] -> {
         inst = masm_mov_membase_imm(inst, X86_ESP, -32, $3, sourceType);
@@ -2501,17 +2449,15 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
         emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_ESP, -32);
         inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
     }
     [=local, local, local] -> {
-        find_one_xmm_reg(inst);
+        find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
         emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_EBP, $3);
         inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-        
     }
     [=local, local, freg] -> {
-        find_one_xmm_reg_cond1(inst, $3);
+        find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
         emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
         inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);        
@@ -2524,7 +2470,6 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
             inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_ESP, -32);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-            
         }
         else
         {
@@ -2535,11 +2480,10 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
     [=local, freg, local] -> {
         if(!jite_xmm_reg_is_free(func, $2))
         {
-            find_one_xmm_reg(inst);
+            find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
             inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_membase((inst), (machine_code1), (machine_code2), xmmreg1, X86_EBP, $3);
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-            
         }
         else
         {
@@ -2553,8 +2497,7 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
             find_one_xmm_reg_cond1(inst, $3);
             inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
             emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
-            inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);
-            
+            inst = masm_mov_membase_reg(inst, X86_EBP, $1, xmmreg1, sourceType);            
         }
         else
         {
@@ -2602,7 +2545,7 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
         }
         else
         {
-            find_one_xmm_reg_cond1(inst, $3);
+            find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
             inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
             emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
             inst = masm_mov_reg_reg(inst, $1, xmmreg1, sourceType);
@@ -2639,8 +2582,7 @@ JIT_OP_FSUB, JIT_OP_DSUB, JIT_OP_FDIV, JIT_OP_DDIV:
                 find_one_xmm_reg_cond1(inst, $3);
                 inst = masm_mov_reg_reg(inst, xmmreg1, $2, sourceType);
                 emit_sse_instruction_reg_reg((inst), (machine_code1), (machine_code2), xmmreg1, $3);
-                inst = masm_mov_reg_reg(inst, $1, xmmreg1, sourceType);
-                
+                inst = masm_mov_reg_reg(inst, $1, xmmreg1, sourceType);                
             }
             else
             {

@@ -240,6 +240,7 @@ void _jit_function_free_builder(jit_function_t func)
         jit_memory_pool_free(&(func->builder->value_pool), _jit_value_free);
         jit_memory_pool_free(&(func->builder->meta_pool), _jit_meta_free_one);
         jit_memory_pool_free(&(func->builder->jite_linked_list_pool), 0);
+
         jit_free(func->builder->param_values);
         jit_free(func->builder->insns);
         jit_free(func->builder->label_blocks);
@@ -1613,7 +1614,7 @@ unsigned int jit_function_get_optimization_level(jit_function_t func)
 unsigned int jit_function_get_max_optimization_level(void)
 {
     /* TODO - implement more than basic optimization */
-    return 1;
+    return 2;
 }
 
 /*@

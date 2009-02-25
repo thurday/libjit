@@ -70,7 +70,6 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
             x86_shift_membase_imm(inst, machine_code1, X86_EBP, $1, $3);
-            
         }
         else x86_shift_membase_imm(inst, machine_code1, X86_EBP, $1, ($3 & 0x1F));
     }
@@ -90,7 +89,6 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
             find_one_gp_reg_cond1(inst, X86_ECX);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_mov_membase_reg(inst, X86_EBP, $1, gpreg1, 4);
-            
         }
         x86_shift_membase(inst, machine_code1, X86_EBP, $1);
     }
@@ -122,7 +120,6 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
             x86_mov_reg_imm(inst, X86_ECX, $3);
             x86_shift_reg(inst, machine_code1, gpreg1);
             x86_mov_reg_reg(inst, X86_ECX, gpreg1, 4);
-            
         }
     }
     [=reg, imm, local] -> {
@@ -139,7 +136,6 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
             x86_mov_reg_membase(inst, X86_ECX, X86_EBP, $3, 4);
             x86_shift_reg(inst, machine_code1, gpreg1);
             x86_mov_reg_reg(inst, X86_ECX, gpreg1, 4);
-            
         }
     }
     [=reg, imm, reg] -> {
@@ -169,7 +165,6 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
             x86_mov_reg_imm(inst, gpreg1, $2);
             x86_shift_reg(inst, machine_code1, gpreg1);
             x86_mov_reg_reg(inst, $1, gpreg1, 4);
-            
         }
     }
     [=reg, local, imm] -> {
@@ -190,7 +185,6 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
             x86_mov_reg_membase(inst, X86_ECX, X86_EBP, $3, 4);
             x86_shift_reg(inst, machine_code1, gpreg1);
             x86_mov_reg_reg(inst, X86_ECX, gpreg1, 4);
-            
         }
     }
     [=reg, local, reg] -> {
@@ -208,8 +202,7 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
                 x86_mov_reg_reg(inst, X86_ECX, $3, 4);
                 x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
                 x86_shift_reg(inst, machine_code1, gpreg1);
-                x86_mov_reg_reg(inst, X86_ECX, gpreg1, 4);
-                
+                x86_mov_reg_reg(inst, X86_ECX, gpreg1, 4);                
             }
         }
         else
@@ -225,7 +218,6 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
                 x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
                 x86_shift_reg(inst, machine_code1, gpreg1);
                 x86_mov_reg_reg(inst, X86_ECX, gpreg1, 4);
-                
             }
         }
     }
@@ -286,7 +278,6 @@ JIT_OP_ISHL, JIT_OP_ISHR, JIT_OP_ISHR_UN:
             x86_mov_reg_reg(inst, X86_ECX, $3, 4);
             x86_shift_reg(inst, machine_code1, gpreg1);
             x86_mov_reg_reg(inst, $1, gpreg1, 4);
-            
         }
     }
 

@@ -695,7 +695,7 @@ JIT_OP_NFLOAT_TO_FLOAT64:
         x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
     }
     [=local, local] -> {
-            if(sizeof(jit_nfloat) != sizeof(jit_float64))
+        if(sizeof(jit_nfloat) != sizeof(jit_float64))
         {
             x86_fld80_membase(inst, X86_EBP, $2);
             x86_fst_membase(inst, X86_EBP, $1, 1, 1);
@@ -704,8 +704,7 @@ JIT_OP_NFLOAT_TO_FLOAT64:
         {
             find_one_xmm_reg(inst);
             sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);    
         }
     }
     [=local, freg] -> {
@@ -749,8 +748,7 @@ JIT_OP_FLOAT32_TO_NFLOAT:
         {
             find_one_xmm_reg(inst);
             sse2_cvtss2sd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);    
         }
     }
     [=local, freg] -> {
@@ -802,7 +800,6 @@ JIT_OP_FLOAT64_TO_NFLOAT:
             x86_mov_membase_imm(inst, X86_EBP, $1, ptr[0], 4);
             x86_mov_membase_imm(inst, X86_EBP, $1 + 4, ptr[1], 4);
         }
-
     }
     [=local, local] -> {
         if(sizeof(jit_nfloat) != sizeof(jit_float64))
@@ -814,8 +811,7 @@ JIT_OP_FLOAT64_TO_NFLOAT:
         {
             find_one_xmm_reg(inst);
             sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
-            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
+            sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);        
         }
     }
     [=local, freg] -> {
@@ -951,7 +947,6 @@ JIT_OP_UINT_TO_NFLOAT:
         sse2_movsd_xmreg_membase(inst, $1, X86_ESP, -32);
         x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
         sse2_subsd_xmreg_membase(inst, $1, X86_ESP, -32);
-        
     }
     [=freg, reg] -> {
         unsigned int value = 0x43300000;
@@ -1014,7 +1009,6 @@ JIT_OP_UINT_TO_NFLOAT:
             x86_mov_membase_imm(inst, X86_EBP, $1, 0, 4);
             sse2_subsd_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
             sse2_movsd_membase_xmreg(inst, X86_EBP, $1, xmmreg1);
-            
         }
     }
 
@@ -1046,7 +1040,6 @@ JIT_OP_NFLOAT_TO_UINT:
             x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
             sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
             sse2_movd_reg_xmreg(inst, gpreg1, xmmreg1);
-            
         }
     }
     [=reg, freg] -> {
@@ -1057,7 +1050,6 @@ JIT_OP_NFLOAT_TO_UINT:
         x86_mov_membase_imm(inst, X86_ESP, -32, 0, 4);
         sse2_addsd_xmreg_membase(inst, xmmreg1, X86_ESP, -32);
         sse2_movd_reg_xmreg(inst, $1, xmmreg1);
-        
     }
     [=local, imm] -> {
         jit_float64 float_value = ((jit_float64 *)($2))[0];

@@ -48,7 +48,8 @@ JIT_OP_BR_IEQ, JIT_OP_BR_INE:
         inst = output_branch(func, inst, machine_code1, insn);
     }
     [local, local] -> {
-        find_one_gp_reg(inst);
+        // find_one_gp_reg(inst);
+	inst = jite_allocate_local_register(inst, func, value1->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $1, 4);
         x86_alu_reg_membase(inst, X86_CMP, gpreg1, X86_EBP, $2);
         inst = output_branch(func, inst, machine_code1, insn);
@@ -98,7 +99,10 @@ JIT_OP_BR_ILT, JIT_OP_BR_ILT_UN, JIT_OP_BR_ILE, JIT_OP_BR_ILE_UN, JIT_OP_BR_IGT,
         inst = output_branch(func, inst, machine_code1, insn);
     }
     [local, local] -> {
-        find_one_gp_reg(inst);
+        // find_one_gp_reg(inst);
+        // inst = jite_allocate_local_register(inst, func, insn->value1, insn->value1, insn->value2, LOCAL_ALLOCATE_FOR_TEMP, 0, 0, 0);
+	inst = jite_allocate_local_register(inst, func, value1->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $1, 4);
         x86_alu_reg_membase(inst, X86_CMP, gpreg1, X86_EBP, $2);
         inst = output_branch(func, inst, machine_code1, insn);
@@ -172,8 +176,9 @@ JIT_OP_BR_LFALSE, JIT_OP_BR_LTRUE:
         inst = output_branch(func, inst, machine_code1, insn);
     }
     [local] -> {
-        find_one_gp_reg(inst);
-        x86_mov_reg_membase(inst, gpreg1, X86_EBP, $1 + 4, 4);
+//      find_one_gp_reg(inst);
+	inst = jite_allocate_local_register(inst, func, value1->vreg, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+//      x86_mov_reg_membase(inst, gpreg1, X86_EBP, $1 + 4, 4);
         x86_alu_reg_membase(inst, X86_OR, gpreg1, X86_EBP, $1);
         inst = output_branch(func, inst, machine_code1, insn);
     }
@@ -251,7 +256,8 @@ JIT_OP_BR_LEQ:
         if($1 != $2)
         {
             unsigned char *patch1, *patch2;
-            find_one_gp_reg(inst);
+	    inst = jite_allocate_local_register(inst, func, value1->vreg, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+//          find_one_gp_reg(inst);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_alu_membase_reg(inst, X86_CMP, X86_EBP, $1, gpreg1);
             patch1 = inst;
@@ -327,7 +333,6 @@ JIT_OP_BR_LNE:
         jit_nint value1 = ((jit_nint *)($2))[0];
         jit_nint value2 = ((jit_nint *)($2))[1];
         x86_alu_reg_imm(inst, X86_CMP, $1, value1);
-	
         inst = output_branch(func, inst, 0x75 /* neq */, insn);
 	if(insn->value1->vreg->in_reg) x86_alu_reg_imm(inst, X86_CMP, jite_register_pair($1), value2);
 	else x86_alu_membase_imm(inst, X86_CMP, X86_EBP, insn->value1->vreg->frame->frame_offset, value2);
@@ -336,11 +341,14 @@ JIT_OP_BR_LNE:
     [local, local] -> {
         if($1 != $2)
         {
-            find_one_gp_reg(inst);
+	    inst = jite_allocate_local_register(inst, func, value2->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+//          find_one_gp_reg(inst);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2, 4);
             x86_alu_membase_reg(inst, X86_CMP, X86_EBP, $1, gpreg1);
             inst = output_branch(func, inst, 0x75 /* neq */, insn);
-            find_one_gp_reg(inst);
+	    inst = jite_allocate_local_register(inst, func, value2->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+
+//          find_one_gp_reg(inst);
             x86_mov_reg_membase(inst, gpreg1, X86_EBP, $2 + 4, 4);
             x86_alu_membase_reg(inst, X86_CMP, X86_EBP, $1 + 4, gpreg1);
             inst = output_branch(func, inst, 0x75 /* neq */, insn);
@@ -362,7 +370,10 @@ JIT_OP_BR_LNE:
 JIT_OP_BR_LLT, JIT_OP_BR_LLT_UN, JIT_OP_BR_LLE, JIT_OP_BR_LLE_UN, JIT_OP_BR_LGT, JIT_OP_BR_LGT_UN, JIT_OP_BR_LGE, JIT_OP_BR_LGE_UN:
     [imm, imm] -> {
         unsigned char *patch1, *patch2;
-        find_one_gp_reg(inst);
+
+	inst = jite_allocate_local_register(inst, func, 0, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+
+//      find_one_gp_reg(inst);
         x86_mov_reg_imm(inst, gpreg1, ((jit_nint *)($1))[1]);
         x86_alu_reg_imm(inst, X86_CMP, gpreg1, ((jit_nint *)($2))[1]);
         inst = output_branch(func, inst, machine_code1, insn);
@@ -371,7 +382,10 @@ JIT_OP_BR_LLT, JIT_OP_BR_LLT_UN, JIT_OP_BR_LLE, JIT_OP_BR_LLE_UN, JIT_OP_BR_LGT,
         patch2 = inst;
         x86_jump8(inst, 0);
         x86_patch(patch1, inst);
-        find_one_gp_reg(inst);
+
+	inst = jite_allocate_local_register(inst, func, 0, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+
+//      find_one_gp_reg(inst);
         x86_mov_reg_imm(inst, gpreg1, ((jit_nint *)($1))[0]);
         x86_alu_reg_imm(inst, X86_CMP, gpreg1, ((jit_nint *)($2))[0]);
         inst = output_branch(func, inst, machine_code2, insn);
@@ -405,7 +419,6 @@ JIT_OP_BR_LLT, JIT_OP_BR_LLT_UN, JIT_OP_BR_LLE, JIT_OP_BR_LLE_UN, JIT_OP_BR_LGT,
         x86_patch(patch2, inst);
     }
     [local, imm] -> {
-	
         unsigned char *patch1, *patch2;
         x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $1 + 4, ((jit_nint *)($2))[1]);
         inst = output_branch(func, inst, machine_code1, insn);
@@ -434,7 +447,12 @@ JIT_OP_BR_LLT, JIT_OP_BR_LLT_UN, JIT_OP_BR_LLE, JIT_OP_BR_LLE_UN, JIT_OP_BR_LGT,
     }
     [local, local] -> {
         unsigned char *patch1, *patch2;
-        find_one_gp_reg(inst);
+
+	find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
+
+//	inst = jite_allocate_local_register(inst, func, insn->value1->vreg, insn->value1->vreg, insn->value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+
+//      find_one_gp_reg(inst);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $1 + 4, 4);
         x86_alu_reg_membase(inst, X86_CMP, gpreg1, X86_EBP, $2 + 4);
         inst = output_branch(func, inst, machine_code1, insn);
@@ -443,7 +461,12 @@ JIT_OP_BR_LLT, JIT_OP_BR_LLT_UN, JIT_OP_BR_LLE, JIT_OP_BR_LLE_UN, JIT_OP_BR_LGT,
         patch2 = inst;
         x86_jump8(inst, 0);
         x86_patch(patch1, inst);
-        find_one_gp_reg(inst);
+
+	find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
+
+//	inst = jite_allocate_local_register(inst, func, value1->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
+
+//      find_one_gp_reg(inst);
         x86_mov_reg_membase(inst, gpreg1, X86_EBP, $1, 4);
         x86_alu_reg_membase(inst, X86_CMP, gpreg1, X86_EBP, $2);
         inst = output_branch(func, inst, machine_code2, insn);
@@ -476,7 +499,8 @@ JIT_OP_DEQ, JIT_OP_DEQ_INV, JIT_OP_DNE, JIT_OP_DNE_INV, JIT_OP_DLT, JIT_OP_DLT_I
         setcc_reg(inst, $1, machine_code1, 0);
     }
     [=reg, imm, local] -> {
-        find_one_xmm_reg(inst);
+	inst = jite_allocate_local_register(inst, func, value2->vreg, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &xmmreg1);
+//        find_one_xmm_reg(inst);
         inst = masm_mov_reg_imm(inst, xmmreg1, $2, sourceType);
         emit_sse_instruction_reg_membase(inst, (machine_code3), (machine_code4), xmmreg1, X86_EBP, $3);
         setcc_reg(inst, $1, machine_code1, 0);
@@ -487,14 +511,16 @@ JIT_OP_DEQ, JIT_OP_DEQ_INV, JIT_OP_DNE, JIT_OP_DNE_INV, JIT_OP_DLT, JIT_OP_DLT_I
         setcc_reg(inst, $1, machine_code2, 0);
     }
     [=reg, local, imm] -> {
-        find_one_xmm_reg(inst);
+	inst = jite_allocate_local_register(inst, func, value1->vreg, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &xmmreg1);
+//      find_one_xmm_reg(inst);
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
         inst = masm_mov_membase_imm(inst, X86_ESP, -32, $3, sourceType);
         emit_sse_instruction_reg_membase(inst, (machine_code3), (machine_code4), xmmreg1, X86_ESP, -32);
         setcc_reg(inst, $1, machine_code1, 0);
     }
     [=reg, local, local] -> {
-        find_one_xmm_reg(inst);
+	inst = jite_allocate_local_register(inst, func, value1->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &xmmreg1);
+//      find_one_xmm_reg(inst);
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $2, sourceType);
         emit_sse_instruction_reg_membase(inst, (machine_code3), (machine_code4), xmmreg1, X86_EBP, $3);
         setcc_reg(inst, $1, machine_code1, 0);
@@ -544,11 +570,9 @@ JIT_OP_BR_DEQ, JIT_OP_BR_DEQ_INV:
         x86_mov_membase_imm(inst, X86_ESP, -16, ((jit_uint *)($1))[0], 4);
         x86_mov_membase_imm(inst, X86_ESP, -12, ((jit_uint *)($1))[1], 4);
         sse2_comisd_xmreg_membase(inst, $2, X86_ESP, -16);
-        
         inst = output_branch(func, inst, 0x74 /* eq */, insn);
     }
     [local, imm] -> {
-	
         unsigned char *patch1, *patch2;
         jit_int value1 = ((jit_int *)($2))[0];
         jit_int value2 = ((jit_int *)($2))[1];
@@ -565,7 +589,9 @@ JIT_OP_BR_DEQ, JIT_OP_BR_DEQ_INV:
     [local, local] -> {
         if($1 != $2)
         {
-            find_one_xmm_reg(inst);
+	    find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
+//	    inst = jite_allocate_local_register(inst, func, insn->value1->vreg, insn->value1->vreg, insn->value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &xmmreg1);
+            // find_one_xmm_reg(inst);
             sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
             sse2_comisd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);    
             inst = output_branch(func, inst, 0x74 /* eq */, insn);
@@ -577,7 +603,6 @@ JIT_OP_BR_DEQ, JIT_OP_BR_DEQ_INV:
     }
     [local, freg] -> {
         sse2_comisd_xmreg_membase(inst, $2, X86_EBP, $1);
-	
         inst = output_branch(func, inst, 0x74 /* eq */, insn);
     }
     [freg, imm] -> {
@@ -620,12 +645,10 @@ JIT_OP_BR_DNE, JIT_OP_BR_DNE_INV:
     [imm, freg] -> {
         x86_mov_membase_imm(inst, X86_ESP, -16, ((jit_uint *)($1))[0], 4);
         x86_mov_membase_imm(inst, X86_ESP, -12, ((jit_uint *)($1))[1], 4);
-        sse2_comisd_xmreg_membase(inst, $2, X86_ESP, -16);
-        
+        sse2_comisd_xmreg_membase(inst, $2, X86_ESP, -16);        
         inst = output_branch(func, inst, 0x75 /* ne */, insn);
     }
     [local, imm] -> {
-        
         x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $1, ((jit_nint *)($2))[0]);
         inst = output_branch(func, inst, 0x75 /* neq */, insn);
         x86_alu_membase_imm(inst, X86_CMP, X86_EBP, $1 + 4, ((jit_nint *)($2))[1]);
@@ -634,7 +657,10 @@ JIT_OP_BR_DNE, JIT_OP_BR_DNE_INV:
     [local, local] -> {
         if($1 != $2)
         {
-            find_one_xmm_reg(inst);
+	    find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
+
+//	    inst = jite_allocate_local_register(inst, func, insn->value1->vreg, insn->value1->vreg, insn->value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &xmmreg1);
+//          find_one_xmm_reg(inst);
             sse2_movsd_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
             sse2_comisd_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
             inst = output_branch(func, inst, 0x75 /* ne */, insn);
@@ -689,14 +715,17 @@ JIT_OP_BR_DLT, JIT_OP_BR_DLT_INV, JIT_OP_BR_DLE, JIT_OP_BR_DLE_INV, JIT_OP_BR_DG
         inst = output_branch(func, inst, machine_code1, insn);
     }
     [local, local] -> {
-        find_one_xmm_reg(inst);
+
+	find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
+
+//	inst = jite_allocate_local_register(inst, func, insn->value1->vreg, insn->value1->vreg, insn->value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &xmmreg1);
+//        find_one_xmm_reg(inst);
         inst = masm_mov_reg_membase(inst, xmmreg1, X86_EBP, $1, sourceType);
         emit_sse_instruction_reg_membase(inst, (machine_code3), (machine_code4), xmmreg1, X86_EBP, $2);
         inst = output_branch(func, inst, machine_code1, insn);
     }
     [local, freg] -> {
         emit_sse_instruction_reg_membase(inst, (machine_code3), (machine_code4), $2, X86_EBP, $1);
-        
         inst = output_branch(func, inst, machine_code2, insn);
     }
     [freg, imm] -> {
@@ -739,7 +768,9 @@ JIT_OP_BR_FEQ, JIT_OP_BR_FEQ_INV:
     [local, local] -> {
         if($1 != $2)
         {
-            find_one_xmm_reg(inst);
+	    find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
+//	    inst = jite_allocate_local_register(inst, func, insn->value1->vreg, insn->value1->vreg, insn->value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &xmmreg1);
+//          find_one_xmm_reg(inst);
             sse_movss_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
             sse_comiss_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
             
@@ -800,7 +831,11 @@ JIT_OP_BR_FNE, JIT_OP_BR_FNE_INV:
     [local, local] -> {
         if($1 != $2)
         {
-            find_one_xmm_reg(inst);
+//          find_one_xmm_reg(inst);
+
+            find_one_xmm_reg_cond2_vreg(inst, value1->vreg, value2->vreg);
+
+//	    inst = jite_allocate_local_register(inst, func, insn->value1->vreg, insn->value1->vreg, insn->value2->vreg, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &xmmreg1);
             sse_movss_xmreg_membase(inst, xmmreg1, X86_EBP, $1);
             sse_comiss_xmreg_membase(inst, xmmreg1, X86_EBP, $2);
             inst = output_branch(func, inst, 0x75 /* ne */, insn);

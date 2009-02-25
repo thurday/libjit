@@ -379,7 +379,6 @@ JIT_OP_STORE_ELEMENT_BYTE:
             find_one_gp_reg_cond4(inst, $1, $2, X86_ESI, X86_EDI);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_memindex_reg(inst, $1, 0, $2, 0, gpreg1, 1);
-            
         }
     }
 
@@ -424,13 +423,11 @@ JIT_OP_STORE_ELEMENT_INT:
         find_one_gp_reg_cond1(inst, $2);
         x86_mov_reg_imm(inst, gpreg1, $1);
         x86_mov_memindex_imm(inst, gpreg1, 0, $2, 2, $3, 4);
-        
     }
     [=imm, reg, reg] -> {
         find_one_gp_reg_cond2(inst, $2, $3);
         x86_mov_reg_imm(inst, gpreg1, $1);
         x86_mov_memindex_reg(inst, gpreg1, 0, $2, 2, $3, 4);
-        
     }
     [=reg, imm, imm] -> {
         x86_mov_membase_imm(inst, $1, $2 * 4, $3, 4);
@@ -610,7 +607,7 @@ JIT_OP_STORE_ELEMENT_FLOAT64:
     }
     [=reg, reg, freg] -> {
         find_one_gp_reg(inst);
-        x86_lea_memindex(inst, gpreg1, $1, 0, $2, 2);
+        x86_lea_memindex(inst, gpreg1, $1, 0, $2, 3);
         sse2_movsd_membase_xmreg(inst, gpreg1, 0, $3);
     }
 
@@ -714,7 +711,7 @@ JIT_OP_STORE_ELEMENT_NFLOAT:
     }
     [=reg, reg, freg] -> {
         find_one_gp_reg(inst);
-        x86_lea_memindex(inst, gpreg1, $1, 0, $2, 2);
+        x86_lea_memindex(inst, gpreg1, $1, 0, $2, 3);
         sse2_movsd_membase_xmreg(inst, gpreg1, 0, $3);
     }
 
@@ -1072,7 +1069,10 @@ JIT_OP_COPY_LOAD_SBYTE, JIT_OP_COPY_LOAD_UBYTE, JIT_OP_COPY_STORE_BYTE, JIT_OP_C
 JIT_OP_ADDRESS_OF: 
     [=reg, reg] -> {
         /* This case can be if the value, address of which we try to load, was saved temporary to a register */
-        x86_lea_membase(inst, $1, X86_EBP, value1->vreg->frame->frame_offset);	
+        if(value1->vreg->frame) 
+	{
+	    x86_lea_membase(inst, $1, X86_EBP, value1->vreg->frame->frame_offset);	
+	}
     }
     [=reg, local] -> {
         x86_lea_membase(inst, $1, X86_EBP, $2);

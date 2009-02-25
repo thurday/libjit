@@ -29,7 +29,7 @@ void jite_init(jit_function_t func)
     }
 
     jite_linked_list_t linked_list = func->jite->vregs_list;
-    while(linked_list)
+    while(linked_list && linked_list->item)
     {
         jite_vreg_t vreg = (jite_vreg_t)linked_list->item;
         jite_free_frame(func, vreg->frame);
@@ -46,6 +46,8 @@ void jite_init(jit_function_t func)
         jite_gp_regs_map[index].local_vreg = 0;
         jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
         jite_gp_regs_map[index].temp_frame = 0;
+	jite_gp_regs_map[index].liveness = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+	                                                           struct _jite_linked_list);
     }
 
     for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
@@ -54,6 +56,8 @@ void jite_init(jit_function_t func)
         jite_xmm_regs_map[index].local_vreg = 0;
         jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
         jite_xmm_regs_map[index].temp_frame = 0;
+	jite_xmm_regs_map[index].liveness = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+	                                                            struct _jite_linked_list);
     }
 
     func->jite->relative_sp_offset = 0;
@@ -82,7 +86,7 @@ void jite_reinit(jit_function_t func)
         list = list->next;
     }
     jite_linked_list_t linked_list = func->jite->vregs_list;
-    while(linked_list)
+    while(linked_list && linked_list->item)
     {
         jite_vreg_t vreg = (jite_vreg_t)linked_list->item;
         jite_free_frame(func, vreg->frame);
@@ -105,6 +109,7 @@ void jite_reinit(jit_function_t func)
         jite_gp_regs_map[index].local_vreg = 0;
         jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
         jite_gp_regs_map[index].temp_frame = 0;
+	jite_clear_linked_list(func, jite_gp_regs_map[index].liveness);
     }
 
     for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
@@ -120,10 +125,72 @@ void jite_reinit(jit_function_t func)
         jite_xmm_regs_map[index].local_vreg = 0;
         jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
         jite_xmm_regs_map[index].temp_frame = 0;
+	jite_clear_linked_list(func, jite_xmm_regs_map[index].liveness);
     }
     
     func->jite->relative_sp_offset = 0;
 }
+
+
+void jite_destroy(jit_function_t func)
+{
+    jite_list_t list = func->jite->frame_state;
+    while(list)
+    {
+        list->item1 = 0;
+        list->item2 = 0;
+        list->item3 = 0;
+        list = list->next;
+    }
+    jite_linked_list_t linked_list = func->jite->vregs_list;
+    while(linked_list && linked_list->item)
+    {
+        jite_vreg_t vreg = (jite_vreg_t)linked_list->item;
+        jite_free_frame(func, vreg->frame);
+        linked_list = linked_list->next;
+    }
+
+    func->jite->scratch_regs = 0;
+    func->jite->scratch_frame = 0;
+
+    int index;
+    for(index = 0; index < JITE_N_GP_REGISTERS; index++)
+    {
+        jite_gp_regs_map[index].vreg = 0;
+        jite_vreg_t local_vreg = jite_gp_regs_map[index].local_vreg;
+        if(local_vreg)
+        {
+            local_vreg->in_frame = 1;
+            local_vreg->in_reg = 0;
+        }
+        jite_gp_regs_map[index].local_vreg = 0;
+        jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
+        jite_gp_regs_map[index].temp_frame = 0;
+	jite_clear_linked_list(func, jite_gp_regs_map[index].liveness);
+    }
+
+    for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
+    {
+        jite_xmm_regs_map[index].vreg = 0;
+        jite_xmm_regs_map[index].local_vreg = 0;
+        jite_vreg_t local_vreg = jite_xmm_regs_map[index].local_vreg;
+        if(local_vreg)
+        {
+            local_vreg->in_frame = 1;
+            local_vreg->in_reg = 0;
+        }
+        jite_xmm_regs_map[index].local_vreg = 0;
+        jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
+        jite_xmm_regs_map[index].temp_frame = 0;
+	jite_clear_linked_list(func, jite_xmm_regs_map[index].liveness);
+    }
+    
+    func->jite->relative_sp_offset = 0;
+
+//  jite_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), func->jite->sigsetjmps);
+}
+
+
 
 // Check for the X86_EAX, X86_ECX, X86_EDX, etc directly
 unsigned char jite_gp_reg_is_free(jit_function_t func, int index) 
@@ -171,6 +238,7 @@ unsigned char jite_register_is_free(jit_function_t func, int reg, jit_value_t va
     }
     return 0;
 }
+
 
 unsigned char jite_regIndex_is_free(jit_function_t func, int regIndex, jit_value_t value)
 {
@@ -251,12 +319,38 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                    jit_block_t block, jit_insn_t insn)
 {
     init_local_register_allocation();
+
+//    printf("Handling insn = %d, ", insn->insn_num);
+//    jit_dump_insn(stdout, func, insn);
+//    printf("\n");
+//    fflush(stdout);
+
     switch(insn->opcode)
     {
         case JIT_OP_NOP:
-	{
+	case JIT_OP_MARK_OFFSET:
+        {
+            unsigned char *inst = (unsigned char *)(gen->posn.ptr);
+            if(!jit_cache_check_for_n(&(gen->posn), 32))
+            {
+                jit_cache_mark_full(&(gen->posn));
+                return;
+            }
+            if(insn->cpoint)
+            {
+                // jite_free_frames(func, insn->cpoint->vregs_die);
+		jite_free_frames(func, insn);
+                jite_free_registers(func, insn->cpoint->vregs_die);
+
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item1);
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item2);
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item3);
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item4);
+            }
+            gen->posn.ptr = (unsigned char *)inst;
+            // /* Notify the back end that the block is starting */
 	}
-	break;
+ 	break;
 
         case JIT_OP_INCOMING_FRAME_POSN:
         {
@@ -285,6 +379,13 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 inst = masm_mov_reg_membase(inst, value->vreg->reg->reg, X86_EBP, frame_offset, type);
                 gen->posn.ptr = (unsigned char *)inst;
             }
+	    if(insn->cpoint)
+            {
+		jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item1);
+    	        jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item2);
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item3);
+	        jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item4);
+	    }
         }
         break;
 
@@ -295,7 +396,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             int typeKind = jit_type_get_kind(type);
             int reg = (int)jit_value_get_nint_constant(insn->value2);
             int size = jite_type_get_size(type);
-            
+
             switch(typeKind)
             {
                 CASE_USE_FLOAT
@@ -304,7 +405,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 }
                 break;
             }
-            
+
             if(value->vreg->in_frame)
             {
                 jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), struct _jite_frame);
@@ -328,6 +429,13 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 inst = masm_mov_reg_reg(inst, value->vreg->reg->reg, reg, type);
                 gen->posn.ptr = (unsigned char *)inst;
             }
+	    if(insn->cpoint)
+            {
+		jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item1);
+    	        jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item2);
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item3);
+	        jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item4);
+	    }
         }
         break;
 
@@ -339,26 +447,48 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 jit_cache_mark_full(&(gen->posn));
                 return;
             }
+
+            jit_value_t dest = jit_insn_get_dest(insn);
+            jit_value_t value1 = jit_insn_get_value1(insn);
+            jit_value_t value2 = jit_insn_get_value2(insn);
+	    
+	    if(jit_insn_dest_is_value(insn))
+	    {
+	        inst = jite_restore_local_vreg(inst, func, dest->vreg);
+	    }
+
+    	    if(value1 && value1->vreg)
+	    {
+                inst = jite_restore_local_vreg(inst, func, value1->vreg);
+	    }
+
+	    if(value2 && value2->vreg)
+	    {
+                inst = jite_restore_local_vreg(inst, func, value2->vreg);
+  	    }
+
             if(insn->cpoint)
             {
-                jite_free_frames(func, insn->cpoint->vregs_die);
+                // jite_free_frames(func, insn->cpoint->vregs_die);
                 if((insn->flags & JIT_INSN_DEST_IS_LABEL) == 0)
                 {
+		    jite_free_frames(func, insn);
                     jite_free_registers(func, insn->cpoint->vregs_die);
                 }
 
-                inst = jite_allocate_registers_and_frames(inst, func, insn->cpoint->vregs_born->item1);
-                inst = jite_allocate_registers_and_frames(inst, func, insn->cpoint->vregs_born->item2);
-                inst = jite_allocate_registers_and_frames(inst, func, insn->cpoint->vregs_born->item3);
-                inst = jite_allocate_registers_and_frames(inst, func, insn->cpoint->vregs_born->item4);
+
+
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item1);
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item2);
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item3);
+                jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item4);
 
                 gen->posn.ptr = (unsigned char *)inst;
                 /* Notify the back end that the block is starting */
             }
 
-            jit_value_t dest = jit_insn_get_dest(insn);
-            jit_value_t value1 = jit_insn_get_value1(insn);
-            jit_value_t value2 = jit_insn_get_value2(insn);
+
+
             // Allocate local registers that are free at this point or restore local registers that will be used
             // for generation of native code in current opcode.
             switch(insn->opcode)
@@ -478,6 +608,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_CALL_VTABLE_PTR_TAIL:
                 case JIT_OP_CALL_EXTERNAL:
                 case JIT_OP_CALL_EXTERNAL_TAIL:
+		case JIT_OP_CALL_FINALLY:
                 {
                     inst = jite_restore_local_registers(inst, func, 0x3fffc7);
                 }
@@ -524,7 +655,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_RETHROW:
                 case JIT_OP_ENTER_FINALLY:
                 case JIT_OP_LEAVE_FINALLY:
-                case JIT_OP_CALL_FINALLY:
+//                case JIT_OP_CALL_FINALLY:
                 case JIT_OP_ENTER_FILTER:
                 case JIT_OP_LEAVE_FILTER:
                 case JIT_OP_CALL_FILTER:
@@ -586,7 +717,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
             // if the current opcode is a branch then all local registers will be restored
             // just before generation of a branch
-            
+
             jit_type_t sourceType = 0; // type of source value
 
             // Build current input state
@@ -594,15 +725,32 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             int index = 0;
             unsigned int offset = 1;
             unsigned int state = 0;
+	    
+
             if(dest)
             {
+//	    	printf("dest = \n");
+//  	     	jit_dump_value(stdout, func, dest, 0);
+//		fflush(stdout);
+//		printf("\n");
+
                 param[index] = dest->address;
                 if(dest->vreg && dest->vreg->in_reg)
                 {
+//		    printf("in_reg\n");
                     param[index] = dest->vreg->reg->reg;
                 }
                 else if(dest->vreg && dest->vreg->in_frame)
                 {
+//		    printf("in_frame\n");
+		    if(dest->vreg->frame == 0)
+		    {
+                        jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
+                                                        struct _jite_frame);
+                        jite_allocate_large_frame(func, frame, jite_type_get_size(jit_value_get_type(dest)));
+                        dest->vreg->frame = frame;
+		    }
+
                     param[index] = dest->vreg->frame->frame_offset;
                     state += 0x1;
                 }
@@ -617,19 +765,38 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 index++;
                 offset *= 3;
             }
+	    
+
+	    // In case a value is in frame but no frame has been allocated
+	    // allocate one.
             
             if(value1)
             {
-                param[index] = value1->address;
+              param[index] = value1->address;
+//		printf("value1 = \n");
+//  	     	jit_dump_value(stdout, func, value1, 0);
+//		fflush(stdout);
+//		printf("\n");
+
                 if(value1->vreg)
-                {    
-                    inst = jite_restore_local_vreg(inst, func, value1->vreg);
+                {
                     if(value1->vreg->in_reg)
                     {
+//		        printf("in_reg \n");
                         param[index] = value1->vreg->reg->reg;
                     }
                     else if(value1->vreg->in_frame)
                     {
+//		        printf("in_frame \n");
+ 
+		        if(value1->vreg->frame == 0)
+			{
+                            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
+                                                        struct _jite_frame);
+                            jite_allocate_large_frame(func, frame, jit_type_get_size(jit_value_get_type(value1)));
+                            value1->vreg->frame = frame;
+			}
+
                         param[index] = value1->vreg->frame->frame_offset;
                         state += (0x1 * offset);
                     }
@@ -645,16 +812,31 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
             if(value2)
             {
+//	    	printf("value2 = \n");
+//  	     	jit_dump_value(stdout, func, value2, 0);
+//		fflush(stdout);
+//		printf("\n");
+
                 param[index] = value2->address;
                 if(value2->vreg)
                 {
-                    inst = jite_restore_local_vreg(inst, func, value2->vreg);
+//                  inst = jite_restore_local_vreg(inst, func, value2->vreg);
                     if(value2->vreg->in_reg)
                     {
+//		        printf("in_reg\n");
                         param[index] = value2->vreg->reg->reg;
                     }
                     else if(value2->vreg->in_frame)
                     {
+//		        printf("in_frame\n");
+		        if(value2->vreg->frame == 0)
+			{
+                            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
+                                                        struct _jite_frame);
+                            jite_allocate_large_frame(func, frame, jit_type_get_size(jit_value_get_type(value2)));
+                            value2->vreg->frame = frame;
+			}
+
                         param[index] = value2->vreg->frame->frame_offset;
                         state += (0x1 * offset);
                     }
@@ -666,11 +848,12 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 index++;
             }
 
+
             unsigned char machine_code1 = jite_opcodes_map[insn->opcode].machine_code1;
             unsigned char machine_code2 = jite_opcodes_map[insn->opcode].machine_code2;
             unsigned char machine_code3 = jite_opcodes_map[insn->opcode].machine_code3;
             unsigned char machine_code4 = jite_opcodes_map[insn->opcode].machine_code4;
-            
+
             switch(insn->opcode)
             {
                 #include "jite-i486-extra-arith.h"
@@ -692,7 +875,8 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 }
                 break;
             }
-            
+
+
             if(insn->opcode == JIT_OP_JUMP_TABLE)
             {
                 // Free EAX used for JUMP_TABLE if the value was in local frame.
@@ -715,6 +899,8 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             // uses locally.
             if(dest && dest->vreg && !jit_insn_dest_is_value(insn))
             {
+//	        printf("\nTry to restore local frame for value ");
+//		jit_dump_value(stdout, func, dest, 0);
                 inst = jite_restore_local_frame(inst, func, dest->vreg);
             }
 
@@ -722,6 +908,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             {
                 if((insn->flags & JIT_INSN_DEST_IS_LABEL) != 0)
                 {
+		    jite_free_frames(func, insn);
                     jite_free_registers(func, insn->cpoint->vregs_die);
                 }
             }
@@ -851,7 +1038,7 @@ void gen_epilog(jit_gencode_t gen, jit_function_t func)
         }
     }
 
-        jit_type_t signature = jit_function_get_signature(func);
+    jit_type_t signature = jit_function_get_signature(func);
     jit_abi_t abi = jit_type_get_abi(signature);
 
     if(func->jite->scratch_frame > 0 || stack_offset > 0 || gen->stack_changed)
@@ -874,6 +1061,21 @@ void gen_epilog(jit_gencode_t gen, jit_function_t func)
 
 void gen_start_block(jit_gencode_t gen, jit_block_t block)
 {
+    unsigned char *inst = (unsigned char *)(gen->posn.ptr);
+
+    if(!jit_cache_check_for_n(&(gen->posn), 32))
+    {
+        jit_cache_mark_full(&(gen->posn));
+        return;
+    }
+
+    if(!block->entered_via_top || block->entered_via_branch)
+    {
+        inst = jite_restore_local_registers(inst, block->func, 0xffffffff);
+        gen->posn.ptr = (unsigned char *)inst;
+    }
+
+
     void **fixup;
     void **next;
     /* Set the address of this block */
@@ -898,21 +1100,6 @@ void gen_start_block(jit_gencode_t gen, jit_block_t block)
         fixup = next;
     }
     block->fixup_absolute_list = 0;
-
-
-    unsigned char *inst = (unsigned char *)(gen->posn.ptr);
-    
-    if(!jit_cache_check_for_n(&(gen->posn), 32))
-    {
-        jit_cache_mark_full(&(gen->posn));
-        return;
-    }
-    
-    if(!block->entered_via_top || block->entered_via_branch)
-    {
-        inst = jite_restore_local_registers(inst, block->func, 0xffffffff);
-        gen->posn.ptr = (unsigned char *)inst;
-    }
 }
 
 void gen_end_block(jit_gencode_t gen, jit_block_t block)
@@ -932,9 +1119,10 @@ void jite_free_reg(jit_function_t func, jite_vreg_t vreg)
                 if(vreg->reg->vreg == vreg)
                 {
                     func->jite->regs_state = func->jite->regs_state & (~(vreg->reg->hash_code));
-                    jite_free_frame(func, vreg->reg->temp_frame);
+                    jite_free_frame(func, vreg->reg->temp_frame); // to remove
                     jite_free_frame(func, vreg->frame);
                     vreg->reg->vreg = 0;
+		    // vreg->reg->temp_frame = 0; // just done
 
                     if(typeKind == JIT_TYPE_LONG || typeKind == JIT_TYPE_ULONG)
                     {
@@ -963,35 +1151,60 @@ unsigned char *jite_restore_local_vreg(unsigned char *inst, jit_function_t func,
         // This value is used with the register globally.
         if(vreg->reg->vreg == vreg || (vreg->reg->vreg == 0 && vreg->reg->local_vreg != vreg))
         {
-            // if this is the value which is used globally with the register
-            if(vreg->reg->local_vreg) // if there is a value used locally with the register then restore it
-            {
-                vreg->reg->local_vreg->in_reg = 0;
-                vreg->reg->local_vreg->in_frame = 1;
-                vreg->reg->local_vreg = 0;
-            }
+//	    printf("\nvreg = ");
+//	    jit_dump_value(stdout, func, vreg->value, 0);
+//	    printf("\n");
+
             if(vreg->reg->temp_frame) // if the input value was saved to a temporary local frame restore it
             {
                 jit_type_t type = jit_value_get_type(vreg->value);
                 type = jit_type_remove_tags(type);
+//		printf("mov_reg_membase 0x%x 0x%x\n", vreg->reg->reg, vreg->reg->temp_frame->frame_offset);
+//		fflush(stdout);
                 inst = masm_mov_reg_membase(inst, vreg->reg->reg, X86_EBP, vreg->reg->temp_frame->frame_offset, type);
                 jite_free_frame(func, vreg->reg->temp_frame);
                 vreg->reg->temp_frame = 0;
+
+//		if(vreg->reg->vreg != vreg)
+//		{
+//		    vreg->reg->vreg->in_frame = 1;
+//		}
+		//vreg->in_frame = 0;
+            }
+
+            // if this is the value which is used globally with the register
+
+            if(vreg->reg->local_vreg) // if there is a value used locally with the register then restore it
+            {
+// 	        printf("\nlocal_vreg = ");
+//    	        jit_dump_value(stdout, func, vreg->reg->local_vreg->value, 0);
+//	        printf("\n");
+
+                vreg->reg->local_vreg->in_reg = 0;
+                vreg->reg->local_vreg->in_frame = 1;
+                vreg->reg->local_vreg = 0;
             }
         }
     }
     return inst;
 }
 
+
 unsigned char *jite_restore_local_frame(unsigned char *inst, jit_function_t func, jite_vreg_t vreg)
 {
     // Called if a value is used for output.
     if(vreg && vreg->in_reg && vreg->reg)
     {
+//        printf("vreg->in_reg\n");
         // if the value is used with the register locally then restore the value in frame
         if(vreg == vreg->reg->local_vreg)
         {
-            inst = masm_mov_membase_reg(inst, X86_EBP, vreg->frame->frame_offset, vreg->reg->reg, jit_value_get_type(vreg->value));
+//	    printf("vreg == local_vreg\n");
+            if(vreg->frame)
+	    {
+	        inst = masm_mov_membase_reg(inst, X86_EBP, vreg->frame->frame_offset, vreg->reg->reg, jit_value_get_type(vreg->value));
+//	        printf("\nRestore frame 0x%x\n\n", vreg->frame->frame_offset);
+	    }
         }
         else if(vreg == vreg->reg->vreg)
         {
@@ -1002,10 +1215,10 @@ unsigned char *jite_restore_local_frame(unsigned char *inst, jit_function_t func
                 local_vreg->in_frame = 1;
                 local_vreg->reg = 0;
                 vreg->reg->local_vreg = 0;
-            
+
                 jite_free_frame(func, vreg->reg->temp_frame);
                 vreg->reg->temp_frame = 0;
-            }    
+            }
 
 	    jit_type_t type = jit_value_get_type(vreg->value);
 	    type = jit_type_remove_tags(type);
@@ -1042,15 +1255,16 @@ unsigned char *jite_restore_temporary_frame(unsigned char *inst, jit_function_t 
         jite_vreg_t local_vreg = jite_gp_regs_map[index].local_vreg;
         if(local_vreg && (jite_gp_regs_map[index].hash_code & regMask))
         {
-            if(jite_gp_regs_map[index].temp_frame)
-            {
-                local_vreg->in_reg = 0;
-                local_vreg->in_frame = 1;
-                jite_gp_regs_map[index].local_vreg = 0;
-                x86_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_gp_regs_map[index].temp_frame->frame_offset, 4);
-		local_vreg->reg = 0;
-                jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
-            }
+            local_vreg->in_reg = 0;
+            local_vreg->in_frame = 1;
+            jite_gp_regs_map[index].local_vreg = 0;
+	    local_vreg->reg = 0;
+        }
+
+        if(jite_gp_regs_map[index].temp_frame && (jite_gp_regs_map[index].hash_code & regMask))
+        {
+            x86_mov_reg_membase(inst, jite_gp_regs_map[index].reg, X86_EBP, jite_gp_regs_map[index].temp_frame->frame_offset, 4);
+            jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
             jite_gp_regs_map[index].temp_frame = 0;
         }
     }
@@ -1060,17 +1274,19 @@ unsigned char *jite_restore_temporary_frame(unsigned char *inst, jit_function_t 
         jite_vreg_t local_vreg = jite_xmm_regs_map[index].local_vreg;
         if(local_vreg && (jite_xmm_regs_map[index].hash_code & regMask))
         {
-            if(jite_xmm_regs_map[index].temp_frame)
-            {
-                local_vreg->in_reg = 0;
-                local_vreg->in_frame = 1;
-                jite_xmm_regs_map[index].local_vreg = 0;
-                jit_type_t type = jit_value_get_type(local_vreg->value);
-                type = jit_type_remove_tags(type);
-                inst = masm_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_xmm_regs_map[index].temp_frame->frame_offset, type);
-                local_vreg->reg = 0;
-                jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
-            }
+            local_vreg->in_reg = 0;
+            local_vreg->in_frame = 1;
+            jite_xmm_regs_map[index].local_vreg = 0;
+            local_vreg->reg = 0;
+        }
+
+	if(jite_xmm_regs_map[index].temp_frame && (jite_xmm_regs_map[index].hash_code & regMask))
+	{
+	    jit_type_t type = jit_value_get_type(local_vreg->value);
+            type = jit_type_remove_tags(type);
+
+            inst = masm_mov_reg_membase(inst, jite_xmm_regs_map[index].reg, X86_EBP, jite_xmm_regs_map[index].temp_frame->frame_offset, type);
+            jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
             jite_xmm_regs_map[index].temp_frame = 0;
         }
     }
@@ -1093,12 +1309,19 @@ unsigned char *jite_restore_local_registers(unsigned char *inst, jit_function_t 
             {
                 func->jite->regs_state = func->jite->regs_state & (~(jite_gp_regs_map[index].hash_code));
             }
-            else
-            {
-                x86_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_gp_regs_map[index].temp_frame->frame_offset, 4);
-                jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
-            }
+//            else
+//            {
+//                x86_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_gp_regs_map[index].temp_frame->frame_offset, 4);
+//                jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
+//            }
             local_vreg->reg = 0;
+//            jite_gp_regs_map[index].temp_frame = 0;
+        }
+
+        if(jite_gp_regs_map[index].temp_frame && (jite_gp_regs_map[index].hash_code & regMask))
+        {
+            x86_mov_reg_membase(inst, jite_gp_regs_map[index].reg, X86_EBP, jite_gp_regs_map[index].temp_frame->frame_offset, 4);
+            jite_free_frame(func, jite_gp_regs_map[index].temp_frame);
             jite_gp_regs_map[index].temp_frame = 0;
         }
     }
@@ -1115,16 +1338,29 @@ unsigned char *jite_restore_local_registers(unsigned char *inst, jit_function_t 
             {
                 func->jite->regs_state = func->jite->regs_state & (~(jite_xmm_regs_map[index].hash_code));
             }
-            else
-            {
-                jit_type_t type = jit_value_get_type(local_vreg->value);
-                type = jit_type_remove_tags(type);
-                inst = masm_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_xmm_regs_map[index].temp_frame->frame_offset, type);
-                jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
-            }
+//            else
+//            {
+//                jit_type_t type = jit_value_get_type(local_vreg->value);
+//                type = jit_type_remove_tags(type);
+//                inst = masm_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_xmm_regs_map[index].temp_frame->frame_offset, type);
+//                jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
+//            }
             local_vreg->reg = 0;
+//            jite_xmm_regs_map[index].temp_frame = 0;
+        }
+
+	if(jite_xmm_regs_map[index].temp_frame && (jite_xmm_regs_map[index].hash_code & regMask))
+	{
+//	    jit_type_t type = jit_value_get_type(local_vreg->value);
+            jit_type_t type = jit_value_get_type(jite_xmm_regs_map[index].vreg->value);
+            type = jit_type_remove_tags(type);
+
+//            inst = masm_mov_reg_membase(inst, local_vreg->reg->reg, X86_EBP, jite_xmm_regs_map[index].temp_frame->frame_offset, type);
+            inst = masm_mov_reg_membase(inst, jite_xmm_regs_map[index].reg, X86_EBP, jite_xmm_regs_map[index].temp_frame->frame_offset, type);
+            jite_free_frame(func, jite_xmm_regs_map[index].temp_frame);
             jite_xmm_regs_map[index].temp_frame = 0;
         }
+
     }
     return inst;
 }
@@ -1171,10 +1407,14 @@ unsigned char *jite_throw_builtin
         }
         else
         {
+//	    printf("Generating jite_throw_builtin\n");
+//	    jit_dump_value(stdout, func, func->builder->setjmp_value, 0);
             int pc = (int) inst;
             x86_mov_membase_imm(inst, X86_EBP,
                         func->builder->setjmp_value->vreg->frame->frame_offset
                         + jit_jmp_catch_pc_offset, pc, 4);
+//	   printf(" frame_offset = 0x%x\n", func->builder->setjmp_value->vreg->frame->frame_offset);
+//	   printf(" jite_jmp_catch_pc_offset = 0x%x\n", jit_jmp_catch_pc_offset);
         }
     }
 
@@ -1203,10 +1443,10 @@ void jite_preallocate_global_registers(jit_function_t func)
         {
             switch(insn->opcode)
             {
-                case JIT_OP_NOP:
-                {
-                }
-                break;
+//              case JIT_OP_NOP:
+//              {
+//              }
+//              break;
 
                 case JIT_OP_INCOMING_REG:
                 {
@@ -1226,9 +1466,10 @@ void jite_preallocate_global_registers(jit_function_t func)
                             
                             // If the value is used less than 2 times (created once and used once)
                             // then there is no need to allocate a register for it.
-                            if(!func->has_try && !jit_value_is_addressable(value))
+                            //if(!func->has_try && 
+			    if(!jit_value_is_addressable(value))
                             {
-                                if(!jite_vreg_is_in_register_hole(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
+                                if(!jite_vreg_is_in_register_liveness(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
                                 {
                                     indexFound = regIndex;
                                 }
@@ -1237,7 +1478,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                                     int index = 0;
                                     for(index = 0; index < JITE_N_GP_REGISTERS; index++)
                                     {
-                                        if(!jite_vreg_is_in_register_hole(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
+                                        if(!jite_vreg_is_in_register_liveness(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
                                         {
                                             indexFound = index;
                                             break;
@@ -1249,11 +1490,15 @@ void jite_preallocate_global_registers(jit_function_t func)
                                 {
                                     func->jite->regs_state = func->jite->regs_state | jite_gp_regs_map[indexFound].hash_code;
                                     func->jite->scratch_regs = func->jite->scratch_regs | jite_gp_regs_map[indexFound].hash_code;
-                
+
                                     value->vreg->in_reg = 1;
                                     value->vreg->in_frame = 0;
-                                        value->vreg->reg = (jite_reg_t)(&(jite_gp_regs_map[indexFound]));
+                                    value->vreg->reg = (jite_reg_t)(&(jite_gp_regs_map[indexFound]));
                                     value->vreg->reg->vreg = value->vreg;
+
+//				    printf("allocated reg index = %d\n", value->vreg->reg->reg);
+
+				    jite_add_item_no_duplicate_to_linked_list(func, value->vreg->liveness, jite_gp_regs_map[indexFound].liveness);
                                 }
                             }
 
@@ -1272,9 +1517,10 @@ void jite_preallocate_global_registers(jit_function_t func)
                         if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
-                            if(!func->has_try && !jit_value_is_addressable(value))
+                            // if(!func->has_try && 
+			    if(!jit_value_is_addressable(value))
                             {
-                                if(!jite_vreg_is_in_register_hole(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
+                                if(!jite_vreg_is_in_register_liveness(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
                                 {
                                     indexFound = regIndex;
                                 }
@@ -1283,7 +1529,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                                     int index;
                                     for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
                                     {
-                                        if(!jite_vreg_is_in_register_hole(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
+                                        if(!jite_vreg_is_in_register_liveness(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
                                         {
                                             indexFound = index;
                                             break;
@@ -1297,8 +1543,10 @@ void jite_preallocate_global_registers(jit_function_t func)
                                     func->jite->scratch_regs = func->jite->scratch_regs | jite_xmm_regs_map[indexFound].hash_code;
                                     value->vreg->in_reg = 1;
                                     value->vreg->in_frame = 0;
-                                        value->vreg->reg = (jite_reg_t)(&(jite_xmm_regs_map[indexFound]));
+                                    value->vreg->reg = (jite_reg_t)(&(jite_xmm_regs_map[indexFound]));
                                     value->vreg->reg->vreg = value->vreg;
+				    
+				    jite_add_item_no_duplicate_to_linked_list(func, value->vreg->liveness, jite_xmm_regs_map[indexFound].liveness);
                                 }
                             }
 
@@ -1326,9 +1574,10 @@ void jite_preallocate_global_registers(jit_function_t func)
                             if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                             {
                                 int indexFound = -1;
-                                if(!func->has_try && !jit_value_is_addressable(value))
+                                // if(!func->has_try && 
+				if(!jit_value_is_addressable(value))
                                 {
-                                    if(!jite_vreg_is_in_register_hole(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
+                                    if(!jite_vreg_is_in_register_liveness(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
                                     {
                                         indexFound = regIndex;
                                     }
@@ -1337,7 +1586,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                                         int index;
                                         for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
                                         {
-                                            if(!jite_vreg_is_in_register_hole(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
+                                            if(!jite_vreg_is_in_register_liveness(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
                                             {
                                                 indexFound = index;
                                                 break;
@@ -1353,6 +1602,8 @@ void jite_preallocate_global_registers(jit_function_t func)
                                         value->vreg->in_frame = 0;
                                         value->vreg->reg = (jite_reg_t)(&(jite_xmm_regs_map[indexFound]));
                                         value->vreg->reg->vreg = value->vreg;
+					
+					jite_add_item_no_duplicate_to_linked_list(func, value->vreg->liveness, jite_xmm_regs_map[indexFound].liveness);
                                     }
                                 }
 
@@ -1369,7 +1620,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                     CASE_USE_LONG
                     {
                         if(value->vreg->min_range != value->vreg->max_range)
-                        {
+                        {			
                             value->vreg->in_frame = 1;
                             value->vreg->in_reg = 0;
                         }
@@ -1386,11 +1637,21 @@ void jite_preallocate_global_registers(jit_function_t func)
                     }
                     break;
                 }
+		if(insn->cpoint)
+		{
+  	 	    jite_allocate_registers(func, insn->cpoint->vregs_born->item1);
+                    jite_allocate_registers(func, insn->cpoint->vregs_born->item2);
+                    jite_allocate_registers(func, insn->cpoint->vregs_born->item3);
+                    jite_allocate_registers(func, insn->cpoint->vregs_born->item4);
+
+                    jite_preallocate_registers_and_frames(func, insn->cpoint->vregs_born);
+		}
                 }
                 break;
 
                 case JIT_OP_INCOMING_FRAME_POSN:
                 {
+//		printf("INCOMING_FRAME_POSN\n");
                 jit_value_t value = insn->value1;
                 jit_type_t type = jit_value_get_type(value);
                 type = jit_type_remove_tags(type);
@@ -1400,18 +1661,20 @@ void jite_preallocate_global_registers(jit_function_t func)
                 {
                     CASE_USE_WORD
                     {
+//		        printf("Try to allocate a dword\n");
                         if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
                             
-                            // If the value is used less than 2 times (created once and used once)
+                            // If the value is used less than 4 times
                             // then there is no need to allocate a register for it.
-                            if(!func->has_try && !jit_value_is_addressable(value) && value->usage_count > 3 )
+                            //if(!func->has_try && 
+			    if(!jit_value_is_addressable(value) && value->usage_count > 3 )
                             {
                                 int index;
                                 for(index = 0; index < JITE_N_GP_REGISTERS; index++)
                                 {
-                                    if(!jite_vreg_is_in_register_hole(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
+                                    if(!jite_vreg_is_in_register_liveness(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
                                     {
                                         indexFound = index;
                                         break;
@@ -1422,16 +1685,21 @@ void jite_preallocate_global_registers(jit_function_t func)
                                 {
                                     func->jite->regs_state = func->jite->regs_state | jite_gp_regs_map[indexFound].hash_code;
                                     func->jite->scratch_regs = func->jite->scratch_regs | jite_gp_regs_map[indexFound].hash_code;
-                
+
                                     value->vreg->in_reg = 1;
                                     value->vreg->in_frame = 0;
                                     value->vreg->reg = (jite_reg_t)(&(jite_gp_regs_map[indexFound]));
                                     value->vreg->reg->vreg = value->vreg;
+//				    printf("allocated reg index = %d\n", value->vreg->reg->reg);
+
+				    jite_add_item_no_duplicate_to_linked_list(func, value->vreg->liveness, jite_gp_regs_map[indexFound].liveness);
                                 }
-                                }
+                            }
 
                             if(indexFound == - 1)
                             {
+//			    	printf("allocated frame\n");
+
                                 value->vreg->in_frame = 1;
                                 value->vreg->in_reg = 0;
                             }
@@ -1444,12 +1712,13 @@ void jite_preallocate_global_registers(jit_function_t func)
                         if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
-                            if(!func->has_try && !jit_value_is_addressable(value) && value->usage_count > 3 )
+                            //if(!func->has_try && 
+			    if(!jit_value_is_addressable(value) && value->usage_count > 3 )
                             {
                                 int index;
                                 for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
                                 {
-                                    if(!jite_vreg_is_in_register_hole(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
+                                    if(!jite_vreg_is_in_register_liveness(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
                                     {
                                         indexFound = index;
                                         break;
@@ -1464,6 +1733,8 @@ void jite_preallocate_global_registers(jit_function_t func)
                                     value->vreg->in_frame = 0;
                                     value->vreg->reg = (jite_reg_t)(&(jite_xmm_regs_map[indexFound]));
                                     value->vreg->reg->vreg = value->vreg;
+
+				    jite_add_item_no_duplicate_to_linked_list(func, value->vreg->liveness, jite_xmm_regs_map[indexFound].liveness);
                                 }
                             }
 
@@ -1490,12 +1761,13 @@ void jite_preallocate_global_registers(jit_function_t func)
                             if(value->vreg && value->vreg->min_range != value->vreg->max_range && value->usage_count > 3 )
                             {
                                 int indexFound = -1;
-                                if(!func->has_try && !jit_value_is_addressable(value))
+                                //if(!func->has_try && 
+				if(!jit_value_is_addressable(value))
                                 {
                                     int index;
                                     for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
                                     {
-                                        if(!jite_vreg_is_in_register_hole(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
+                                        if(!jite_vreg_is_in_register_liveness(func, value->vreg, index) && jite_regIndex_is_free(func, index, value))
                                         {
                                             indexFound = index;
                                             break;
@@ -1510,6 +1782,8 @@ void jite_preallocate_global_registers(jit_function_t func)
                                         value->vreg->in_frame = 0;
                                         value->vreg->reg = (jite_reg_t)(&(jite_xmm_regs_map[indexFound]));
                                         value->vreg->reg->vreg = value->vreg;
+
+				        jite_add_item_no_duplicate_to_linked_list(func, value->vreg->liveness, jite_xmm_regs_map[indexFound].liveness);
                                     }
                                 }
 
@@ -1535,6 +1809,7 @@ void jite_preallocate_global_registers(jit_function_t func)
 
                     default: // Anything else is a structure or a union.
                     {
+//		        printf("default\n");
                         if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             value->vreg->in_frame = 1;
@@ -1543,30 +1818,38 @@ void jite_preallocate_global_registers(jit_function_t func)
                     }
                     break;
                 }
+		if(insn->cpoint)
+		{
+		    jite_allocate_registers(func, insn->cpoint->vregs_born->item1);
+                    jite_allocate_registers(func, insn->cpoint->vregs_born->item2);
+                    jite_allocate_registers(func, insn->cpoint->vregs_born->item3);
+                    jite_allocate_registers(func, insn->cpoint->vregs_born->item4);
+
+                    jite_preallocate_registers_and_frames(func, insn->cpoint->vregs_born);
+		}
                 }
                 break;
 
                 default:
                 {
-                if(insn->cpoint)
-                {
-                    if((insn->flags & JIT_INSN_DEST_IS_LABEL) == 0)
+                    if(insn->cpoint)
                     {
-                        jite_free_registers(func, insn->cpoint->vregs_die);
+                        if((insn->flags & JIT_INSN_DEST_IS_LABEL) == 0)
+                        {
+                            jite_free_registers(func, insn->cpoint->vregs_die);
+		        }
+ 	      	        jite_allocate_registers(func, insn->cpoint->vregs_born->item1);
+                        jite_allocate_registers(func, insn->cpoint->vregs_born->item2);
+                        jite_allocate_registers(func, insn->cpoint->vregs_born->item3);
+                        jite_allocate_registers(func, insn->cpoint->vregs_born->item4);
+
                         jite_preallocate_registers_and_frames(func, insn->cpoint->vregs_born);
+
+                        if((insn->flags & JIT_INSN_DEST_IS_LABEL) != 0)
+                        {
+                            jite_free_registers(func, insn->cpoint->vregs_die);
+                        }
                     }
-                    else
-                    {
-                        jite_preallocate_registers_and_frames(func, insn->cpoint->vregs_born);
-                    }
-                }
-                if(insn->cpoint)
-                {
-                    if((insn->flags & JIT_INSN_DEST_IS_LABEL) != 0)
-                    {
-                        jite_free_registers(func, insn->cpoint->vregs_die);
-                    }
-                }
                 }
                 break;
             }
@@ -1604,7 +1887,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
     int weight;
     int index;
 
-    // Allocates registers for the parallel group of virtual registers.
+    // Allocates registers for parallel group of virtual registers.
 
     for(index = 0; func && func->jite && list
                 && (index < JITE_N_GP_REGISTERS) && dword_list && (need_n_gp > 0); index++)
@@ -1621,10 +1904,10 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                     vreg = (jite_vreg_t)(temp->item);
                     weight = jite_vreg_weight(func, vreg);
 
-                    if(!jite_vreg_is_in_register_hole(func, vreg, index)
+                    if(!jite_vreg_is_in_register_liveness(func, vreg, index)
                         && (reg_weight[index] == 0 || weight < reg_weight[index])
-                        && weight != 0 && vreg->in_reg==0 && !jit_value_is_addressable(vreg->value)
-                        && (!func->has_try || jit_value_is_temporary(vreg->value)))
+                        && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
+//                        && (!func->has_try || jit_value_is_temporary(vreg->value)))
                     {
                         reg_weight[index] = weight;
                         vregs[index] = vreg;
@@ -1642,6 +1925,9 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
 
                      func->jite->scratch_regs = func->jite->scratch_regs | (&jite_gp_regs_map[index])->hash_code;
                      func->jite->regs_state = func->jite->regs_state | (&jite_gp_regs_map[index])->hash_code;
+		     jite_add_item_no_duplicate_to_linked_list(func, vregs[index]->liveness, jite_gp_regs_map[index].liveness);
+//		     jit_dump_value(func, vregs[index]->value, 0);
+//		     printf("1 allocated index = %d\n", index);
                 }
             }
         }
@@ -1657,7 +1943,10 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         {
             // All free register were used, or cannot be used.
             // The register is not free, and was not just allocated.
-            if(reg_weight[count] == 0 && !jite_gp_reg_index_is_free(func, count))
+            if((reg_weight[count] == 0) && 
+	           !jite_gp_reg_index_is_free(func, count)) // jite_gp_regs_map[count].vreg != 0)||
+//		   && !jite_vreg_is_in_register_hole(func, vreg, index));
+//		   && !jite_vreg_is_in_register_liveness_ignore_vreg(func, vreg, index, jite_gp_regs_map[count].vreg))
             {
                 if(found_index == -1
                     || ((found_index != -1) && jite_vreg_weight(func, jite_gp_regs_map[count].vreg)
@@ -1679,11 +1968,11 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                 vreg = (jite_vreg_t)(temp->item);
                 weight = jite_vreg_weight(func, vreg);
 
-                if(jite_vreg_weight(func, jite_gp_regs_map[found_index].vreg) > weight
-                    && !jite_vreg_is_in_register_hole(func, vreg, found_index)
+                if(jite_vreg_weight(func, jite_gp_regs_map[found_index].vreg) >= weight
+                    && !jite_vreg_is_in_register_liveness_ignore_vreg(func, vreg, found_index, jite_gp_regs_map[found_index].vreg)
                     && (reg_weight[found_index] == 0 || weight < reg_weight[found_index])
-                    && weight != 0 && vreg->in_reg==0 && !jit_value_is_addressable(vreg->value)
-                    && (!func->has_try || jit_value_is_temporary(vreg->value)))
+                    && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
+//                    && (!func->has_try || jit_value_is_temporary(vreg->value)))
                 {
                     reg_weight[found_index] = weight;
                     vregs[found_index] = vreg;
@@ -1700,8 +1989,15 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
 
                  jite_gp_regs_map[found_index].vreg->in_reg = 0;
                  jite_gp_regs_map[found_index].vreg->in_frame = 1;
+		 jite_gp_regs_map[found_index].vreg->reg = 0;
+
+		 jite_remove_item_from_linked_list(func, jite_gp_regs_map[found_index].vreg->liveness, jite_gp_regs_map[found_index].liveness);
 
                  vregs[found_index]->reg->vreg = vregs[found_index];
+
+		 jite_add_item_no_duplicate_to_linked_list(func, vregs[found_index]->liveness, jite_gp_regs_map[found_index].liveness);
+//		 jit_dump_value(func, vregs[found_index]->value, 0);
+//		 printf("2 allocated index = %d\n", found_index);
             }
         }
     }
@@ -1721,7 +2017,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         }
     }
 
-    // Allocates registers for the parallel group of virtual registers.
+    // Allocates registers for parallel group of virtual registers.
 
     for(index = 0; func && func->jite && list
                 && (index < JITE_N_GP_REGISTERS - 1) && qword_list && (need_n_long > 0); index++)
@@ -1739,11 +2035,11 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                     vreg = (jite_vreg_t)(temp->item);
                     weight = jite_vreg_weight(func, vreg);
 
-                    if(!jite_vreg_is_in_register_hole(func, vreg, index)
+                    if(!jite_vreg_is_in_register_liveness(func, vreg, index)
                         && (reg_weight[index] == 0 || weight < reg_weight[index])
                         && (reg_weight[index_pair] == 0 || weight < reg_weight[index_pair])
-                        && weight != 0 && vreg->in_reg==0 && !jit_value_is_addressable(vreg->value)
-                        && (!func->has_try || jit_value_is_temporary(vreg->value)))
+                        && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
+//                        && (!func->has_try || jit_value_is_temporary(vreg->value)))
                     {
                         reg_weight[index] = weight;
                         reg_weight[index_pair] = weight;
@@ -1765,6 +2061,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                      func->jite->regs_state = func->jite->regs_state | (&jite_gp_regs_map[index])->hash_code;
                      func->jite->scratch_regs = func->jite->scratch_regs | (&jite_gp_regs_map[index_pair])->hash_code;
                      func->jite->regs_state = func->jite->regs_state | (&jite_gp_regs_map[index_pair])->hash_code;
+		     jite_add_item_no_duplicate_to_linked_list(func, vregs[index]->liveness, jite_gp_regs_map[index].liveness);
                 }
             }
         }
@@ -1781,7 +2078,10 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
             // The register is not free, and was not just allocated.
             int count_pair = jite_index_register_pair(count);
             if(reg_weight[count] == 0 && !jite_gp_reg_index_is_free(func, count)
-                && reg_weight[count_pair] == 0 && !jite_gp_reg_index_is_free(func, count_pair))
+                && reg_weight[count_pair] == 0
+		&& !jite_gp_reg_index_is_free(func, count_pair))
+//		&& jite_gp_regs_map[count].vreg != 0
+//		&& jite_gp_regs_map[count_pair].vreg != 0
 
             {
                 if(found_index == -1 || ((found_index != -1)
@@ -1798,18 +2098,19 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         int use_reg = 0;
         jite_vreg_t vreg;
         if(func && list && func->jite)
-            {
+        {
             jite_linked_list_t temp = qword_list;
             while(temp)
             {
                 vreg = (jite_vreg_t)(temp->item);
                 weight = jite_vreg_weight(func, vreg);
                 if(jite_vreg_weight(func, jite_gp_regs_map[found_index].vreg) > weight
-                    && !jite_vreg_is_in_register_hole(func, vreg, found_index)
+//                    && !jite_vreg_is_in_register_liveness(func, vreg, found_index)
+                    && !jite_vreg_is_in_register_liveness_ignore_vreg(func, vreg, found_index, jite_gp_regs_map[found_index].vreg)
                     && (reg_weight[found_index] == 0 || weight < reg_weight[found_index])
                     && (reg_weight[found_index_pair] == 0 || weight < reg_weight[found_index_pair])
-                    && weight != 0 && vreg->in_reg==0 && !jit_value_is_addressable(vreg->value)
-                    && (!func->has_try || jit_value_is_temporary(vreg->value)))
+                    && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
+//                    && (!func->has_try || jit_value_is_temporary(vreg->value)))
                 {
                     reg_weight[found_index] = weight;
                     reg_weight[found_index_pair] = weight;
@@ -1827,11 +2128,22 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
 
                  jite_gp_regs_map[found_index].vreg->in_reg = 0;
                  jite_gp_regs_map[found_index].vreg->in_frame = 1;
+		 jite_gp_regs_map[found_index].vreg->reg = 0;
+
                  jite_gp_regs_map[found_index_pair].vreg->in_reg = 0;
                  jite_gp_regs_map[found_index_pair].vreg->in_frame = 1;
+                 jite_gp_regs_map[found_index_pair].vreg->reg = 0;
+
+		 jite_remove_item_from_linked_list(func, jite_gp_regs_map[found_index].vreg->liveness, jite_gp_regs_map[found_index].liveness);
+		 jite_remove_item_from_linked_list(func, jite_gp_regs_map[found_index_pair].vreg->liveness, jite_gp_regs_map[found_index_pair].liveness);
 
                  jite_gp_regs_map[found_index].vreg = vregs[found_index];
                  jite_gp_regs_map[found_index_pair].vreg = vregs[found_index];
+//		 printf("found_index = %d\n", found_index);
+//		 printf("found_index_pair = %d\n", found_index_pair);
+//		 fflush(stdout);
+		 jite_add_item_no_duplicate_to_linked_list(func, vregs[found_index]->liveness, jite_gp_regs_map[found_index].liveness);
+		 jite_add_item_no_duplicate_to_linked_list(func, vregs[found_index]->liveness, jite_gp_regs_map[found_index_pair].liveness);
             }
         }
     }
@@ -1866,10 +2178,10 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                 {
                     vreg = (jite_vreg_t)(temp->item);
                     weight = jite_vreg_weight(func, vreg);
-                    if(!jite_vreg_is_in_register_hole(func, vreg, index)
+                    if(!jite_vreg_is_in_register_liveness(func, vreg, index)
                         && (reg_weight[index] == 0 || weight < reg_weight[index])
-                        && weight != 0 && vreg->in_reg==0 && !jit_value_is_addressable(vreg->value)
-                        && (!func->has_try || jit_value_is_temporary(vreg->value)))
+                        && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
+//                        && (!func->has_try || jit_value_is_temporary(vreg->value)))
                     {
                         reg_weight[index] = weight;
                         vregs[index] = vreg;
@@ -1887,6 +2199,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
 
                      func->jite->scratch_regs = func->jite->scratch_regs | (&jite_xmm_regs_map[index])->hash_code;
                      func->jite->regs_state = func->jite->regs_state | (&jite_xmm_regs_map[index])->hash_code;
+		     jite_add_item_no_duplicate_to_linked_list(func, vregs[index]->liveness, jite_xmm_regs_map[index].liveness);
                 }
             }
         }
@@ -1902,7 +2215,9 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         {
             // All free register were used, or cannot be used.
             // The register is not free, and was not just allocated.
-            if(reg_weight[count] == 0 && !jite_xmm_reg_index_is_free(func, count))
+            if(reg_weight[count] == 0
+	        && !jite_xmm_reg_index_is_free(func, count))
+// && jite_xmm_regs_map[count].vreg != 0)
             {
                 if(found_index == -1
                     || ((found_index != -1) && jite_vreg_weight(func, jite_xmm_regs_map[count].vreg)
@@ -1925,10 +2240,11 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                 weight = jite_vreg_weight(func, vreg);
 
                 if(jite_vreg_weight(func, jite_xmm_regs_map[found_index].vreg) > weight
-                    && !jite_vreg_is_in_register_hole(func, vreg, found_index)
+//                    && !jite_vreg_is_in_register_liveness(func, vreg, found_index)
+                    && !jite_vreg_is_in_register_liveness_ignore_vreg(func, vreg, found_index, jite_xmm_regs_map[found_index].vreg)
                     && (reg_weight[found_index] == 0 || weight < reg_weight[found_index])
-                    && weight != 0 && vreg->in_reg==0 && !jit_value_is_addressable(vreg->value)
-                    && (!func->has_try || jit_value_is_temporary(vreg->value)))
+                    && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
+//                    && (!func->has_try || jit_value_is_temporary(vreg->value)))
                 {
                     reg_weight[found_index] = weight;
                     vregs[found_index] = vreg;
@@ -1945,8 +2261,14 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
 
                  jite_xmm_regs_map[found_index].vreg->in_reg = 0;
                  jite_xmm_regs_map[found_index].vreg->in_frame = 1;
+		 jite_xmm_regs_map[found_index].vreg->reg = 0;
+
+
+		 jite_remove_item_from_linked_list(func, jite_xmm_regs_map[found_index].vreg->liveness, jite_xmm_regs_map[found_index].liveness);
+
                  vregs[found_index]->reg->vreg = vregs[found_index];
 
+		 jite_add_item_no_duplicate_to_linked_list(func, vregs[found_index]->liveness, jite_xmm_regs_map[found_index].liveness);
             }
         }
     }
@@ -1983,7 +2305,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
 }
 
 
-unsigned char *jite_allocate_registers_and_frames(unsigned char *inst, jit_function_t func, jite_linked_list_t list)
+void jite_allocate_registers(jit_function_t func, jite_linked_list_t list)
 {
     while(list)
     {
@@ -1997,15 +2319,108 @@ unsigned char *jite_allocate_registers_and_frames(unsigned char *inst, jit_funct
             {
                 CASE_USE_WORD
                 {
+                    if(vreg->in_reg)
+                    {
+                        jite_gp_regs_map[vreg->reg->index].vreg = vreg;
+                        func->jite->regs_state = func->jite->regs_state | vreg->reg->hash_code;
+                        func->jite->scratch_regs = func->jite->scratch_regs | vreg->reg->hash_code;
+                    }
+                }
+                break;
+                CASE_USE_LONG
+                {
+                    if(vreg->in_reg && vreg->frame == 0)
+                    {
+                        int reg_pair_index = jite_index_register_pair(vreg->reg->index);
+                        jite_gp_regs_map[vreg->reg->index].vreg = vreg;
+                        jite_gp_regs_map[reg_pair_index].vreg = vreg;
+                        func->jite->regs_state = func->jite->regs_state | vreg->reg->hash_code;
+                        func->jite->scratch_regs = func->jite->scratch_regs | vreg->reg->hash_code;
+                        func->jite->regs_state = func->jite->regs_state | (&jite_gp_regs_map[reg_pair_index])->hash_code;
+                        func->jite->scratch_regs = func->jite->scratch_regs | (&jite_gp_regs_map[reg_pair_index])->hash_code;
+                    }
+                }
+                break;
+                case JIT_TYPE_FLOAT32:
+                case JIT_TYPE_FLOAT64:
+                {
+                    if(vreg->in_reg)
+                    {
+                        jite_xmm_regs_map[vreg->reg->index].vreg = vreg;
+                        func->jite->regs_state = func->jite->regs_state | vreg->reg->hash_code;
+                        func->jite->scratch_regs = func->jite->scratch_regs | vreg->reg->hash_code;                
+                    }
+                }
+                break;
+                case JIT_TYPE_NFLOAT:
+                {
+                    if(sizeof(jit_nfloat) == sizeof(jit_float64))
+                    {
+                        if(vreg->in_reg)
+                        {
+                            jite_xmm_regs_map[vreg->reg->index].vreg = vreg;
+                            func->jite->regs_state = func->jite->regs_state | vreg->reg->hash_code;
+                            func->jite->scratch_regs = func->jite->scratch_regs | vreg->reg->hash_code;                
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        list = list->next;
+    }
+    return;
+}
+
+
+void jite_allocate_registers_and_frames(jit_function_t func, jite_linked_list_t list)
+{
+    while(list)
+    {
+        jite_vreg_t vreg = (jite_vreg_t)list->item;
+        if(vreg)
+        {
+//	    printf("allocate register or frame for value ");
+//	    jit_dump_value(stdout, func, vreg->value, 0);
+//	    printf("\n");
+//	    fflush(stdout);
+
+            jit_type_t type = jit_value_get_type(vreg->value);
+            type = jit_type_remove_tags(type);
+            int typeKind = jit_type_get_kind(type);
+            switch(typeKind)
+            {
+                CASE_USE_WORD
+                {
                     if(vreg->in_frame)
                     {
-                        jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
-                                                struct _jite_frame);
-                        jite_allocate_frame(func, frame);
-                        vreg->frame = frame;
+		        if(vreg->frame == 0)
+			{
+//			    printf("allocate frame\n");
+//			    fflush(stdout);
+
+                            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
+                                                    struct _jite_frame);
+                            jite_allocate_frame(func, frame);
+                            vreg->frame = frame;
+//	  		    printf("Allocated frame 0x%x for value ", vreg->frame->frame_offset);
+			}
+			else
+			{
+//			    printf("occupy frame\n");
+//			    fflush(stdout);
+
+			    jite_occupy_frame(func, vreg->frame);
+//	  		    printf("Occupy frame 0x%x for value ", vreg->frame->frame_offset);
+			}
+//			jit_dump_value(stdout, func, vreg->value, 0);
+//			printf("\n");
                     }
                     else if(vreg->in_reg)
                     {
+//		        printf("allocate reg %d\n", vreg->reg->index);
+//			fflush(stdout);
+
                         jite_gp_regs_map[vreg->reg->index].vreg = vreg;
                         func->jite->regs_state = func->jite->regs_state | vreg->reg->hash_code;
                         func->jite->scratch_regs = func->jite->scratch_regs | vreg->reg->hash_code;
@@ -2016,12 +2431,19 @@ unsigned char *jite_allocate_registers_and_frames(unsigned char *inst, jit_funct
                 {
                     if(vreg->in_frame)
                     {
-                        jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
-                                                struct _jite_frame);
-                        jite_allocate_large_frame(func, frame, 8);
-                        vreg->frame = frame;
+		        if(vreg->frame == 0)
+			{
+                            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
+                                                    struct _jite_frame);
+                            jite_allocate_large_frame(func, frame, 8);
+                            vreg->frame = frame;
+			}
+			else
+			{
+			    jite_occupy_frame(func, vreg->frame);
+			}
                     }
-                    else if(vreg->in_reg)
+                    else if(vreg->in_reg && vreg->frame == 0)
                     {
                         int reg_pair_index = jite_index_register_pair(vreg->reg->index);
                         jite_gp_regs_map[vreg->reg->index].vreg = vreg;
@@ -2038,10 +2460,17 @@ unsigned char *jite_allocate_registers_and_frames(unsigned char *inst, jit_funct
                 {
                     if(vreg->in_frame)
                     {
-                        jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
-                                                struct _jite_frame);
-                        jite_allocate_large_frame(func, frame, 8);
-                        vreg->frame = frame;
+		        if(vreg->frame == 0)
+			{
+                            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
+                                                    struct _jite_frame);
+                            jite_allocate_large_frame(func, frame, 8);
+                            vreg->frame = frame;
+			}
+			else
+			{
+			    jite_occupy_frame(func, vreg->frame);
+			}
                     }
                     else if(vreg->in_reg)
                     {
@@ -2057,20 +2486,34 @@ unsigned char *jite_allocate_registers_and_frames(unsigned char *inst, jit_funct
                     {
                         if(vreg->in_frame)
                         {
-                            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
-                                                    struct _jite_frame);
-                            jite_allocate_large_frame(func, frame, 12);
-                            vreg->frame = frame;
+			    if(vreg->frame == 0)
+			    {
+                                jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
+                                                        struct _jite_frame);
+                                jite_allocate_large_frame(func, frame, 12);
+                                vreg->frame = frame;
+			    }
+			    else
+			    {
+			        jite_occupy_frame(func, vreg->frame);
+			    }
                         }
                     }
                     else
                     {
                         if(vreg->in_frame)
                         {
-                            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
-                                                    struct _jite_frame);
-                            jite_allocate_large_frame(func, frame, 8);
-                            vreg->frame = frame;
+			    if(vreg->frame == 0)
+			    {
+                                jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool), 
+                                                        struct _jite_frame);
+                                jite_allocate_large_frame(func, frame, 8);
+                                vreg->frame = frame;
+			    }
+			    else
+			    {
+			        jite_occupy_frame(func, vreg->frame);
+			    }
                         }
                         else if(vreg->in_reg)
                         {
@@ -2083,18 +2526,29 @@ unsigned char *jite_allocate_registers_and_frames(unsigned char *inst, jit_funct
                 break;
                 default:
                 {
-                    jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
-                                                struct _jite_frame);
-                    jite_allocate_large_frame(func, frame, jit_type_get_size(jit_value_get_type(vreg->value)));
-                    vreg->frame = frame;
+		    if(vreg->in_frame)
+		    {
+		        if(vreg->frame == 0)
+			{
+                            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
+                                                        struct _jite_frame);
+                            jite_allocate_large_frame(func, frame, jite_type_get_size(jit_value_get_type(vreg->value)));
+                            vreg->frame = frame;
+			}
+			else
+			{
+			    jite_occupy_frame(func, vreg->frame);
+			}
+		    }
                 }
                 break;
             }
         }
         list = list->next;
     }
-    return inst;
+    return;
 }
+
 
 
 void jite_allocate_large_frame_cond6(jit_function_t func, jite_frame_t frame, int size, jite_frame_t frame1, jite_frame_t frame2, jite_frame_t frame3, jite_frame_t frame4, jite_frame_t frame5, jite_frame_t frame6)
@@ -2341,6 +2795,82 @@ void jite_allocate_large_frame_cond6(jit_function_t func, jite_frame_t frame, in
     }
 }
 
+
+void jite_occupy_frame(jit_function_t func, jite_frame_t frame)
+{
+    if(!frame || (frame && frame->hash_code == -1)) return;
+
+    jite_list_t temp = func->jite->frame_state;
+    int index = frame->hash_code;
+    while(index >= 96)
+    {
+        temp = temp->next;
+	index = index - 96;
+    }
+
+    int segment = index / 32;
+    int offset  = index % 32;
+    int flag = 0;
+    int size = frame->length;
+
+    while(temp && flag < size)
+    {
+        for(; segment < 3 && flag < size; segment++)
+        {
+            for(; offset < 32 && flag < size; offset++)
+            {
+                switch(segment)
+                {
+                    case 0:
+                    {
+                        if( ((unsigned int)(temp->item1) & (1 << offset))==0)
+                        {
+                            temp->item1 = (void*)((unsigned int)(temp->item1)
+                                     | (1 << offset));
+                            flag++;
+                        }
+                    }
+                    break;
+                    case 1:
+                    {
+                        if( ((unsigned int)(temp->item2) & (1 << offset))==0)
+                        {
+                            temp->item2 = (void*)((unsigned int)(temp->item2) 
+                                        | (1 << offset));
+                            flag++;
+                        }
+                    }
+                    break;
+                    case 2:
+                    {
+                        if( ((unsigned int)(temp->item3) & (1 << offset))==0)
+                        {
+                            temp->item3 = (void*)((unsigned int)(temp->item3)
+                                        | (1<<offset));
+                            flag++;
+                        }
+                    }
+                    break;
+                }
+            }
+            offset = 0;
+        }
+        segment = 0;
+        if(temp->next==0)
+        {
+            temp->next = jit_memory_pool_alloc(&(func->builder->jite_list_pool),
+                                    struct _jite_list);
+            temp->next->item1 = 0;
+            temp->next->item2 = 0;
+            temp->next->item3 = 0;
+            temp->next->next = 0;
+        }
+        temp = temp->next;
+    }
+    if(func->jite->scratch_frame < -frame->frame_offset) func->jite->scratch_frame = -frame->frame_offset;
+}
+
+
 void jite_allocate_large_frame(jit_function_t func, jite_frame_t frame, int size)
 {
     if(size <= 4)
@@ -2494,32 +3024,32 @@ void jite_allocate_large_frame(jit_function_t func, jite_frame_t frame, int size
                 {
                     case 0:
                     {
-                        if( ((unsigned int)(temp->item1) & (1 << offset))==0)
-                        {
+//                        if( ((unsigned int)(temp->item1) & (1 << offset))==0)
+//                        {
                             temp->item1 = (void*)((unsigned int)(temp->item1)
                                      | (1 << offset));
                             flag++;
-                        }
+//                        }
                     }
                     break;
                     case 1:
                     {
-                        if( ((unsigned int)(temp->item2) & (1 << offset))==0)
-                        {
+//                        if( ((unsigned int)(temp->item2) & (1 << offset))==0)
+//                        {
                             temp->item2 = (void*)((unsigned int)(temp->item2) 
                                         | (1 << offset));
                             flag++;
-                        }
+//                        }
                     }
                     break;
                     case 2:
                     {
-                        if( ((unsigned int)(temp->item3) & (1 << offset))==0)
-                        {
+//                        if( ((unsigned int)(temp->item3) & (1 << offset))==0)
+//                        {
                             temp->item3 = (void*)((unsigned int)(temp->item3)
                                         | (1<<offset));
                             flag++;
-                        }
+//                        }
                     }
                     break;
                 }
@@ -2613,11 +3143,22 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
 {
     if((vreg && vreg->in_frame) || bUsage == LOCAL_ALLOCATE_FOR_TEMP)
     {
+        if(vreg && vreg->in_frame && vreg->frame == 0)
+	{
+            jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
+                                                        struct _jite_frame);
+            jite_allocate_large_frame(func, frame, jite_type_get_size(jit_value_get_type(vreg->value)));
+
+            vreg->frame = frame;
+	}
+
         jit_type_t type;
         unsigned char bRegFound = 0;
         jite_reg_t reg1 = 0, reg2 = 0, reg3 = 0, reg4 = 0;
         if(vreg1 != 0 && vreg1->in_reg && vreg1->reg)
         {
+//	    printf("vreg1->in_reg\n");
+//	    fflush(stdout);
             reg1 = vreg1->reg;
             type = jit_value_get_type(vreg1->value);
             type = jit_type_normalize(type);
@@ -2669,9 +3210,15 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                         &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 &&
                         !(jite_gp_regs_map[count].hash_code & fRegCond))
                     {
+//			    printf("CASE4\n");
+//		            fflush(stdout);
+
                         jite_gp_regs_map[count].local_vreg = vreg;
-                        if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
-                        if(vreg)
+                        if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			{
+			    x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
+                        }
+			if(vreg)
                         {
                             vreg->in_frame = 0;
                             vreg->in_reg = 1;
@@ -2685,8 +3232,9 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                         if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
                         
                         break;
-                     }
+                    }
                 }
+
                 if(!bRegFound) // if we did not find any free register unused
                 {
                     for(count = 0; count < JITE_N_GP_REGISTERS; count++)
@@ -2696,6 +3244,9 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                              &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 &&
                              !(jite_gp_regs_map[count].hash_code & fRegCond))
                         {
+//			    printf("CASE3\n");
+//		            fflush(stdout);
+
                             // restore the old local register content to frame
                             jite_vreg_t local_vreg = jite_gp_regs_map[count].local_vreg;
                             if(local_vreg)
@@ -2706,8 +3257,11 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             
                             // load new content into local register
                             jite_gp_regs_map[count].local_vreg = vreg;
-                            if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
-                            if(vreg)
+                            if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			    {
+			        x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
+                            }
+			    if(vreg)
                             {
                                 vreg->in_frame = 0;
                                 vreg->in_reg = 1;
@@ -2717,7 +3271,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
 
                             break;
-                         }
+                        }
                     }
                 }
 
@@ -2730,16 +3284,22 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                            jite_gp_regs_map[count].temp_frame &&
                            !(jite_gp_regs_map[count].hash_code & fRegCond))
                         {
+//			    printf("CASE2\n");
+//		            fflush(stdout);
+
                             // load new content into local register
-                            if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
-                            jite_vreg_t local_vreg = jite_gp_regs_map[count].local_vreg;
+                            if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			    {
+			        x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
+                            }
+			    jite_vreg_t local_vreg = jite_gp_regs_map[count].local_vreg;
                             if(local_vreg)
                             {
                                 local_vreg->in_frame = 1;
                                 local_vreg->in_reg = 0;
                             }
                             jite_gp_regs_map[count].local_vreg = vreg;
-                            
+
                             if(vreg)
                             {
                                 vreg->in_frame = 0;
@@ -2750,13 +3310,20 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
 
                             break;
-                         }
+                        }
                     }
                 }
                 if(!bRegFound && (bUsage != LOCAL_ALLOCATE_FOR_ALIASING)) // if we did not find any free register at all try to find one not saved yet locally
                 {
+//		    printf("try to save to temporary frame\n");
+//		    fflush(stdout);
                     for(count = 0; count < JITE_N_GP_REGISTERS; count++)
                     {
+//		        int flag = !(jite_gp_regs_map[count].hash_code & fRegCond);
+
+//		        printf("condition = 0x%d, fRegCond = 0x%d\n", flag, fRegCond);
+//			fflush(stdout);
+
                         if(&jite_gp_regs_map[count] != reg1 && &jite_gp_regs_map[count] != reg2 &&
                            &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 && 
                            !(jite_gp_regs_map[count].hash_code & fRegCond))
@@ -2768,8 +3335,20 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                                 frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
                                                     struct _jite_frame);
                                 jite_allocate_large_frame_cond6(func, frame, jite_type_get_size(jit_value_get_type(jite_gp_regs_map[count].vreg->value)), frame1, frame2, frame3, frame4, frame5, frame6);
-                                jite_gp_regs_map[count].temp_frame = frame;
                             }
+			    else
+			    {
+			        jite_occupy_frame(func, frame);
+			    }
+//			    else
+//			    {
+                            jite_gp_regs_map[count].temp_frame = frame;
+				// todo
+//			    }
+
+//         		    printf("CASE1\n");
+//		            fflush(stdout);
+
                             
                             jit_type_t type = jit_value_get_type(jite_gp_regs_map[count].vreg->value);
                             type = jit_type_normalize(type);
@@ -2782,8 +3361,10 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                                 x86_mov_membase_reg(inst, X86_EBP, frame->frame_offset + 4, jite_register_pair(jite_gp_regs_map[count].reg), 4);
                             }
 
-                            if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
-
+                            if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			    {
+			        x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
+                            }
                             jite_vreg_t local_vreg = jite_gp_regs_map[count].local_vreg;
                             if(local_vreg)
                             {
@@ -2802,9 +3383,11 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
                             
                             break;
-                         }
+                        }
                     }
                 }
+//		printf("fall thru\n");
+//		fflush(stdout);
             }
             break;
             CASE_USE_FLOAT
@@ -2820,15 +3403,19 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                        !(jite_xmm_regs_map[count].hash_code & fRegCond))
                     {
                         jite_xmm_regs_map[count].local_vreg = vreg;
-                        if(typeKind == JIT_TYPE_FLOAT32)
-                        {
-                            if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) sse_movss_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+
+			if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			{
+                           if(typeKind == JIT_TYPE_FLOAT32)
+                           {
+			        sse_movss_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+                           }
+                           else
+                           {
+			        sse2_movsd_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+                           }
                         }
-                        else
-                        {
-                            if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) sse2_movsd_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
-                        }
-                        
+
                         if(vreg)
                         {
                             vreg->in_frame = 0;
@@ -2841,7 +3428,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                         if(foundReg) *foundReg = jite_xmm_regs_map[count].reg;
                         
                         break;
-                     }
+                    }
                 }
                 if(!bRegFound) // if we did not find any free register
                 {
@@ -2860,14 +3447,17 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             }
                             // load new content into local register
                             jite_xmm_regs_map[count].local_vreg = vreg;
-                            if(typeKind == JIT_TYPE_FLOAT32)
-                            {
-                                if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) sse_movss_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
-                            }
-                            else
-                            {
-                                if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) sse2_movsd_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
-                            }
+			    if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			    {
+                                if(typeKind == JIT_TYPE_FLOAT32)
+                                {
+	  	  	    	    sse_movss_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+                                }
+                                else
+                                {
+                                    sse2_movsd_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+                                }
+			    }
                             if(vreg)
                             {
                                 vreg->in_frame = 0;
@@ -2878,7 +3468,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             if(foundReg) *foundReg = jite_xmm_regs_map[count].reg;
                             
                             break;
-                         }
+                        }
                     }
                 }
 
@@ -2891,15 +3481,17 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             && !(jite_xmm_regs_map[count].hash_code & fRegCond))
                         {
                             // load new content into local register
-
-                            if(typeKind == JIT_TYPE_FLOAT32)
-                            {
-                                if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) sse_movss_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
-                            }
-                            else
-                            {
-                                if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) sse2_movsd_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
-                            }
+                            if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			    {
+                                if(typeKind == JIT_TYPE_FLOAT32)
+                                {
+                                    sse_movss_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+                                }
+                                else
+                                {
+                                    sse2_movsd_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+                                }
+			    }
                             jite_vreg_t local_vreg = jite_xmm_regs_map[count].local_vreg;
                             if(local_vreg)
                             {
@@ -2917,10 +3509,10 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             if(foundReg) *foundReg = jite_xmm_regs_map[count].reg;
                             
                             break;
-                         }
+                        }
                     }
                 }
-                if(!bRegFound) // if we did not find any free register at all try to find one not saved yet locally
+                if(!bRegFound && (bUsage != LOCAL_ALLOCATE_FOR_ALIASING)) // if we did not find any free register at all try to find one not saved yet locally
                 {
                     for(count = 0; count < JITE_N_XMM_REGISTERS; count++)
                     {
@@ -2934,19 +3526,26 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                                 frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
                                                     struct _jite_frame);
                                 jite_allocate_large_frame_cond6(func, frame, 8, frame1, frame2, frame3, frame4, frame5, frame6);
-                                jite_xmm_regs_map[count].temp_frame = frame;
                             }
+			    else
+			    {
+			        jite_occupy_frame(func, frame);
+			    }
+                            jite_xmm_regs_map[count].temp_frame = frame;
 
                             sse2_movsd_membase_xmreg(inst, X86_EBP, frame->frame_offset, jite_xmm_regs_map[count].reg);
 
-                            if(typeKind == JIT_TYPE_FLOAT32)
-                            {
-                                if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) sse_movss_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
-                            }
-                            else
-                            {
-                                if(bUsage == LOCAL_ALLOCATE_FOR_INPUT) sse2_movsd_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
-                            }
+                            if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			    {
+                                if(typeKind == JIT_TYPE_FLOAT32)
+                                {
+                                    sse_movss_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+                                }
+                                else
+                                {
+                                    sse2_movsd_xmreg_membase(inst, jite_xmm_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset);
+                                }
+			    }
                             jite_vreg_t local_vreg = jite_xmm_regs_map[count].local_vreg;
                             if(local_vreg)
                             {
@@ -2964,7 +3563,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             if(foundReg) *foundReg = jite_xmm_regs_map[count].reg;
                             
                             break;
-                         }
+                        }
                     }
                 }
             }
@@ -2974,6 +3573,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
 
     return inst;
 }
+
 
 unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned char *buf, jit_type_t signature, void *func_address, int call_type)
 {
@@ -3460,7 +4060,6 @@ unsigned int jite_stack_depth_used(jit_function_t func)
             }
             break;
         }
-        
     }
     return depth;
 }
@@ -3502,6 +4101,8 @@ void jite_compute_register_holes(jit_function_t func)
 
     holes[X86_REG_XMM2] = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
                                         struct _jite_linked_list);
+					
+    unsigned int op_level = jit_function_get_optimization_level(func);
 
     while((block = jit_block_next(func, block)) != 0)
     {
@@ -3512,14 +4113,11 @@ void jite_compute_register_holes(jit_function_t func)
             {
                 switch(insn->opcode)
                 {
-                    case JIT_OP_CALL:
-                    case JIT_OP_CALL_TAIL:
                     case JIT_OP_CALL_INDIRECT:
                     case JIT_OP_CALL_INDIRECT_TAIL:
                     case JIT_OP_CALL_VTABLE_PTR:
                     case JIT_OP_CALL_VTABLE_PTR_TAIL:
-                    case JIT_OP_CALL_EXTERNAL:
-                    case JIT_OP_CALL_EXTERNAL_TAIL:
+                    case JIT_OP_CALL_FILTER:
                     {
                         jite_add_item_to_linked_list(func, insn, allFunctions);
                         jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]);
@@ -3530,6 +4128,51 @@ void jite_compute_register_holes(jit_function_t func)
                         jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM2]);
                     }
                     break;
+/*
+		    case JIT_OP_CALL_FINALLY:
+		    case JIT_OP_LEAVE_FINALLY:
+                    {
+                        jite_add_item_to_linked_list(func, insn, allFunctions);
+
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EBX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDI]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_ESI]);
+
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM0]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM1]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM2]);
+                    }
+                    break;
+*/
+                    case JIT_OP_CALL:
+                    case JIT_OP_CALL_TAIL:
+                    case JIT_OP_CALL_EXTERNAL:
+                    case JIT_OP_CALL_EXTERNAL_TAIL:
+                    {
+                        jite_add_item_to_linked_list(func, insn, allFunctions);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
+
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM0]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM1]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM2]);
+#if defined(HAVE___SIGSETJMP)
+			if((void *) insn->dest == (void *) __sigsetjmp)
+#else
+                        if((void *) insn->dest == (void *) sigsetjmp)
+#endif
+			{
+                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_EBX]);
+                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_ESI]);
+                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDI]);
+			}
+                    }
+                    break;
+
                     case JIT_OP_IDIV:
                     case JIT_OP_IDIV_UN:
                     case JIT_OP_IREM:
@@ -3671,6 +4314,22 @@ void jite_compute_register_holes(jit_function_t func)
                     }
                     break;
                 }
+
+		if(op_level <= 1 && (insn->opcode == JIT_OP_CALL_FINALLY || insn->opcode == JIT_OP_LEAVE_FINALLY))
+		{
+                        jite_add_item_to_linked_list(func, insn, allFunctions);
+
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EBX]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDI]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_ESI]);
+
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM0]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM1]);
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_XMM2]);
+		}
             }
         }
     }
@@ -3691,6 +4350,155 @@ void jite_compute_register_holes(jit_function_t func)
     func->jite->reg_holes[X86_REG_XMM6] = allFunctions;
     func->jite->reg_holes[X86_REG_XMM7] = allFunctions;
 }
+
+
+unsigned char jite_vreg_is_in_register_liveness(jit_function_t func, jite_vreg_t vreg, unsigned int regIndex)
+{
+    jit_type_t type = jit_value_get_type(vreg->value);
+    type = jit_type_remove_tags(type);
+    int typeKind = jit_type_get_kind(type);
+    jite_linked_list_t index[3];
+    unsigned int count = 1;
+
+    switch(typeKind)
+    {
+        CASE_USE_WORD
+        {
+            index[0] = jite_gp_regs_map[regIndex].liveness;
+        }
+        break;
+        CASE_USE_LONG
+        {
+            index[0] = jite_gp_regs_map[regIndex].liveness;
+	    jite_reg_t register_pair = jite_object_register_pair(&jite_gp_regs_map[regIndex]);
+            index[1] = register_pair->liveness;
+	    count = 2;
+        }
+        break;
+        CASE_USE_FLOAT
+        {
+            // index[0] = jite_xmm_regs_map[regIndex + X86_REG_XMM0].liveness;
+            index[0] = jite_xmm_regs_map[regIndex].liveness;
+        }
+        break;
+        default:
+        {
+            return 0;
+        }
+        break;
+    }
+
+    while(count > 0)
+    {
+        count--;
+        jite_linked_list_t list = index[count];
+
+        while(list)
+        {
+            jite_linked_list_t regLiveness = (jite_linked_list_t)(list->item);
+  	    while(regLiveness)
+	    {
+		unsigned int regMin = ((jit_insn_t)(regLiveness->item))->insn_num;
+		regLiveness = regLiveness->next;
+		unsigned int regMax = ((jit_insn_t)(regLiveness->item))->insn_num;
+		regLiveness = regLiveness->next;
+		jite_linked_list_t vregLiveness = vreg->liveness;
+		while(vregLiveness)
+		{
+		    unsigned int vregMin = ((jit_insn_t)(vregLiveness->item))->insn_num;
+		    vregLiveness = vregLiveness->next;
+		    unsigned int vregMax = ((jit_insn_t)(vregLiveness->item))->insn_num;
+		    vregLiveness = vregLiveness->next;
+                    if((vregMin >= regMin && vregMin < regMax) || (vregMax > regMin && vregMax <= regMax)
+		        || (vregMin <= regMin && vregMax >= regMax))
+		    {
+		        return 1;
+		    }
+		}
+	    }
+	    list = list->next;
+        }
+    }
+
+    
+    return jite_vreg_is_in_register_hole(func, vreg, regIndex);
+}
+
+
+unsigned char jite_vreg_is_in_register_liveness_ignore_vreg(jit_function_t func, jite_vreg_t vreg, unsigned int regIndex, jite_vreg_t ignoreVreg)
+{
+    jit_type_t type = jit_value_get_type(vreg->value);
+    type = jit_type_remove_tags(type);
+    int typeKind = jit_type_get_kind(type);
+    jite_linked_list_t index[3];
+    unsigned int count = 1;
+
+    switch(typeKind)
+    {
+        CASE_USE_WORD
+        {
+            index[0] = jite_gp_regs_map[regIndex].liveness;
+        }
+        break;
+        CASE_USE_LONG
+        {
+            index[0] = jite_gp_regs_map[regIndex].liveness;
+	    jite_reg_t register_pair = jite_object_register_pair(&jite_gp_regs_map[regIndex]);
+            index[1] = register_pair->liveness;
+	    count = 2;
+        }
+        break;
+        CASE_USE_FLOAT
+        {
+            index[0] = jite_xmm_regs_map[regIndex].liveness;
+        }
+        break;
+        default:
+        {
+            return 0;
+        }
+        break;
+    }
+
+    while(count > 0)
+    {
+        count--;
+        jite_linked_list_t list = index[count];
+
+        while(list)
+        {
+            jite_linked_list_t regLiveness = (jite_linked_list_t)(list->item);
+	    if((ignoreVreg && ignoreVreg->liveness != regLiveness) || !ignoreVreg)
+	    {
+  	    while(regLiveness)
+	    {
+		unsigned int regMin = ((jit_insn_t)(regLiveness->item))->insn_num;
+		regLiveness = regLiveness->next;
+		unsigned int regMax = ((jit_insn_t)(regLiveness->item))->insn_num;
+		regLiveness = regLiveness->next;
+		jite_linked_list_t vregLiveness = vreg->liveness;
+		while(vregLiveness)
+		{
+		    unsigned int vregMin = ((jit_insn_t)(vregLiveness->item))->insn_num;
+		    vregLiveness = vregLiveness->next;
+		    unsigned int vregMax = ((jit_insn_t)(vregLiveness->item))->insn_num;
+		    vregLiveness = vregLiveness->next;
+                    if((vregMin >= regMin && vregMin < regMax) || (vregMax > regMin && vregMax <= regMax)
+		     || (vregMin <= regMin && vregMax >= regMax))
+		    {
+		        return 1;
+		    }
+		}
+	    }
+	    }
+	    list = list->next;
+        }
+    }
+
+    
+    return jite_vreg_is_in_register_hole(func, vreg, regIndex);
+}
+
 
 
 unsigned char jite_vreg_is_in_register_hole(jit_function_t func, jite_vreg_t vreg, unsigned int regIndex)
@@ -3724,8 +4532,10 @@ unsigned char jite_vreg_is_in_register_hole(jit_function_t func, jite_vreg_t vre
         }
         break;
     }
+    
     unsigned int min = vreg->min_range->insn_num;
     unsigned int max = vreg->max_range->insn_num;
+
     while(index[count] != -1)
     {
             jite_linked_list_t list = func->jite->reg_holes[index[count]];
@@ -3735,8 +4545,22 @@ unsigned char jite_vreg_is_in_register_hole(jit_function_t func, jite_vreg_t vre
             jit_insn_t insn = (jit_insn_t)(list->item);
             if(insn)
             {
-                unsigned int current = insn->insn_num;
-                if(min < current && max > current) return 1;
+                unsigned int current_insn = insn->insn_num;
+                if(min < current_insn && max > current_insn)
+		{
+		jite_linked_list_t vregLiveness = vreg->liveness;
+		while(vregLiveness)
+		{
+		    unsigned int vregMin = ((jit_insn_t)(vregLiveness->item))->insn_num;
+		    vregLiveness = vregLiveness->next;
+		    unsigned int vregMax = ((jit_insn_t)(vregLiveness->item))->insn_num;
+		    vregLiveness = vregLiveness->next;
+		    if((vregMin <= current_insn && vregMax > current_insn) || (vregMin < current_insn && vregMax >= current_insn))
+		    {
+		        return 1;
+		    }
+		}
+		}
             }
             list = list->next;
         }
@@ -3784,7 +4608,7 @@ void jite_dump_registers(unsigned int buf, unsigned int ecx, unsigned int edx, u
 {
     printf("\naddress = 0x%x, ecx = 0x%x, edx = 0x%x, eax = 0x%x, ebx = 0x%x, edi = 0x%x, esi = 0x%x, ebp = 0x%x, \n", buf, ecx, edx, eax, ebx, edi, esi, ebp);
     unsigned int index;
-    for(index = 0; index < 3; index++)
+    for(index = 0; index < 5; index++)
     {
         printf(" *(ebp + 0x%x) = 0x%x", (0x8 + index * 4), *((unsigned int *)(ebp + 0x8 + index * 4)));
     }

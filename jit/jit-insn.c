@@ -6193,6 +6193,7 @@ jit_value_t jit_insn_call_native
             return 0;
         }
     }
+
     /* Create the instructions necessary to move the return value into place */
     if((flags & JIT_CALL_TAIL) == 0)
     {
@@ -7406,6 +7407,7 @@ static int initialize_setjmp_block(jit_function_t func)
 		(func, "sigsetjmp", (void *)sigsetjmp,
 		 type, args, 2, JIT_CALL_NOTHROW);
 #endif
+
 	jit_type_free(type);
 	if(!value)
 	{
@@ -7821,10 +7823,14 @@ int jit_insn_call_finally(jit_function_t func, jit_label_t *finally_label)
 	{
 		return 0;
 	}
+#if defined(JITE_ENABLED)
 	insn->opcode = (short)JIT_OP_CALL_FINALLY;
 	insn->flags = JIT_INSN_DEST_IS_LABEL;
 	insn->dest = (jit_value_t)(*finally_label);
-	return 1;
+	return jit_insn_new_block(func);
+#else
+        return 1;
+#endif
 }
 
 /*@

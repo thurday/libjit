@@ -22,7 +22,13 @@
 
 #include <jit/jit-arch.h>
 #include <jit/jit-defs.h>
-#define	JIT_MEMCPY		"mem_copy"
+
+#if defined(__APPLE__) && defined(__MACH__)
+# define	JIT_MEMCPY	"_mem_copy"
+#else
+# define	JIT_MEMCPY	"mem_copy"
+#endif
+
 #include "jit-apply-func.h"
 #include <stdio.h>
 #include <config.h>
@@ -953,7 +959,7 @@ void detect_float_return(void)
 	void run_detect_struct_##n(void) \
 	{ \
 		jit_nint *args; \
-		jit_nint stack[1]; \
+		volatile jit_nint stack[1]; \
 		jit_nint buffer[64 / sizeof(jit_nint)]; \
 		void *apply_return; \
 		jit_builtin_apply_args(jit_nint *, args); \
