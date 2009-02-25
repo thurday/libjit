@@ -362,6 +362,14 @@ JIT_OP_RETURN_REG:
             inst = masm_mov_membase_reg(inst, X86_EBP, $1, sourceReg, sourceType);
         }
     }
+    [] ->
+    {
+        int sourceX86Reg = (int)jit_value_get_nint_constant(insn->value2);
+        if(sourceX86Reg >= X86_REG_ST0 && sourceX86Reg <= X86_REG_ST7)
+        {
+ 	    x86_fdecstp(inst);
+	}
+    }
 
 JIT_OP_TAIL_CALL:
     [] -> {

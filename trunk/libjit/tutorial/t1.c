@@ -41,6 +41,7 @@ int main(int argc, char **argv)
 
 	/* Create the function object */
 	function = jit_function_create(context, signature);
+	jit_function_set_optimization_level(function, 2);
 
 	/* Construct the function body */
 	x = jit_value_get_param(function, 0);
@@ -50,7 +51,9 @@ int main(int argc, char **argv)
 	temp2 = jit_insn_add(function, temp1, z);
 	jit_insn_return(function, temp2);
 	/* Compile the function */
+	jit_dump_function(stdout, function, "function");
 	jit_function_compile(function);
+	jit_dump_function(stdout, function, "function");
 
 	/* Unlock the context */
 	jit_context_build_end(context);

@@ -2,30 +2,29 @@
 
 #include "jite-linear-scan.h"
 #include "jit-gen-i486-simd.h"
-// Item = {reg,    min_life_range, max_life_range, min_weight_range, max_weight_range, hash_code,      vreg,    local_vreg}.
-//         1 param  2 param          3 param           4 param           5 param         6 param     7 param    8 param
-// -1 stands for unlimited
+// Item = {reg,    index,          hash_code,      vreg,    local_vreg, liveness}.
+//        1 param  2 param         3 param         4 param  5 param     6 param
 
 struct _jite_reg jite_gp_regs_map[] =
         {
-        {X86_EAX, 0, 0, -1, -1, -1, 0x1,  0, 0, 0},
-        {X86_EDX, 1, 0, -1, -1, -1, 0x2,  0, 0, 0},
-        {X86_ECX, 2, 0, -1, -1, -1, 0x4,  0, 0, 0},
-        {X86_EBX, 3, 0,  2, -1, -1, 0x8,  0, 0, 0},
-        {X86_EDI, 4, 0, -1, -1, -1, 0x10, 0, 0, 0},
-        {X86_ESI, 5, 0, -1, -1, -1, 0x20, 0, 0, 0}
+        {X86_EAX, 0, 0x1,  0, 0, 0, 0},
+        {X86_EDX, 1, 0x2,  0, 0, 0, 0},
+        {X86_ECX, 2, 0x4,  0, 0, 0, 0},
+        {X86_EBX, 3, 0x8,  0, 0, 0, 0},
+        {X86_EDI, 4, 0x10, 0, 0, 0, 0},
+        {X86_ESI, 5, 0x20, 0, 0, 0, 0}
         };
 
 struct _jite_reg jite_xmm_regs_map[] =
         {
-        {XMM0, 0, 0, -1, -1, -1, 0x40,   0, 0, 0},
-        {XMM1, 1, 0, -1, -1, -1, 0x80,   0, 0, 0},
-        {XMM2, 2, 0, -1, -1, -1, 0x100,  0, 0, 0},
-        {XMM3, 3, 0, -1, -1, -1, 0x200,  0, 0, 0},
-        {XMM4, 4, 0, -1, -1, -1, 0x400,  0, 0, 0},
-        {XMM5, 5, 0, -1, -1, -1, 0x800,  0, 0, 0},
-        {XMM6, 6, 0, -1, -1, -1, 0x1000, 0, 0, 0},
-        {XMM7, 7, 0, -1, -1, -1, 0x2000, 0, 0, 0}
+        {XMM0, 0, 0x40,   0, 0, 0, 0},
+        {XMM1, 1, 0x80,   0, 0, 0, 0},
+        {XMM2, 2, 0x100,  0, 0, 0, 0},
+        {XMM3, 3, 0x200,  0, 0, 0, 0},
+        {XMM4, 4, 0x400,  0, 0, 0, 0},
+        {XMM5, 5, 0x800,  0, 0, 0, 0},
+        {XMM6, 6, 0x1000, 0, 0, 0, 0},
+        {XMM7, 7, 0x2000, 0, 0, 0, 0}
         };
 
 // In the following table all opcodes are aranged according to their own code, which means that
@@ -476,6 +475,8 @@ void jite_allocate_large_frame_cond6(jit_function_t func, jite_frame_t frame, in
 
 void jite_allocate_frame(jit_function_t func, jite_frame_t frame);
 
+void jite_occupy_frame(jit_function_t func, jite_frame_t frame);
+
 unsigned char jite_gp_reg_is_free(jit_function_t func, int index);
 
 unsigned char jite_xmm_reg_is_free(jit_function_t func, int index);
@@ -515,6 +516,10 @@ unsigned char *jite_throw_builtin
 unsigned int jite_stack_depth_used(jit_function_t func);
 
 void jite_compute_registers_holes(jit_function_t func);
+
+unsigned char jite_vreg_is_in_register_liveness(jit_function_t func, jite_vreg_t vreg, unsigned int regIndex);
+
+unsigned char jite_vreg_is_in_register_liveness_ignore_vreg(jit_function_t func, jite_vreg_t vreg, unsigned int regIndex, jite_vreg_t ignoreVreg);
 
 unsigned char jite_vreg_is_in_register_hole(jit_function_t func, jite_vreg_t vreg, unsigned int regIndex);
 

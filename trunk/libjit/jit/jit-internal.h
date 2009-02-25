@@ -198,6 +198,10 @@ struct _jit_block
     void                *address;
     void                *fixup_list;
     void                *fixup_absolute_list;
+#if defined(JITE_ENABLED)
+    int                 analysed;
+    jite_linked_list_t  list;
+#endif
 };
 
 /*
@@ -266,6 +270,8 @@ struct _jit_insn
     unsigned int            insn_num;
     jite_critical_point_t        cpoint;
     jit_type_t             signature;
+    jit_insn_t             next;
+    jit_insn_t             prev;
 #endif
 };
 

@@ -1704,6 +1704,8 @@ typedef union {
 #define x86_fsqrt(inst) do { *(inst)++ = (unsigned char)0xd9; *(inst)++ = (unsigned char)0xfa; } while (0)
 #define x86_fptan(inst) do { *(inst)++ = (unsigned char)0xd9; *(inst)++ = (unsigned char)0xf2; } while (0)
 
+#define x86_fdecstp(inst) do { *(inst)++ = (unsigned char)0xd9; *(inst)++ = (unsigned char)0xf6; } while (0)
+
 #define x86_padding(inst,size)	\
 	do {	\
 		switch ((size)) {	\

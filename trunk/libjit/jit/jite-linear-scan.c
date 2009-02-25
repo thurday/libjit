@@ -77,10 +77,10 @@ jit_value_t jite_value_get_param(jit_function_t func, int index)
     }
 }
 
-jit_value_t jite_find_work_value(jit_insn_t insn, jit_value_t value)
-{
-    return value;
-}
+// jit_value_t jite_find_work_value(jit_insn_t insn, jit_value_t value)
+// {
+//    return value;
+// }
 
 jite_vreg_t jite_create_vreg(jit_function_t func, jit_value_t value)
 {
@@ -100,8 +100,8 @@ jite_vreg_t jite_create_vreg(jit_function_t func, jit_value_t value)
             {
                 list = list->next;
             }
-            // Means, that at this point list->next == 0.
-            // Allocate some place for a new item.
+            /* This means that at this point list->next == 0.
+               Allocate some place for a new item. */
 
             list->next = jit_memory_pool_alloc(&(func->builder->jite_list_pool),
                                         struct _jite_linked_list);
@@ -125,6 +125,9 @@ jite_vreg_t jite_create_vreg(jit_function_t func, jit_value_t value)
         vreg->weight = 0;
         vreg->reg = 0;
         vreg->frame = 0;
+	/* Create an empty list of liveness ranges.
+	   It will be filled latter at liveness analysis. */
+	vreg->liveness = 0;
         jite->vregs_num++;
         list->item = (void*)vreg;
         value->vreg = vreg;
@@ -164,6 +167,7 @@ void jite_destroy_instance(jit_function_t func)
 {
     if(func && func->jite && func->jite->incoming_params_state) jit_free(func->jite->incoming_params_state);
     if(func && func->jite) jit_free(func->jite);
+
     func->jite = 0;
 }
 
@@ -382,9 +386,38 @@ void jite_remove_vreg_from_complex_list(jit_function_t func, jite_vreg_t vreg, j
     }
 }
 
-unsigned char jite_add_item_to_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list)
+unsigned char jite_replace_item_in_linked_list(jit_function_t func, void *dest_item, void *src_item, jite_linked_list_t linked_list)
 {
+    // TODO. Cleanup
     unsigned char updated = 0;
+    if(linked_list && dest_item && src_item) // cannot add a null value.
+    {
+        while(linked_list)
+        {
+	    if(linked_list->item == dest_item)
+	    {
+	        linked_list->item = src_item;
+		updated = 1;
+	    }
+            linked_list = linked_list->next;
+        }
+    }
+    return updated;
+}
+
+void jite_clear_linked_list(jit_function_t func, jite_linked_list_t linked_list)
+{
+    if(linked_list)
+    {
+        linked_list->next = 0;
+	linked_list->item = 0;
+    }
+}
+
+jite_linked_list_t jite_add_item_no_duplicate_to_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list)
+{
+    // TODO. Cleanup
+//    unsigned char updated = 0;
     if(linked_list && item) // cannot add a null value.
     {
         while(linked_list->next && linked_list->item != item)
@@ -399,72 +432,90 @@ unsigned char jite_add_item_to_linked_list(jit_function_t func, void *item, jite
                                         struct _jite_linked_list);
                 linked_list->next->item = item;
                 linked_list->next->prev = linked_list;
+                return linked_list->next;
             }
             else
             {
                 linked_list->item = item;
+		return linked_list;
             }
-            updated = 1;
+//            updated = 1;
         }
     }
-    return updated;
+    return (jite_linked_list_t)(0);
 }
 
-unsigned char jite_add_two_linked_lists(jit_function_t func, jite_linked_list_t dest_list, jite_linked_list_t source_list)
+
+jite_linked_list_t jite_insert_item_after_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list)
 {
-    unsigned char updated = 0;
-    while(source_list)
+    // TODO. Cleanup
+    if(linked_list && item) // cannot add a null value.
     {
-        void *item = source_list->item;
-        if(item)
+        jite_linked_list_t next_list = linked_list->next;
+        // if(linked_list->item != item)
         {
-        
-            unsigned char new_update = jite_add_item_to_linked_list(func, item, dest_list);
-            updated = updated || new_update;
+            if(linked_list->item)
+            {
+                linked_list->next = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                        struct _jite_linked_list);
+                linked_list->next->item = item;
+                linked_list->next->prev = linked_list;
+		linked_list->next->next = next_list;
+		if(next_list)
+		{
+		    next_list->prev     = linked_list->next;
+		}
+	        return linked_list->next;
+            }
+            else
+            {
+                linked_list->item = item;
+	        return linked_list;
+            }
         }
-        source_list = source_list->next;
     }
-    return updated;
+    return (jite_linked_list_t)(0);
 }
 
-unsigned char jite_sub_two_linked_lists(jit_function_t func, jite_linked_list_t dest_list, jite_linked_list_t source_list)
+
+
+jite_linked_list_t jite_add_item_to_linked_list(jit_function_t func, void *item, jite_linked_list_t linked_list)
 {
-    unsigned char updated = 0;
-    while(source_list)
+    // TODO. Cleanup
+    if(linked_list && item) // cannot add a null value.
     {
-        void *item = source_list->item;
-        if(item)
+        while(linked_list->next && linked_list->item)// && linked_list->item != item)
         {
-            unsigned char new_update = jite_remove_item_from_linked_list(func, item, dest_list);
-            updated = updated || new_update;
+            linked_list = linked_list->next;
         }
-        source_list = source_list->next;
+        // if(linked_list->item != item)
+        {
+            if(linked_list->item)
+            {
+                linked_list->next = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                        struct _jite_linked_list);
+                linked_list->next->item = item;
+                linked_list->next->prev = linked_list;
+		return linked_list->next;
+            }
+            else
+            {
+                linked_list->item = item;
+		return linked_list;
+            }
+        }
     }
-    return updated;
+    return (jite_linked_list_t)(0);
 }
 
-unsigned char jite_add_add_sub_linked_lists(jit_function_t func, jite_linked_list_t dest, jite_linked_list_t list1, jite_linked_list_t list2, jite_linked_list_t list3)
-{
-    unsigned char updated = 0;
-    // do dest = dest + a + b - c;
-    jite_linked_list_t list = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool), 
-                                struct _jite_linked_list);
-    updated = jite_add_two_linked_lists(func, list, dest);
-    jite_add_two_linked_lists(func, dest, list1);
-    jite_add_two_linked_lists(func, dest, list2);
-    jite_sub_two_linked_lists(func, dest, list3);
-    updated = jite_add_two_linked_lists(func, list, dest);
-    jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool),
-                            list);
-    return updated;
-}
 
-unsigned char jite_remove_item_from_linked_list(jit_function_t func, void *item, jite_linked_list_t list)
+jite_linked_list_t jite_remove_item_from_linked_list(jit_function_t func, void *item, jite_linked_list_t list)
 {
-    unsigned char updated = 0;
+//    unsigned char updated = 0;
+    jite_linked_list_t linked_list = list;
+
     if(list && item) // Cannot remove a null value.
     {
-        jite_linked_list_t linked_list = list;
         if(linked_list)
         {
             while(linked_list->next && linked_list->item != item)
@@ -477,22 +528,29 @@ unsigned char jite_remove_item_from_linked_list(jit_function_t func, void *item,
                 {
                     linked_list->prev->next = linked_list->next;
                     if(linked_list->next) linked_list->next->prev = linked_list->prev;
+		    return linked_list->prev;
                 }
                 else // the first node
                 {
-                    if(linked_list->next) 
+                    if(list->next)
                     {
-                        list->item = linked_list->next;
-                        linked_list->next->prev = 0;
+                        list->item = list->next->item;
+			list->next = list->next->next;;
+			if(list->next) list->next->prev = list;
                     }
-                    else list->item = 0;
+                    else
+		    {
+		        list->item = 0;
+		    }
+		    return list;
                 }
-                updated = 1;
+//                updated = 1;
             }
         }
     }
-    return updated;
+    return (jite_linked_list_t)(0);
 }
+
 
 unsigned char jite_update_liveness_for_branch(jit_function_t func, jit_insn_t insn_from, jit_insn_t insn_to)
 {
@@ -530,6 +588,7 @@ unsigned char jite_update_liveness_for_branch(jit_function_t func, jit_insn_t in
     }
     return updated;
 }
+
 
 void jite_add_fixup_branch(jit_function_t func, jit_insn_t insn_from, jit_insn_t insn_to)
 {
@@ -586,6 +645,50 @@ void jite_free_registers(jit_function_t func, jite_list_t list)
 }
 
 
+void jite_free_frames(jit_function_t func, jit_insn_t insn)
+{
+//  return;
+    jite_linked_list_t linked_list;
+    jite_list_t list = insn->cpoint->vregs_die;
+
+    if(func && list && func->jite)
+    {
+        linked_list = (jite_linked_list_t)list->item1;
+        while(linked_list)
+        {
+	    jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
+
+            if(vreg->max_range->insn_num == insn->insn_num) jite_free_vreg_frame(func, vreg);
+            linked_list = linked_list->next;
+        }
+        linked_list = (jite_linked_list_t)list->item2;
+        while(linked_list)
+        {
+	    jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
+
+            if(vreg->max_range->insn_num == insn->insn_num) jite_free_vreg_frame(func, linked_list->item);
+            linked_list = linked_list->next;
+        }
+        linked_list = (jite_linked_list_t)list->item3;
+        while(linked_list)
+        {
+	    jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
+
+            if(vreg->max_range->insn_num == insn->insn_num) jite_free_vreg_frame(func, linked_list->item);
+            linked_list = linked_list->next;
+        }
+        linked_list = (jite_linked_list_t)list->item4;
+        while(linked_list)
+        {
+	    jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
+
+            if(vreg->max_range->insn_num == insn->insn_num) jite_free_vreg_frame(func, linked_list->item);
+            linked_list = linked_list->next;
+        }
+    }
+}
+
+/*
 void jite_free_frames(jit_function_t func, jite_list_t list)
 {
     jite_linked_list_t linked_list;
@@ -617,12 +720,17 @@ void jite_free_frames(jit_function_t func, jite_list_t list)
         }
     }
 }
-
+*/
 
 void jite_free_vreg_frame(jit_function_t func, jite_vreg_t vreg)
 {
+//  return;
     if(vreg && vreg->frame && vreg->frame->hash_code != -1)
     {
+//        printf("Free frame 0x%x for value ", vreg->frame->frame_offset);
+//	jit_dump_value(stdout, func, vreg->value, 0);
+//	printf("\n");
+
         jite_frame_t frame = vreg->frame;
         jite_list_t temp;
         int count;
@@ -667,6 +775,7 @@ void jite_free_vreg_frame(jit_function_t func, jite_vreg_t vreg)
 
 void jite_free_frame(jit_function_t func, jite_frame_t frame)
 {
+//  return;
     if(frame && frame->hash_code != - 1)
     {
         jite_list_t temp;
@@ -751,11 +860,12 @@ int jite_count_vregs(jit_function_t func, jite_list_t list)
 
 short jite_vreg_weight(jit_function_t func, jite_vreg_t vreg)
 {
-    if(vreg)
+    if(vreg && vreg->min_range && vreg->max_range)
     {
         vreg->weight = vreg->max_range->insn_num;
         return vreg->weight;
     }
+    vreg->weight = 0;
     return 0;
 }
 
@@ -786,6 +896,7 @@ void jite_add_branch_target(jit_function_t func, jit_insn_t insn, jit_label_t la
             dest_insn = jit_insn_iter_next(&temp_iter);
         }
         while(dest_insn && (dest_insn->opcode == JIT_OP_MARK_OFFSET ||
+	        dest_insn->opcode == JIT_OP_NOP ||
                 dest_insn->opcode == JIT_OP_INCOMING_REG ||
                 dest_insn->opcode == JIT_OP_INCOMING_FRAME_POSN));
                 temp_block = jit_block_next(func, temp_block);
@@ -798,6 +909,21 @@ void jite_add_branch_target(jit_function_t func, jit_insn_t insn, jit_label_t la
 void jite_compute_liveness(jit_function_t func)
 {
     _jit_function_compute_liveness(func);
+
+    if(jit_function_get_optimization_level(func) <= 1)
+    {
+        jite_compute_fast_liveness(func);
+    }
+    else
+    {
+        jite_compute_full_liveness(func);
+    }
+
+    jite_compute_register_holes(func);
+}
+
+void jite_compute_fast_liveness(jit_function_t func)
+{
     jit_block_t block;
     jit_insn_iter_t iter;
     jit_insn_t insn;
@@ -808,7 +934,7 @@ void jite_compute_liveness(jit_function_t func)
     unsigned char updated;
     // Step 1. Compute vregs liveness without branches.
     block = 0;
-
+    
     while((block = jit_block_next(func, block)) != 0)
     {
         if(!(block->entered_via_top) && !(block->entered_via_branch))
@@ -827,10 +953,11 @@ void jite_compute_liveness(jit_function_t func)
             jit_value_t dest = insn->dest;
             jit_value_t value1 = insn->value1;
             jit_value_t value2 = insn->value2;
-	    if(insn && insn->opcode == JIT_OP_NOP)
+	    if(insn && (insn->opcode == JIT_OP_NOP || insn->opcode == JIT_OP_MARK_OFFSET))
 	    {
 	        continue;
             }
+
 
             if(insn && (insn->flags & JIT_INSN_DEST_IS_LABEL) !=0)
             {
@@ -838,13 +965,6 @@ void jite_compute_liveness(jit_function_t func)
                 jite_add_branch_target(func, insn, (jit_label_t)dest);
             }
 
-
-            // constants are not considered to be associated with virtual registers,
-            // though in the future we may store the low and high ranges that are 
-            // applicable for the virtual registers as it walks thru code.
-            // This might be used for optimization. In that sense a constant
-            // is a very special case of it, but we avoid this abstraction as
-            // it simplifies things.
             if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
                 && !(dest->is_constant)
                 && !(dest->is_nint_constant)
@@ -901,7 +1021,7 @@ void jite_compute_liveness(jit_function_t func)
                 }
             }
             if(insn && insn->opcode != JIT_OP_INCOMING_REG && insn->opcode != JIT_OP_INCOMING_FRAME_POSN
-                && insn->opcode != JIT_OP_MARK_OFFSET)
+                    && insn->opcode != JIT_OP_MARK_OFFSET && insn->opcode != JIT_OP_NOP)
             {
                 if(min_insn == 0) min_insn = insn;
                 max_insn = insn;
@@ -917,7 +1037,7 @@ void jite_compute_liveness(jit_function_t func)
                 {
                     jite_add_branch_target(func, insn, labels[index]);
                 }
-            }
+            }	    
         }
     }
 
@@ -952,7 +1072,6 @@ void jite_compute_liveness(jit_function_t func)
     }
 
     // Step 3. Compute vregs liveness with branches.
-
     do
     {
         updated = 0;
@@ -976,24 +1095,48 @@ void jite_compute_liveness(jit_function_t func)
         }
     } while(updated);
 
+
+    jite_linked_list_t vregItem = func->jite->vregs_list;
+    while(vregItem)
+    {
+        jite_vreg_t vreg = (jite_vreg_t)(vregItem->item);
+	if(vreg && vreg->value)
+	{
+            if(vreg->min_range && vreg->max_range)
+	    {
+	    	vreg->liveness = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                                         struct _jite_linked_list);
+
+	        jite_add_item_to_linked_list(func, vreg->min_range, vreg->liveness);
+	        jite_add_item_to_linked_list(func, vreg->max_range, vreg->liveness);
+	    }
+	}
+	vregItem = vregItem->next;
+    }
+
+
     // At this point all critical points and vregs liveness should be ready.
     // If the function has a try/catch/finally block, we need to set all variables the maximum liveness range
     // which intersect with the sigsetjmp/__sigsetjmp method.
-    if(func->has_try)
+//    if(func->has_try)
     {
+/*
         jite_linked_list_t sigsetjmps = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
-	                                        struct _jite_linked_list);
+	                                                                   struct _jite_linked_list);
 
         while((block = jit_block_next(func, block)) != 0)
         {
             jit_insn_iter_init(&iter, block);
             while((insn = jit_insn_iter_next(&iter)) != 0)
             {
-		if(insn && insn->opcode == JIT_OP_NOP)
+		if(insn && (insn->opcode == JIT_OP_NOP || insn->opcode == JIT_OP_MARK_OFFSET))
 		{
 		    continue;
 		}
-		if(insn && insn->opcode == JIT_OP_CALL_EXTERNAL)
+		if(insn && (insn->opcode == JIT_OP_CALL_EXTERNAL
+	                	|| insn->opcode == JIT_OP_CALL_EXTERNAL_TAIL
+				|| insn->opcode == JIT_OP_CALL
+				|| insn->opcode == JIT_OP_CALL_TAIL))
 		{
 #if defined(HAVE___SIGSETJMP)
 		    if((void*) insn->dest == (void *) __sigsetjmp)
@@ -1025,22 +1168,1092 @@ void jite_compute_liveness(jit_function_t func)
 		    jit_value_set_addressable(vreg->value);
                     if(vreg->min_range->insn_num > min_insn->insn_num)
 		    {
+		    	jite_remove_vreg_from_complex_list(func, vreg, vreg->min_range->cpoint->vregs_born);
 		        vreg->min_range = min_insn;
                         jite_add_vreg_to_complex_list(func, vreg, vreg->min_range->cpoint->vregs_born);
 		    }
+		    jite_remove_vreg_from_complex_list(func, vreg, vreg->max_range->cpoint->vregs_die);
                     vreg->max_range = max_insn;
                     jite_add_vreg_to_complex_list(func, vreg, vreg->max_range->cpoint->vregs_die);
                 }
 	    }
         }
 	jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), sigsetjmps);
+*/
     }
-
-    jite_compute_register_holes(func);
-
 }
 
+void jite_liveness_node_add_bit(jit_uint *node, jit_uint index)
+{
+    unsigned int dwordOffset = index / (sizeof(jit_uint) * 8);
+    unsigned int bitOffset   = index % (sizeof(jit_uint) * 8);
+    node[dwordOffset] = node[dwordOffset] | (1 << bitOffset);
+}
+
+unsigned int jite_liveness_node_get_bit(jit_uint *node, jit_uint index)
+{
+    unsigned int dwordOffset = index / (sizeof(jit_uint) * 8);
+    unsigned int bitOffset   = index % (sizeof(jit_uint) * 8);
+    if(node[dwordOffset] & (1 << bitOffset)) return 1;
+    return 0;
+}
+
+
+void jite_liveness_remove_nodes(jit_uint *dest_node, jit_uint *src_node1, jit_uint *src_node2, jit_int size)
+{
+    while( size > 0 )
+    {
+        size--;
+        dest_node[size] = src_node1[size] & ~src_node2[size];
+    }
+}
+
+void jite_liveness_unit_nodes(jit_uint *dest_node, jit_uint *src_node1, jit_uint *src_node2, jit_int size)
+{
+    while( size > 0 )
+    {
+        size--;
+        dest_node[size] = src_node1[size] | src_node2[size];
+    }
+}
+
+jit_insn_t jite_get_insn_from_label(jit_function_t func, jit_label_t dest)
+{
+    jit_block_t temp_block = jit_block_from_label(func, dest);
+    jit_insn_iter_t temp_iter;
+    jit_insn_t dest_insn;
+    // We find the first block, in which there is at least one opcode.
+    // We need this because of a possible case of two blocks which
+    // follow one another, when the first block does not contain opcodes.
+    do
+    {
+	jit_insn_iter_init(&temp_iter, temp_block);
+	do
+	{
+	    dest_insn = jit_insn_iter_next(&temp_iter);
+	}
+	while (dest_insn && (dest_insn->opcode == JIT_OP_MARK_OFFSET || dest_insn->opcode == JIT_OP_NOP));
+	temp_block = jit_block_next(func, temp_block);
+    } while(dest_insn == 0);
+    return dest_insn;
+}
+
+jit_insn_t jite_get_insn_from_block(jit_function_t func, jit_block_t block)
+{
+    jit_insn_iter_t temp_iter;
+    jit_insn_t dest_insn;
+    // We find the first block, in which there is at least one opcode.
+    // We need this because of a possible case of two blocks which
+    // follow one another, when the first block does not contain opcodes.
+    do
+    {
+	jit_insn_iter_init(&temp_iter, block);
+	do
+	{
+	    dest_insn = jit_insn_iter_next(&temp_iter);
+	}
+	while (dest_insn && (dest_insn->opcode == JIT_OP_MARK_OFFSET || dest_insn->opcode == JIT_OP_NOP));
+	block = jit_block_next(func, block);
+    } while(dest_insn == 0);
+    return dest_insn;
+}
+
+
+
+unsigned char jite_vreg_lives_at_insn(jite_vreg_t vreg, jit_insn_t insn)
+{
+    jite_linked_list_t list = vreg->liveness;
+    while(list && list->item)
+    {
+        jit_insn_t min_insn = ((jit_insn_t)(list->item));
+	list = list->next;
+	jit_insn_t max_insn = ((jit_insn_t)(list->item));
+	list = list->next;
+	if(min_insn->insn_num <= insn->insn_num && max_insn->insn_num >= insn->insn_num)
+	{
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+
+void jite_compute_full_liveness(jit_function_t func)
+{
+    jite_linked_list_t blocks = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                                        struct _jite_linked_list);
+
+
+    jite_linked_list_t reverse_nodes = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                                        struct _jite_linked_list);
+
+    jite_linked_list_t finally_clauses = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                                                       struct _jite_linked_list);
+    jite_linked_list_t last_clause = finally_clauses;
+
+
+    jit_block_t block;
+    jit_insn_iter_t iter;
+    jit_insn_t insn = 0;
+
+    jit_insn_t min_insn = 0, max_insn = 0;
+    block = 0;
+    jit_insn_t first_insn = 0;
+    
+    jit_insn_t insn_enter_finally = 0;
+    
+    // Create virtual registers
+    while((block = jit_block_next(func, block)) != 0)
+    {
+        if(!block->entered_via_top && !block->entered_via_branch)
+        {
+            continue;
+        }
+	
+
+        jit_insn_iter_init(&iter, block);
+        while((insn = jit_insn_iter_next(&iter)) != 0)
+        {
+            jit_value_t dest = insn->dest;
+            jit_value_t value1 = insn->value1;
+            jit_value_t value2 = insn->value2;
+	    if(insn && (insn->opcode == JIT_OP_NOP || insn->opcode == JIT_OP_MARK_OFFSET))
+	    {
+	        continue;
+            }
+	    else if(first_insn == 0)
+	    {
+	        first_insn = insn;
+	    }
+
+
+            if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
+                && !(dest->is_constant)
+                && !(dest->is_nint_constant)
+                && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
+                && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
+            {
+                if(!jite_value_is_in_vreg(func, dest))
+                {
+                    jite_create_vreg(func, dest);
+                }
+            }
+            if(insn && value1 && !(insn->flags & JIT_INSN_VALUE1_IS_NAME)
+                && !(insn->flags & JIT_INSN_VALUE1_IS_LABEL) && !value1->is_constant
+                && !value1->is_nint_constant)
+            {
+                if(!jite_value_is_in_vreg(func, value1))
+                {
+                    jite_create_vreg(func, value1);
+                }
+            }
+            if(insn && value2 && !(insn->flags & JIT_INSN_VALUE2_IS_SIGNATURE)
+                && !value2->is_constant && !value2->is_nint_constant)
+            {
+                if(!jite_value_is_in_vreg(func, value2))
+                {
+                    jite_create_vreg(func, value2);
+                }
+            }
+            if(insn && insn->opcode != JIT_OP_INCOMING_REG && insn->opcode != JIT_OP_INCOMING_FRAME_POSN
+                    && insn->opcode != JIT_OP_MARK_OFFSET && insn->opcode != JIT_OP_NOP)
+            {
+                if(min_insn == 0) min_insn = insn;
+                max_insn = insn;
+            }
+
+
+            // Store information about finally clauses. CALL_FINALLY jumps to code starting from ENTER_FINALLY.
+	    // ENTER_FINALLY can be entered via multiple places. LEAVE_FINALLY should return to next opcode after CALL_FINALLY.
+	    if(insn && insn->opcode == JIT_OP_CALL_FINALLY)
+	    {
+                jit_insn_t insn_next = jite_get_insn_from_label(func, (jit_label_t)(insn->dest));
+		jit_block_t block_next = jit_block_next(func, block);
+
+		if(insn_next->opcode == JIT_OP_ENTER_FINALLY && insn_next->dest == 0)
+		{
+		    jite_linked_list_t return_targets = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                                                       struct _jite_linked_list);
+		    insn_next->dest = (jit_value_t)(return_targets);
+		    insn_next->flags |= JIT_INSN_DEST_IS_NATIVE;
+		    // Set this flag that other parts of the code handle this extra info in dest field correctly.
+                }
+		else if(insn_next->opcode != JIT_OP_ENTER_FINALLY)
+		{
+		    fprintf(stderr, "JIT_OP_CALL_FINALLY does not jump to JIT_OP_ENTER_FINALLY\n");
+        	}
+	
+		jite_add_item_to_linked_list(func, block_next, (jite_linked_list_t)insn_next->dest);
+	    }
+
+	    if(insn && insn->opcode == JIT_OP_ENTER_FINALLY)
+	    {
+	        last_clause = jite_insert_item_after_linked_list(func, insn, last_clause);
+	    }
+
+	    if(insn && insn->opcode == JIT_OP_LEAVE_FINALLY)
+	    {
+               if(last_clause->item)
+	       {
+	           insn_enter_finally = (jit_insn_t) last_clause->item;
+	           last_clause = jite_remove_item_from_linked_list(func, insn_enter_finally, last_clause);
+	       }
+	       
+
+               // This is a leave_finally, without an enter_finally. This case means that this opcode is never executed
+	       // or there is a bug in the program.
+
+	       insn->dest = insn_enter_finally->dest;
+
+	       insn->flags |= JIT_INSN_DEST_IS_NATIVE;
+	    }
+        }
+    }
+
+
+    unsigned int modelSize = func->builder->num_insns;
+    unsigned int vregsNum = func->jite->vregs_num;
+    unsigned int nodeLength = (vregsNum + sizeof(jit_uint) - 1) / sizeof(jit_uint);
+    // IN, OUT, DEF, USED
+    jit_uint *model = malloc(modelSize * 4 * nodeLength * sizeof(jit_uint));
+    memset(model, 0, modelSize * 4 * nodeLength * sizeof(jit_uint));
+
+
+    unsigned int inOffset = 0, outOffset = nodeLength, defOffset = 2 * nodeLength, usedOffset = 3 * nodeLength;
+
+
+    block = 0;
+    jit_insn_t insn_prev = 0;
+    while((block = jit_block_next(func, block)) != 0)
+    {
+    	if(!block->entered_via_top)
+	{
+	    insn_prev = 0;
+	}
+
+        if(!block->entered_via_top && !block->entered_via_branch)
+        {
+            continue;
+        }
+
+        jit_insn_iter_init(&iter, block);
+        while((insn = jit_insn_iter_next(&iter)) != 0)
+        {
+            jit_value_t dest   = insn->dest;
+            jit_value_t value1 = insn->value1;
+            jit_value_t value2 = insn->value2;
+
+
+	    if(insn && (insn->opcode == JIT_OP_NOP || insn->opcode == JIT_OP_MARK_OFFSET))
+	    {
+	        continue;
+            }
+
+            if(insn_prev)
+	    {
+	        insn_prev->next = insn;
+		insn->prev = insn_prev;
+	    }
+
+	    insn_prev = insn;
+
+
+
+            if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
+                && !(dest->is_constant)
+                && !(dest->is_nint_constant)
+                && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
+                && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
+            {
+		if((insn->opcode >= JIT_OP_LOAD_RELATIVE_SBYTE && insn->opcode <= JIT_OP_LOAD_RELATIVE_STRUCT)
+		   || (insn->opcode >= JIT_OP_ADD_RELATIVE     && insn->opcode <= JIT_OP_LOAD_ELEMENT_NFLOAT)
+		   || (insn->opcode >= JIT_OP_ADDRESS_OF_LABEL && insn->opcode <= JIT_OP_ADDRESS_OF)
+		   || (insn->opcode >= JIT_OP_TRUNC_SBYTE      && insn->opcode <= JIT_OP_LSHR_UN)
+		   || (insn->opcode >= JIT_OP_ICMP             && insn->opcode <= JIT_OP_NFSIGN)
+		   || (insn->opcode >= JIT_OP_LOAD_PC          && insn->opcode <= JIT_OP_LOAD_EXCEPTION_PC))
+		{
+		    jite_liveness_node_add_bit(&model[insn->insn_num * nodeLength * 4 + defOffset], dest->vreg->index);
+		}
+		else
+		{
+		    jite_liveness_node_add_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], dest->vreg->index);
+		}
+            }
+            if(insn && value1 && !(insn->flags & JIT_INSN_VALUE1_IS_NAME)
+                    && !(insn->flags & JIT_INSN_VALUE1_IS_LABEL) && !value1->is_constant
+                    && !value1->is_nint_constant)
+            {
+		if(insn->opcode == JIT_OP_INCOMING_REG || insn->opcode == JIT_OP_INCOMING_FRAME_POSN
+		                                       || insn->opcode == JIT_OP_RETURN_REG)
+		{
+		    jite_liveness_node_add_bit(&model[insn->insn_num * nodeLength * 4 + defOffset], value1->vreg->index);
+		}
+		else
+		{
+		    jite_liveness_node_add_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], value1->vreg->index);
+		}
+            }
+            if(insn && value2 && !(insn->flags & JIT_INSN_VALUE2_IS_SIGNATURE)
+                    && !value2->is_constant && !value2->is_nint_constant)
+            {
+		jite_liveness_node_add_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], value2->vreg->index);
+            }
+        }
+
+	if(jit_block_ends_in_dead(block))
+	{
+            insn_prev = 0;
+	}
+    }
+
+
+//    printf("Start liveness analysis\n");
+
+    jite_linked_list_t current_node = blocks;
+
+    jite_linked_list_t reverse_node = reverse_nodes;
+
+    block = jit_block_next(func, 0); // Find the first block in the current method
+    jite_linked_list_t new_node = jite_insert_item_after_linked_list(func, block, current_node);
+    new_node = jite_insert_item_after_linked_list(func, block, reverse_node);
+    block->list = new_node;
+
+
+    // We consider that a conditional branch or an indexed branch is taken
+    while(current_node && current_node->item)
+    {
+        jite_linked_list_t next_node   = 0; // current_node;
+	jite_linked_list_t branch_node = 0;	
+
+	
+        block = current_node->item;
+
+        if((!block->entered_via_top && !block->entered_via_branch))
+	{
+	    current_node = current_node->next;
+	    continue;
+	}
+
+	if(block->analysed)
+	{
+	    current_node = current_node->next;
+	    continue;
+	}
+
+
+	block->analysed = 1;
+
+	if(!jit_block_ends_in_dead(block))
+	{
+	    jit_block_t block_next = jit_block_next(func, block);
+	    if(!block_next->analysed)
+	    {
+	        next_node = jite_insert_item_after_linked_list(func, block_next, current_node);
+	    }
+	}
+
+
+        jit_insn_iter_init(&iter, block);
+        while((insn = jit_insn_iter_next(&iter)) != 0)
+        {
+	    if(insn && (insn->opcode == JIT_OP_NOP || insn->opcode == JIT_OP_MARK_OFFSET))
+	    {
+	        continue;
+            }
+
+            if(insn && (insn->flags & JIT_INSN_DEST_IS_LABEL) !=0)
+            {
+	        jit_block_t block_next = jit_block_from_label(func, (jit_label_t)(insn->dest));
+                if(!block_next->analysed)
+		{
+ 	     	    jite_insert_item_after_linked_list(func, block_next, current_node);
+		    branch_node = jite_insert_item_after_linked_list(func, block_next, block->list);
+                    block_next->list = branch_node;
+//	            printf("Add after  .L%ld, .L%ld\n", (long)(block->label), (long)(block_next->label));
+		}
+            }
+
+            if(insn && insn->opcode == JIT_OP_JUMP_TABLE)
+            {
+                // Process every possible target label.
+                jit_label_t *labels = (jit_label_t*)(insn->value1->address);
+                jit_nint num_labels = (jit_nint)(insn->value2->address);
+                int index;
+                for(index = num_labels - 1; index >= 0; index--)
+                {
+                    jit_block_t block_next = jit_block_from_label(func, (jit_label_t)(labels[index]));
+                    if(!block_next->analysed)
+		    {
+	                jite_insert_item_after_linked_list(func, block_next, current_node);
+	                branch_node = jite_insert_item_after_linked_list(func, block_next, block->list);
+                        block_next->list = branch_node;
+		    }
+                }
+            }
+	    
+	    if(insn && insn->opcode == JIT_OP_LEAVE_FINALLY)
+	    {
+	        jite_linked_list_t next_blocks = (jite_linked_list_t)(insn->dest);
+		while(next_blocks && next_blocks->item)
+		{
+	            jit_block_t block_next = (jit_block_t)(next_blocks->item);
+                    if(!block_next->analysed)
+		    {
+	                jite_insert_item_after_linked_list(func, block_next, current_node);
+	                branch_node = jite_insert_item_after_linked_list(func, block_next, block->list);
+                        block_next->list = branch_node;
+		    }		    
+		    next_blocks = next_blocks->next;
+		}
+	    }
+
+/*
+	    if(insn && insn->opcode == JIT_OP_THROW)
+	    {
+	        jite_linked_list_t next_blocks = (jite_linked_list_t)(sigsetjmps);
+		while(next_blocks && next_blocks->item)
+		{
+	            jit_block_t block_next = (jit_block_t)(next_blocks->item);
+                    if(!block_next->analysed)
+		    {
+	                jite_insert_item_after_linked_list(func, block_next, current_node);
+	                branch_node = jite_insert_item_after_linked_list(func, block_next, block->list);
+                        block_next->list = branch_node;
+		    }		    
+		    next_blocks = next_blocks->next;
+		}
+	    }
+*/
+	}
+
+
+	if(!jit_block_ends_in_dead(block))
+	{
+	    jit_block_t block_next = jit_block_next(func, block);
+	    if(!block_next->analysed)
+	    {
+//	        printf("Add after  .L%d, .L%d\n", (unsigned int )(block->label), (unsigned int )(block_next->label));
+
+	        next_node = jite_insert_item_after_linked_list(func, block_next, block->list);
+	        block_next->list = next_node;
+	    }
+	}
+
+	current_node = current_node->next;
+    }
+
+
+    jit_uint *model_next = malloc(modelSize * nodeLength * 4 * sizeof(jit_uint));
+    memcpy(model_next, model, modelSize * nodeLength * 4 * sizeof(jit_uint));
+    jite_vreg_t vregs_table[vregsNum];
+
+    if(func->jite->vregs_list)
+    {
+        jite_linked_list_t list = func->jite->vregs_list;
+	while(list->next)
+	{
+	    jite_vreg_t vreg = (jite_vreg_t)list->item;
+	    vreg->liveness = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                                         struct _jite_linked_list);
+	    vregs_table[vreg->index] = vreg;
+	    list = list->next;
+	}
+	jite_vreg_t vreg = (jite_vreg_t)list->item;
+	vreg->liveness = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+                                                         struct _jite_linked_list);
+	vregs_table[vreg->index] = vreg;
+    }
+
+/*
+        block = 0;
+        while((block = jit_block_next(func, block)) != 0)
+        {
+            if(!block->entered_via_top && !block->entered_via_branch)
+            {
+                continue;
+            }
+
+            jit_insn_iter_init(&iter, block);
+
+            while((insn = jit_insn_iter_next(&iter)) != 0)
+            {
+		printf("\n* Handling insn = %d ", insn->insn_num);
+	        jit_dump_insn(stdout, func, insn);
+     	        printf("\n");
+	        fflush(stdout);
+
+		unsigned int count;
+	    	for(count = 0; count < vregsNum; count++)
+	        {
+  	  	    jit_dump_value(stdout, func, vregs_table[count]->value, 0);
+		    printf(" ");
+	            unsigned int live_def_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + defOffset], count);
+		    printf(" def = %d, ", live_def_bit);
+	            live_def_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], count);
+		    printf(" use = %d, ", live_def_bit);
+	            live_def_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + outOffset], count);
+		    printf(" out = %d, ", live_def_bit);
+	            live_def_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + inOffset], count);
+		    printf(" in = %d, ", live_def_bit);
+		}
+	    }
+	}
+	printf("\n");
+*/
+
+    unsigned int blocks_num = 1;
+    jite_linked_list_t last_node = reverse_nodes;
+    while(last_node->next)
+    {
+        blocks_num++;
+        last_node = last_node->next;
+    }
+
+//    printf("Computed block reverse order. Doing equation solution...\n");
+
+
+    int counter = 0;
+    unsigned char bEqual;
+    do
+    {
+        bEqual = 1;
+        block = 0;
+
+
+        jite_linked_list_t list = last_node; // reverse_nodes;
+
+        while(list)
+        {
+	    block = list->item;
+	    list  = list->prev;
+
+
+            if(!block->entered_via_top && !block->entered_via_branch)
+            {
+                continue;
+            }
+
+	    insn = _jit_block_get_last(block);
+
+            while(insn)
+            {
+
+
+  	      	jit_insn_t insn_next = insn->next;
+
+                if(insn_next)
+		{
+  	            jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
+	                                     &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                     &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+			  		     nodeLength);
+		}
+
+                if(insn && (insn->flags & JIT_INSN_DEST_IS_LABEL) !=0)
+                {
+	            jit_insn_t insn_next = jite_get_insn_from_label(func, (jit_label_t)(insn->dest));
+	            jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
+	                                     &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                     &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+					     nodeLength);
+        	}
+
+                if(insn && insn->opcode == JIT_OP_JUMP_TABLE)
+                {
+                    // Process every possible target label.
+                    jit_label_t *labels = (jit_label_t*)(insn->value1->address);
+                    jit_nint num_labels = (jit_nint)(insn->value2->address);
+                    int index;
+                    for(index = 0; index < num_labels; index++)
+                    {
+                        jit_insn_t insn_next = jite_get_insn_from_label(func, (jit_label_t)(labels[index]));
+	                jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
+	                                             &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                             &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+					  	     nodeLength);
+                    }
+                }
+
+                if(insn && insn->opcode == JIT_OP_LEAVE_FINALLY)
+                {
+                    // Process every possible target label.
+	            jite_linked_list_t next_blocks = (jite_linked_list_t)(insn->dest);
+	  	    while(next_blocks && next_blocks->item)
+		    {
+	                jit_block_t block_next = (jit_block_t)(next_blocks->item);
+			jit_insn_t insn_next = jite_get_insn_from_block(func, block_next);
+	                jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                             &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                             &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+					  	     nodeLength);
+		        next_blocks = next_blocks->next;
+		    }
+                }
+/*
+                if(insn && insn->opcode == JIT_OP_THROW)
+                {
+                    // Process every possible target label.
+	            jite_linked_list_t next_blocks = (jite_linked_list_t)(sigsetjmps);
+	  	    while(next_blocks && next_blocks->item)
+		    {
+	                jit_block_t block_next = (jit_block_t)(next_blocks->item);
+			jit_insn_t insn_next = jite_get_insn_from_block(func, block_next);
+	                jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                             &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                             &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+					  	     nodeLength);
+		        next_blocks = next_blocks->next;
+		    }
+                }
+
+*/
+	        jite_liveness_remove_nodes(&model[insn->insn_num * nodeLength * 4 + inOffset],
+	                                   &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                   &model[insn->insn_num * nodeLength * 4 + defOffset],
+					   nodeLength);
+
+   	        jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + inOffset], 
+	                                 &model[insn->insn_num * nodeLength * 4 + inOffset],
+	                                 &model[insn->insn_num * nodeLength * 4 + usedOffset],
+					 nodeLength);					 
+
+
+                insn = insn->prev;
+            }
+        }
+
+	counter++;
+
+        unsigned int count = 0;
+        for(count = 0; (count < modelSize * nodeLength * 4); count++)
+        {
+            bEqual = bEqual && (model[count] == model_next[count]);
+        }
+        memcpy(model_next, model, modelSize * nodeLength * 4 * sizeof(jit_uint));
+    } while(!bEqual);
+
+//    printf("\nLiveness analysis done in %d iterations, for %d instructions, %d blocks, and %d variables\n\n", counter, func->builder->num_insns, blocks_num, func->jite->vregs_num);
+//    if(counter >= 3) printf("Over 3 iterations.\n");
+//    fflush(stdout);
+
+// if(counter == 1)
+/*
+{
+        block = 0;
+        while((block = jit_block_next(func, block)) != 0)
+        {
+            if(!block->entered_via_top && !block->entered_via_branch)
+            {
+                continue;
+            }
+
+            jit_insn_iter_init(&iter, block);
+
+            while((insn = jit_insn_iter_next(&iter)) != 0)
+            {
+		printf("\nHandling insn = %d ", insn->insn_num);
+	        jit_dump_insn(stdout, func, insn);
+     	        printf("\n");
+	        fflush(stdout);
+
+		unsigned int count;
+	    	for(count = 0; count < vregsNum; count++)
+	        {
+  	  	    jit_dump_value(stdout, func, vregs_table[count]->value, 0);
+		    printf(" ");
+	            unsigned int live_def_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + defOffset], count);
+		    printf(" def = %d, ", live_def_bit);
+	            live_def_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], count);
+		    printf(" use = %d, ", live_def_bit);
+	            live_def_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + outOffset], count);
+		    printf(" out = %d, ", live_def_bit);
+	            live_def_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + inOffset], count);
+		    printf(" in = %d, ", live_def_bit);
+		}
+	    }
+	}
+	printf("\n\n\n");
+}
+
+*/
+
+    block = 0;
+    jite_vreg_t live_out[vregsNum], live_in[vregsNum];
+    unsigned char live_state[vregsNum];
+    memset(live_out, 0, sizeof(jite_vreg_t) * vregsNum);
+    memset(live_in,  0, sizeof(jite_vreg_t) * vregsNum);
+    memset(live_state, 0, sizeof(unsigned char) * vregsNum);
+
+
+
+
+    jit_insn_t prev_insn = 0;
+    while((block = jit_block_next(func, block)) != 0)
+    {
+        if(!block->entered_via_top && !block->entered_via_branch)
+	{
+	    continue;
+	}
+	jit_insn_iter_init(&iter, block);
+	while((insn = jit_insn_iter_next(&iter)) != 0)
+	{
+	    if(insn && (insn->opcode == JIT_OP_NOP || insn->opcode == JIT_OP_MARK_OFFSET))
+	    {
+	       continue;
+            }
+
 #ifdef JITE_DEBUG_ENABLED
+	    printf("\nHandling insn = %d ", insn->insn_num);
+	    jit_dump_insn(stdout, func, insn);
+	    printf("\n");
+	    fflush(stdout);
+#endif
+	    unsigned int count;
+	    for(count = 0; count < vregsNum; count++)
+	    {
+	        unsigned int live_in_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + inOffset], count);
+
+		if(!live_in_bit)
+		{
+		    if(live_state[count] && live_in[count]) // Last time a virtual register is live in, means it is dying
+		    {
+		        live_state[count] = 0;
+		        if(!vregs_table[count]->max_range || vregs_table[count]->max_range->insn_num < insn->insn_num)
+                        {
+                            vregs_table[count]->max_range = prev_insn;
+			}
+		 	jite_add_item_to_linked_list(func, prev_insn, vregs_table[count]->liveness);
+#ifdef JITE_DEBUG_ENABLED
+			jit_dump_value(stdout, func, vregs_table[count]->value, 0);
+			printf(" 4. die at %d\n", prev_insn->insn_num);
+#endif
+		    }
+		    live_in[count] = 0;
+		}
+
+	        // outOffset
+	        unsigned int live_out_bit = jite_liveness_node_get_bit(&model[insn->insn_num * nodeLength * 4 + outOffset], count);
+
+		if(live_out_bit)
+		{
+		    if(!live_state[count]) //&& live_out[count] == 0) // First time a virtual register is live out, means it is born
+		    {
+		        if(!vregs_table[count]->min_range)
+                        {
+                            vregs_table[count]->min_range = insn;
+			    vregs_table[count]->max_range = insn;
+                        }
+			else if(vregs_table[count]->max_range->insn_num < insn->insn_num)
+			{
+			    vregs_table[count]->max_range = insn;
+			}
+#ifdef JITE_DEBUG_ENABLED
+			jit_dump_value(stdout, func, vregs_table[count]->value, 0);
+			printf(" 1. born at %d\n", insn->insn_num);
+#endif
+			jite_add_item_to_linked_list(func, insn, vregs_table[count]->liveness);
+			live_state[count] = 1;
+		    }
+		    live_out[count] = vregs_table[count];
+		}
+		else
+		{
+		    live_out[count] = 0;
+		}
+
+		// inOffset
+		if(live_in_bit)
+		{
+		    if(!live_state[count]) // The register is live in in this insn, although in previous insn it was dead, then it was dead only temporary in that previous block
+		    {
+		        if(!vregs_table[count]->min_range)
+                        {
+                            vregs_table[count]->min_range = insn;
+			    vregs_table[count]->max_range = insn;
+                        }
+			else if(vregs_table[count]->max_range->insn_num < insn->insn_num)
+			{
+			    vregs_table[count]->max_range = insn;
+			}
+#ifdef JITE_DEBUG_ENABLED
+			jit_dump_value(stdout, func, vregs_table[count]->value, 0);
+			printf(" 2. born at %d\n", insn->insn_num);
+#endif
+			jite_add_item_to_linked_list(func, insn, vregs_table[count]->liveness);
+			live_state[count] = 1;
+
+		    }
+		    live_in[count] = vregs_table[count];
+		}
+	    }
+	    prev_insn = insn;
+	}
+    }
+
+
+    unsigned int count;
+    for(count = 0; count < vregsNum; count++)
+    {
+        if(live_state[count] == 1)
+	{
+//	    if(!vregs_table[count]->max_range || vregs_table[count]->max_range->insn_num < prev_insn->insn_num)
+	    {
+	        vregs_table[count]->max_range = prev_insn;
+#ifdef JITE_DEBUG_ENABLED
+		jit_dump_value(stdout, func, vregs_table[count]->value, 0);
+		printf("die at %d\n", prev_insn->insn_num);
+#endif
+	    }
+	    jite_add_item_to_linked_list(func, prev_insn, vregs_table[count]->liveness);
+	}
+    }
+
+
+//    jite_debug_print_vregs_ranges(func);
+
+
+    block = 0;
+
+    // Create virtual registers
+
+    while((block = jit_block_next(func, block)) != 0)
+    {
+        if(!block->entered_via_top && !block->entered_via_branch)
+        {
+            continue;
+        }
+
+        jit_insn_iter_init(&iter, block);
+        while((insn = jit_insn_iter_next(&iter)) != 0)
+        {
+            jit_value_t dest = insn->dest;
+            jit_value_t value1 = insn->value1;
+            jit_value_t value2 = insn->value2;
+	    if(insn && (insn->opcode == JIT_OP_NOP || insn->opcode == JIT_OP_MARK_OFFSET))
+	    {
+	        continue;
+            }
+
+	    if(insn && insn->opcode == JIT_OP_ENTER_FINALLY)
+	    {
+                if(insn->dest) jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), insn->dest);
+		insn->dest = 0;
+	    }
+
+	    if(block && !block->analysed)
+	    {
+	        insn->opcode = JIT_OP_NOP;
+	    }
+
+	    prev_insn = insn;
+
+            if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
+                && !(dest->is_constant)
+                && !(dest->is_nint_constant)
+                && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
+                && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
+            {
+                if(jite_value_is_in_vreg(func, dest))
+                {
+                    if(!jite_vreg_lives_at_insn(dest->vreg, insn))
+		    {
+		        insn->opcode = JIT_OP_NOP;
+		    }
+                }
+		else
+		{
+		    insn->opcode = JIT_OP_NOP;
+		}
+            }
+            if(insn && value1 && !(insn->flags & JIT_INSN_VALUE1_IS_NAME)
+                && !(insn->flags & JIT_INSN_VALUE1_IS_LABEL) && !value1->is_constant
+                && !value1->is_nint_constant)
+            {
+                if(jite_value_is_in_vreg(func, value1))
+                {
+                    if(!jite_vreg_lives_at_insn(value1->vreg, insn) && insn->opcode != JIT_OP_RETURN_REG)
+		    {
+		        insn->opcode = JIT_OP_NOP;
+		    }
+                }
+		else
+		{
+		    insn->opcode = JIT_OP_NOP;
+		}
+            }
+            if(insn && value2 && !(insn->flags & JIT_INSN_VALUE2_IS_SIGNATURE)
+                && !value2->is_constant && !value2->is_nint_constant)
+            {
+                if(jite_value_is_in_vreg(func, value2))
+                {
+                    if(!jite_vreg_lives_at_insn(value2->vreg, insn))
+		    {
+		        insn->opcode = JIT_OP_NOP;
+		    }
+                }
+		else
+		{
+		    insn->opcode = JIT_OP_NOP;
+		}
+            }
+        }
+    }
+
+
+    for(count = 0; count < vregsNum; count++)
+    {
+        jite_vreg_t vreg = vregs_table[count];
+
+	// Values can be in and out already at begin of function. INCOMING_* opcodes are usually the very first instructions.
+	// But we allocate registers specially in INCOMING_* opcodes.
+	// So for these values we need to change the insn where they are born (to the first which is not incoming_* opcode).
+	// The first instruction is "first_insn".
+	// The first none INCOMING_* instruction is min_insn.
+
+//	unsigned int live_in_bit = jite_liveness_node_get_bit(&model[inOffset], count);
+//	if(live_in_bit == 1)
+//	{
+//	    jite_replace_item_in_linked_list(func, first_insn, min_insn, vreg->liveness);
+//	}
+
+        if(vreg->min_range && vreg->max_range && (vreg->min_range->insn_num == vreg->max_range->insn_num))
+	{
+	    unsigned int live_out_bit = jite_liveness_node_get_bit(&model[prev_insn->insn_num * nodeLength * 4 + outOffset], count);
+            if(live_out_bit == 0)
+	    {
+	        jite_remove_item_from_linked_list(func, vreg->min_range, vregs_table[count]->liveness);
+	        jite_remove_item_from_linked_list(func, vreg->min_range, vregs_table[count]->liveness);
+	    }
+	}
+	if(!vreg->min_range || !vreg->max_range)
+	{
+	    jite_remove_item_from_linked_list(func, vreg, func->jite->vregs_list);
+	}
+    }
+
+
+
+    // At this point all critical points and vregs liveness should be ready.
+    // If the function has a try/catch/finally block, we need to set all variables the maximum liveness range
+    // which intersect with the sigsetjmp/__sigsetjmp method.
+//    if(func->has_try)
+    {
+        // jite_linked_list_t func->jite->
+/*
+	jite_linked_list_t sigsetjmps = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
+	                                        struct _jite_linked_list);
+
+        while((block = jit_block_next(func, block)) != 0)
+        {
+            jit_insn_iter_init(&iter, block);
+            while((insn = jit_insn_iter_next(&iter)) != 0)
+            {
+		if(insn && insn->opcode == JIT_OP_NOP)
+		{
+		    continue;
+		}
+
+		if(insn && (insn->opcode == JIT_OP_CALL_EXTERNAL
+	                	|| insn->opcode == JIT_OP_CALL_EXTERNAL_TAIL
+				|| insn->opcode == JIT_OP_CALL
+				|| insn->opcode == JIT_OP_CALL_TAIL))
+		{
+#if defined(HAVE___SIGSETJMP)
+		    if((void*) insn->dest == (void *) __sigsetjmp)
+#else
+                    if((void *) insn->dest == (void *) sigsetjmp)
+#endif
+                    {
+		        jite_add_item_to_linked_list(func, insn, sigsetjmps);
+		    }
+		}
+            }
+        }
+	
+	// Create all critical points, based on liveness for every vreg
+        jite_create_critical_point(func, min_insn);
+        jite_create_critical_point(func, max_insn);
+
+        linked_list = func->jite->vregs_list;
+        while(linked_list)
+        {
+            jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
+            linked_list = linked_list->next;
+	    jite_linked_list_t insns = sigsetjmps;
+	    while(insns)
+	    {
+    	        jit_insn_t insn = (jit_insn_t)(insns->item);
+    	        insns = (jite_linked_list_t) insns->next;
+		if(vreg->min_range->insn_num < insn->insn_num && vreg->max_range->insn_num > insn->insn_num)
+                {				
+		    jit_value_set_addressable(vreg->value);
+                }
+	    }
+        }
+        jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), sigsetjmps);
+	*/
+    }
+
+
+    for(count = 0; count < vregsNum; count++)
+    {
+        jite_vreg_t vreg = vregs_table[count];
+	if(vreg && vreg->value && jit_value_is_addressable(vreg->value))
+	{
+            jite_linked_list_t list = vreg->liveness;
+  	    while(list && list->item)
+	    {
+	        jit_insn_t min_insn = ((jit_insn_t)(list->item));
+	        list = list->next;
+	        jit_insn_t max_insn = ((jit_insn_t)(list->item));
+	        list = list->next;
+	        jite_remove_item_from_linked_list(func, min_insn, vreg->liveness);
+	        jite_remove_item_from_linked_list(func, max_insn, vreg->liveness);
+	    }
+	    vreg->min_range = min_insn;
+            vreg->max_range = max_insn;
+
+	    jite_add_item_to_linked_list(func, min_insn, vreg->liveness);
+	    jite_add_item_to_linked_list(func, max_insn, vreg->liveness);
+	}
+    }
+
+
+//    jite_debug_print_vregs_ranges(func);
+
+
+    for(count = 0; count < vregsNum; count++)
+    {
+        jite_linked_list_t list = vregs_table[count]->liveness;
+        while(list && list->item)
+	{
+	    jit_insn_t min_insn = ((jit_insn_t)(list->item));
+	    list = list->next;
+	    jit_insn_t max_insn = ((jit_insn_t)(list->item));
+	    list = list->next;
+	    if(min_insn->insn_num != max_insn->insn_num)
+	    {
+	        jite_create_critical_point(func, min_insn);
+	        jite_create_critical_point(func, max_insn);
+
+	        jite_add_vreg_to_complex_list(func, vregs_table[count], min_insn->cpoint->vregs_born);
+  	        jite_add_vreg_to_complex_list(func, vregs_table[count], max_insn->cpoint->vregs_die);
+	    }
+	}
+    }
+
+
+    free(model);
+    free(model_next);
+    jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), blocks);
+    jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), reverse_nodes);
+    jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), finally_clauses);
+//    jit_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), sigsetjmps);
+
+//    printf("allocation done\n");
+}
+
+// #ifdef JITE_DEBUG_ENABLED
 void jite_debug_print_vregs_ranges(jit_function_t func)
 {
     jite_linked_list_t list = func->jite->vregs_list;
@@ -1052,7 +2265,25 @@ void jite_debug_print_vregs_ranges(jit_function_t func)
         {
             printf("Virtual Register %d, ", vreg->index);
             jit_dump_value(stdout, func, vreg->value, 0);
-            printf(", lives from %d to %d; ", vreg->min_range->insn_num, vreg->max_range->insn_num);
+	    printf(", ");
+
+            jite_linked_list_t list = vreg->liveness;
+	    if(list && list->item)
+	    {
+	        printf("lives from ");
+                while(list && list->item)
+                {
+                    jit_insn_t min_insn = ((jit_insn_t)(list->item));
+                    list = list->next;
+	            jit_insn_t max_insn = ((jit_insn_t)(list->item));
+	            list = list->next;
+		    printf("%d to %d; ", min_insn->insn_num, max_insn->insn_num);
+                }
+//	        printf("min_range = %d, max_range = %d", vreg->min_range->insn_num, vreg->max_range->insn_num);
+		printf("\n");
+	    }
+	    else if(vreg->min_range && vreg->max_range) printf(", lives from %d to %d; ", vreg->min_range->insn_num, vreg->max_range->insn_num);
+
             if(vreg->in_reg) printf("reg used %d; ", vreg->reg->index);
             if(vreg->in_frame)
             {
@@ -1070,7 +2301,7 @@ void jite_debug_print_vregs_ranges(jit_function_t func)
     }
     printf("\n");
 }
-#endif
+// #endif
 
 int jite_compile(jit_function_t func, void **entry_point)
 {
@@ -1218,6 +2449,9 @@ int jite_compile(jit_function_t func, void **entry_point)
 #endif
 
     restart:
+//      printf("Restart compilation\n");
+//	fflush(stdout);
+
         /* End the function's output process */
         result = _jit_cache_end_method(&(gen.posn));
         if(result != JIT_CACHE_RESTART)
@@ -1269,9 +2503,11 @@ int jite_compile(jit_function_t func, void **entry_point)
 #endif
     
     jit_mutex_unlock(&(func->context->cache_lock));
-#ifdef JITE_DEBUG_ENABLED
+
+#ifdef JITE_DUMP_LIVENESS_RANGES
     jite_debug_print_vregs_ranges(func);
 #endif
+
     /* Free the builder structure, which no longer require */
     _jit_function_free_builder(func);
 
@@ -1280,6 +2516,9 @@ int jite_compile(jit_function_t func, void **entry_point)
     {
         *entry_point = start;
     }
+    
+//    jite_destroy(func);
+
     return 1;
 }
 
