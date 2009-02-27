@@ -4603,6 +4603,12 @@ int jite_x86reg_to_reg(int reg)
     return -1;
 }
 
+unsigned int jite_insn_has_side_effect(jit_insn_t insn)
+{
+    return jite_opcodes_map[insn->opcode].has_side_effect;
+}
+
+
 #ifdef JITE_DEBUG_ENABLED
 void jite_dump_registers(unsigned int buf, unsigned int ecx, unsigned int edx, unsigned int eax, unsigned int ebx, unsigned int edi, unsigned int esi, unsigned int ebp)
 {
