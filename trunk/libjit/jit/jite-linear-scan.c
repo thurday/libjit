@@ -1183,6 +1183,13 @@ void jite_compute_fast_liveness(jit_function_t func)
     }
 }
 
+void jite_liveness_node_remove_bit(jit_uint *node, jit_uint index)
+{
+    unsigned int dwordOffset = index / (sizeof(jit_uint) * 8);
+    unsigned int bitOffset   = index % (sizeof(jit_uint) * 8);
+    node[dwordOffset] = node[dwordOffset] & ~(1 << bitOffset);
+}
+
 void jite_liveness_node_add_bit(jit_uint *node, jit_uint index)
 {
     unsigned int dwordOffset = index / (sizeof(jit_uint) * 8);
@@ -1695,7 +1702,9 @@ void jite_compute_full_liveness(jit_function_t func)
 
 
     jit_uint *model_next = malloc(modelSize * nodeLength * 4 * sizeof(jit_uint));
-    memcpy(model_next, model, modelSize * nodeLength * 4 * sizeof(jit_uint));
+    memset(model_next, 0, modelSize * 4 * nodeLength * sizeof(jit_uint));
+
+//    memcpy(model_next, model, modelSize * nodeLength * 4 * sizeof(jit_uint));
     jite_vreg_t vregs_table[vregsNum];
 
     if(func->jite->vregs_list)
@@ -1764,112 +1773,10 @@ void jite_compute_full_liveness(jit_function_t func)
     unsigned char bEqual;
 
 
-    do
-    {
-        bEqual = 1;
-        block = 0;
 
 
-        jite_linked_list_t list = last_node; // reverse_nodes;
-
-        while(list)
-        {
-	    block = list->item;
-	    list  = list->prev;
-
-
-            if(!block->entered_via_top && !block->entered_via_branch)
-            {
-                continue;
-            }
-
-	    insn = _jit_block_get_last(block);
-
-            while(insn)
-            {
-
-
-  	      	jit_insn_t insn_next = insn->next;
-
-                if(insn_next)
-		{
-  	            jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
-	                                     &model[insn->insn_num * nodeLength * 4 + outOffset],
-	                                     &model[insn_next->insn_num * nodeLength * 4 + inOffset],
-			  		     nodeLength);
-		}
-
-                if(insn && (insn->flags & JIT_INSN_DEST_IS_LABEL) !=0)
-                {
-	            jit_insn_t insn_next = jite_get_insn_from_label(func, (jit_label_t)(insn->dest));
-	            jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
-	                                     &model[insn->insn_num * nodeLength * 4 + outOffset],
-	                                     &model[insn_next->insn_num * nodeLength * 4 + inOffset],
-					     nodeLength);
-        	}
-
-                if(insn && insn->opcode == JIT_OP_JUMP_TABLE)
-                {
-                    // Process every possible target label.
-                    jit_label_t *labels = (jit_label_t*)(insn->value1->address);
-                    jit_nint num_labels = (jit_nint)(insn->value2->address);
-                    int index;
-                    for(index = 0; index < num_labels; index++)
-                    {
-                        jit_insn_t insn_next = jite_get_insn_from_label(func, (jit_label_t)(labels[index]));
-	                jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
-	                                             &model[insn->insn_num * nodeLength * 4 + outOffset],
-	                                             &model[insn_next->insn_num * nodeLength * 4 + inOffset],
-					  	     nodeLength);
-                    }
-                }
-
-                if(insn && insn->opcode == JIT_OP_LEAVE_FINALLY)
-                {
-                    // Process every possible target label.
-	            jite_linked_list_t next_blocks = (jite_linked_list_t)(insn->dest);
-	  	    while(next_blocks && next_blocks->item)
-		    {
-	                jit_block_t block_next = (jit_block_t)(next_blocks->item);
-			jit_insn_t insn_next = jite_get_insn_from_block(func, block_next);
-	                jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset],
-	                                             &model[insn->insn_num * nodeLength * 4 + outOffset],
-	                                             &model[insn_next->insn_num * nodeLength * 4 + inOffset],
-					  	     nodeLength);
-		        next_blocks = next_blocks->next;
-		    }
-                }
-
-	        jite_liveness_remove_nodes(&model[insn->insn_num * nodeLength * 4 + inOffset],
-	                                   &model[insn->insn_num * nodeLength * 4 + outOffset],
-	                                   &model[insn->insn_num * nodeLength * 4 + defOffset],
-					   nodeLength);
-
-   	        jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + inOffset], 
-	                                 &model[insn->insn_num * nodeLength * 4 + inOffset],
-	                                 &model[insn->insn_num * nodeLength * 4 + usedOffset],
-					 nodeLength);					 
-
-
-                insn = insn->prev;
-            }
-        }
-
-	counter++;
-
-        unsigned int count = 0;
-        for(count = 0; (count < modelSize * nodeLength * 4); count++)
-        {
-            bEqual = bEqual && (model[count] == model_next[count]);
-        }
-        memcpy(model_next, model, modelSize * nodeLength * 4 * sizeof(jit_uint));
-    } while(!bEqual);
-
-
-//    printf("Computed block reverse order. Doing equation solution...\n");
-
-{
-    memcpy(model_next, deadcode, modelSize * nodeLength * 4 * sizeof(jit_uint));
+// {
+//    memcpy(model_next, deadcode, modelSize * nodeLength * 4 * sizeof(jit_uint));
 
     do
     {
@@ -2013,14 +1920,14 @@ void jite_compute_full_liveness(jit_function_t func)
 				          nodeLength);
 
 
-	        jite_liveness_unit_nodes(&deadcode[insn->insn_num * nodeLength * 4 + candidatesInOffset],
+	        jite_liveness_remove_nodes(&deadcode[insn->insn_num * nodeLength * 4 + candidatesInOffset],
 	                                  &deadcode[insn->insn_num * nodeLength * 4 + candidatesOutOffset],
-	                                  &deadcode[insn->insn_num * nodeLength * 4 + sideEffectOffset],
+	                                  &model[insn->insn_num * nodeLength * 4 + defOffset],
 				          nodeLength);
 
-	        jite_liveness_intersect_nodes(&deadcode[insn->insn_num * nodeLength * 4 + candidatesInOffset],
+	        jite_liveness_unit_nodes(&deadcode[insn->insn_num * nodeLength * 4 + candidatesInOffset],
 	                                      &deadcode[insn->insn_num * nodeLength * 4 + candidatesInOffset],
-	                                      &model[insn->insn_num * nodeLength * 4 + inOffset],
+	                                      &deadcode[insn->insn_num * nodeLength * 4 + sideEffectOffset],
 		 	                      nodeLength);
 
 
@@ -2035,13 +1942,15 @@ void jite_compute_full_liveness(jit_function_t func)
         {
             bEqual = bEqual && (deadcode[count] == model_next[count]);
         }
-        memcpy(model_next, deadcode, modelSize * nodeLength * 4 * sizeof(jit_uint));
+        if(!bEqual) memcpy(model_next, deadcode, modelSize * nodeLength * 4 * sizeof(jit_uint));
     } while(!bEqual);
+
+
 
 
     block = 0;
 
-
+    // Remove dead-code. And update register liveness information.
     jite_linked_list_t list = last_node; // reverse_nodes;
 
     while(list)
@@ -2078,13 +1987,170 @@ void jite_compute_full_liveness(jit_function_t func)
                     int flag = jite_insn_has_side_effect(insn);
 		    if(!flag)
 		    {
-		        insn->opcode = JIT_OP_NOP;
+		        jit_value_t dest = insn->dest;
+			jit_value_t value1 = insn->value1;
+			jit_value_t value2 = insn->value2;
+		        if(insn->opcode != JIT_OP_NOP && insn->opcode != JIT_OP_MARK_OFFSET)
+			{
+		            if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
+        	    		    && !(dest->is_constant)
+	        	            && !(dest->is_nint_constant)
+    		    	            && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
+			            && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
+		            {
+				if((insn->opcode >= JIT_OP_LOAD_RELATIVE_SBYTE && insn->opcode <= JIT_OP_LOAD_RELATIVE_STRUCT)
+				   || (insn->opcode >= JIT_OP_ADD_RELATIVE     && insn->opcode <= JIT_OP_LOAD_ELEMENT_NFLOAT)
+		    		   || (insn->opcode >= JIT_OP_ADDRESS_OF_LABEL && insn->opcode <= JIT_OP_ADDRESS_OF)
+				   || (insn->opcode >= JIT_OP_TRUNC_SBYTE      && insn->opcode <= JIT_OP_LSHR_UN)
+				   || (insn->opcode >= JIT_OP_ICMP             && insn->opcode <= JIT_OP_NFSIGN)
+				   || (insn->opcode >= JIT_OP_LOAD_PC          && insn->opcode <= JIT_OP_LOAD_EXCEPTION_PC))
+				{
+				    jite_liveness_node_remove_bit(&model[insn->insn_num * nodeLength * 4 + defOffset], dest->vreg->index);
+				}
+				else
+				{
+				    jite_liveness_node_remove_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], dest->vreg->index);
+				}
+		    	    }
+	    	    	    if(insn && value1 && !(insn->flags & JIT_INSN_VALUE1_IS_NAME)
+	    	                && !(insn->flags & JIT_INSN_VALUE1_IS_LABEL) && !value1->is_constant
+    			        && !value1->is_nint_constant)
+	            	    {
+				if(insn->opcode == JIT_OP_INCOMING_REG || insn->opcode == JIT_OP_INCOMING_FRAME_POSN
+		                                       || insn->opcode == JIT_OP_RETURN_REG)
+				{
+				    jite_liveness_node_remove_bit(&model[insn->insn_num * nodeLength * 4 + defOffset], value1->vreg->index);
+			        }
+				else
+			        {
+			    	    jite_liveness_node_remove_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], value1->vreg->index);
+				}
+		            }
+	            	    if(insn && value2 && !(insn->flags & JIT_INSN_VALUE2_IS_SIGNATURE)
+        	        	&& !value2->is_constant && !value2->is_nint_constant)
+    			    {
+				jite_liveness_node_remove_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], value2->vreg->index);
+
+	            	    }
+		            insn->opcode = JIT_OP_NOP;
+			}	
 		    }
 	    }
             insn = insn->prev;
 	}
     }
-}
+// }
+
+
+    memset(model_next, 0, modelSize * 4 * nodeLength * sizeof(jit_uint));
+
+
+
+
+    do
+    {
+        bEqual = 1;
+        block = 0;
+
+
+        jite_linked_list_t list = last_node; // reverse_nodes;
+
+        while(list)
+        {
+	    block = list->item;
+	    list  = list->prev;
+
+
+            if(!block->entered_via_top && !block->entered_via_branch)
+            {
+                continue;
+            }
+
+	    insn = _jit_block_get_last(block);
+
+            while(insn)
+            {
+
+
+  	      	jit_insn_t insn_next = insn->next;
+
+                if(insn_next)
+		{
+  	            jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
+	                                     &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                     &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+			  		     nodeLength);
+		}
+
+                if(insn && (insn->flags & JIT_INSN_DEST_IS_LABEL) !=0)
+                {
+	            jit_insn_t insn_next = jite_get_insn_from_label(func, (jit_label_t)(insn->dest));
+	            jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
+	                                     &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                     &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+					     nodeLength);
+        	}
+
+                if(insn && insn->opcode == JIT_OP_JUMP_TABLE)
+                {
+                    // Process every possible target label.
+                    jit_label_t *labels = (jit_label_t*)(insn->value1->address);
+                    jit_nint num_labels = (jit_nint)(insn->value2->address);
+                    int index;
+                    for(index = 0; index < num_labels; index++)
+                    {
+                        jit_insn_t insn_next = jite_get_insn_from_label(func, (jit_label_t)(labels[index]));
+	                jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset], 
+	                                             &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                             &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+					  	     nodeLength);
+                    }
+                }
+
+                if(insn && insn->opcode == JIT_OP_LEAVE_FINALLY)
+                {
+                    // Process every possible target label.
+	            jite_linked_list_t next_blocks = (jite_linked_list_t)(insn->dest);
+	  	    while(next_blocks && next_blocks->item)
+		    {
+	                jit_block_t block_next = (jit_block_t)(next_blocks->item);
+			jit_insn_t insn_next = jite_get_insn_from_block(func, block_next);
+	                jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                             &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                             &model[insn_next->insn_num * nodeLength * 4 + inOffset],
+					  	     nodeLength);
+		        next_blocks = next_blocks->next;
+		    }
+                }
+
+	        jite_liveness_remove_nodes(&model[insn->insn_num * nodeLength * 4 + inOffset],
+	                                   &model[insn->insn_num * nodeLength * 4 + outOffset],
+	                                   &model[insn->insn_num * nodeLength * 4 + defOffset],
+					   nodeLength);
+
+   	        jite_liveness_unit_nodes(&model[insn->insn_num * nodeLength * 4 + inOffset], 
+	                                 &model[insn->insn_num * nodeLength * 4 + inOffset],
+	                                 &model[insn->insn_num * nodeLength * 4 + usedOffset],
+					 nodeLength);					 
+
+                insn = insn->prev;
+            }
+        }
+
+	counter++;
+
+        unsigned int count = 0;
+        for(count = 0; (count < modelSize * nodeLength * 4); count++)
+        {
+            bEqual = bEqual && (model[count] == model_next[count]);
+        }
+        memcpy(model_next, model, modelSize * nodeLength * 4 * sizeof(jit_uint));
+    } while(!bEqual);
+
+
+//    printf("Computed block reverse order. Doing equation solution...\n");
+
+
 
 //    jit_dump_function(stdout, func, 0);
 //    printf("\nLiveness analysis done in %d iterations, for %d instructions, %d blocks, and %d variables\n\n", counter, func->builder->num_insns, blocks_num, func->jite->vregs_num);
