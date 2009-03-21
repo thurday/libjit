@@ -1716,7 +1716,7 @@ void jite_compute_full_liveness(jit_function_t func)
 
 // {
 //    memcpy(model_next, deadcode, modelSize * nodeLength * 4 * sizeof(jit_uint));
-
+/*
     do
     {
         bEqual = 1;
@@ -1984,6 +1984,7 @@ void jite_compute_full_liveness(jit_function_t func)
 // }
 
     memset(model_next, 0, modelSize * 4 * nodeLength * sizeof(jit_uint));
+*/
 
     do
     {
