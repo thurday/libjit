@@ -7952,22 +7952,6 @@ int jit_insn_memcpy
     (jit_function_t func, jit_value_t dest,
      jit_value_t src, jit_value_t size)
 {
-    /*
-    if(jit_function_extended_compiler_is_enabled(func) && (!jit_value_is_constant(size) || jit_value_is_constant(dest) || jit_value_is_constant(src)))
-    {
-        jit_type_t params[3];
-        jit_value_t args[3];
-        params[0] = jit_type_void_ptr;
-        params[1] = jit_type_void_ptr;
-        params[2] = jit_type_uint;
-        args[0] = dest;
-        args[1] = src;
-        args[2] = size;
-        jit_type_t signature = jit_type_create_signature(jit_abi_cdecl, jit_type_int, params, 3, 1);
-        jit_insn_call_native(func, "jit_memcpy", jit_memcpy, signature, args, 3, JIT_CALL_NOTHROW);
-        return 1;
-    }
-    */
     return apply_ternary(func, JIT_OP_MEMCPY, dest, src, size);
 }
 
@@ -7981,22 +7965,6 @@ int jit_insn_memmove
     (jit_function_t func, jit_value_t dest,
      jit_value_t src, jit_value_t size)
 {
-/*
-    if(jit_function_extended_compiler_is_enabled(func))
-    {
-        jit_type_t params[3];
-        jit_value_t args[3];
-        params[0] = jit_type_void_ptr;
-        params[1] = jit_type_void_ptr;
-        params[2] = jit_type_uint;
-        args[0] = dest;
-        args[1] = src;
-        args[2] = size;
-        jit_type_t signature = jit_type_create_signature(jit_abi_cdecl, jit_type_int, params, 3, 1);
-        jit_insn_call_native(func, "jit_memmove", jit_memmove, signature, args, 3, JIT_CALL_NOTHROW);  
-        return 1;
-    }
-*/
     size = jit_insn_convert(func, size, jit_type_nint, 0);
     return apply_ternary(func, JIT_OP_MEMMOVE, dest, src, size);
 }
@@ -8010,22 +7978,6 @@ int jit_insn_memset
     (jit_function_t func, jit_value_t dest,
      jit_value_t value, jit_value_t size)
 {
-/*
-    if(jit_function_extended_compiler_is_enabled(func))
-    {
-        jit_type_t params[3];
-        jit_value_t args[3];
-        params[0] = jit_type_void_ptr;
-        params[1] = jit_type_uint;
-        params[2] = jit_type_uint;
-        args[0] = dest;
-        args[1] = value;
-        args[2] = size;
-        jit_type_t signature = jit_type_create_signature(jit_abi_cdecl, jit_type_int, params, 3, 1);
-        jit_insn_call_native(func, "jit_memset", jit_memset, signature, args, 3, JIT_CALL_NOTHROW);  
-        return 1;
-    }
-*/
     value = jit_insn_convert(func, value, jit_type_int, 0);
     size = jit_insn_convert(func, size, jit_type_nint, 0);
     return apply_ternary(func, JIT_OP_MEMSET, dest, value, size);
