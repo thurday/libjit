@@ -947,4 +947,6 @@ JIT_OP_JUMP_TABLE:
         }
 
         x86_patch(patch_fall_through, inst);
+	/* Free used EAX for JUMP_TABLE if the value was in local frame */
+	inst = jite_restore_local_registers(inst, func, 0x1);
     }

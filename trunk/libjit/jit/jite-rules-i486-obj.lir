@@ -726,7 +726,41 @@ JIT_OP_MEMCPY, JIT_OP_MEMMOVE:
         x86_call_code(inst, jit_memcpy);
 	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
     }
-
+    [reg, imm, reg] -> {
+        x86_push_reg(inst, $3);
+	x86_push_imm(inst, $2);
+	x86_push_reg(inst, $1);
+        x86_call_code(inst, jit_memcpy);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [imm, reg, reg] -> {
+        x86_push_reg(inst, $3);
+	x86_push_reg(inst, $2);
+	x86_push_imm(inst, $1);
+        x86_call_code(inst, jit_memcpy);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [imm, imm, reg] -> {
+        x86_push_reg(inst, $3);
+	x86_push_imm(inst, $2);
+	x86_push_imm(inst, $1);
+        x86_call_code(inst, jit_memcpy);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [reg, imm, imm] -> {
+        x86_push_imm(inst, $3);
+	x86_push_imm(inst, $2);
+	x86_push_reg(inst, $1);
+        x86_call_code(inst, jit_memcpy);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [imm, imm, imm] -> {
+        x86_push_imm(inst, $3);
+	x86_push_imm(inst, $2);
+	x86_push_imm(inst, $1);
+        x86_call_code(inst, jit_memcpy);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
 
 JIT_OP_MEMSET:
     [reg, reg, imm] -> {
@@ -736,6 +770,41 @@ JIT_OP_MEMSET:
         x86_push_reg(inst, $3);
 	x86_push_reg(inst, $2);
 	x86_push_reg(inst, $1);
+        x86_call_code(inst, jit_memset);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [reg, imm, reg] -> {
+        x86_push_reg(inst, $3);
+	x86_push_imm(inst, $2);
+	x86_push_reg(inst, $1);
+        x86_call_code(inst, jit_memset);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [imm, reg, reg] -> {
+        x86_push_reg(inst, $3);
+	x86_push_reg(inst, $2);
+	x86_push_imm(inst, $1);
+        x86_call_code(inst, jit_memset);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [imm, imm, reg] -> {
+        x86_push_reg(inst, $3);
+	x86_push_imm(inst, $2);
+	x86_push_imm(inst, $1);
+        x86_call_code(inst, jit_memset);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [reg, imm, imm] -> {
+        x86_push_imm(inst, $3);
+	x86_push_imm(inst, $2);
+	x86_push_reg(inst, $1);
+        x86_call_code(inst, jit_memset);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    [imm, imm, imm] -> {
+        x86_push_imm(inst, $3);
+	x86_push_imm(inst, $2);
+	x86_push_imm(inst, $1);
         x86_call_code(inst, jit_memset);
 	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
     }
