@@ -1614,7 +1614,7 @@ unsigned int jit_function_get_optimization_level(jit_function_t func)
 unsigned int jit_function_get_max_optimization_level(void)
 {
     /* TODO - implement more than basic optimization */
-    return 2;
+    return 10;
 }
 
 /*@
