@@ -315,6 +315,18 @@ unsigned int jite_type_get_size(jit_type_t type)
     return ROUND_STACK(jit_type_get_size(type));
 }
 
+
+unsigned char *jite_gen_handle_outgoing_reg(unsigned char *inst, jit_function_t func, jit_insn_t insn)
+{
+    jit_value_t value = insn->value1;
+    jit_type_t type = jit_value_get_type(value);
+    int reg = (int)jit_value_get_nint_constant(insn->value2);
+    jite_reg_t objectReg = jite_reg2object(func, reg, type);
+
+    inst = jite_restore_local_registers(inst, func, objectReg->hash_code);
+    return inst;
+}
+
 void gen_insn(jit_gencode_t gen, jit_function_t func,
                    jit_block_t block, jit_insn_t insn)
 {
@@ -879,12 +891,12 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             }
 
 
-            if(insn->opcode == JIT_OP_JUMP_TABLE)
-            {
+//            if(insn->opcode == JIT_OP_JUMP_TABLE)
+//            {
                 // Free EAX used for JUMP_TABLE if the value was in local frame.
-                inst = jite_restore_local_registers(inst, func, 0x1);
-            }
-
+//                inst = jite_restore_local_registers(inst, func, 0x1);
+//            }
+/*
 	    if(insn->opcode == JIT_OP_OUTGOING_REG)
 	    {
                 jit_value_t value = insn->value1;
@@ -894,6 +906,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
    	        inst = jite_restore_local_registers(inst, func, objectReg->hash_code);
 	    }
+	    */
 
             // At this point LibJIT does not use true SSA form because jit-insn.c may transform a jit_insn_store
             // to a change of the dest value in the previous opcode.
