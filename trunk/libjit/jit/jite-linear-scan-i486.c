@@ -546,6 +546,8 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_STORE_ELEMENT_FLOAT64:
                 case JIT_OP_STORE_ELEMENT_NFLOAT:
                 case JIT_OP_MEMCPY:
+		case JIT_OP_MEMMOVE:
+		case JIT_OP_MEMSET:
                 {
                     inst = jite_allocate_local_register(inst, func, dest->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_INPUT, 0, 0, 0);
                     inst = jite_allocate_local_register(inst, func, value1->vreg, value2->vreg, dest->vreg, LOCAL_ALLOCATE_FOR_INPUT, 0, 0, 0);
@@ -4282,6 +4284,8 @@ void jite_compute_register_holes(jit_function_t func)
                     }
                     break;
                     case JIT_OP_MEMCPY:
+		    case JIT_OP_MEMMOVE:
+		    case JIT_OP_MEMSET:
                     {
                         jit_value_t value2 = jit_insn_get_value2(insn);
                         if(!jit_value_is_constant(value2) ||
@@ -4603,9 +4607,35 @@ int jite_x86reg_to_reg(int reg)
     return -1;
 }
 
-unsigned int jite_insn_has_side_effect(jit_insn_t insn)
+unsigned char jite_insn_has_side_effect(jit_insn_t insn)
 {
     return jite_opcodes_map[insn->opcode].has_side_effect;
+}
+
+unsigned char jite_insn_dest_defined(jit_insn_t insn)
+{
+    return jite_opcodes_map[insn->opcode].dest_defined;
+}
+
+unsigned char jite_insn_dest_used(jit_insn_t insn)
+{
+    return jite_opcodes_map[insn->opcode].dest_used;
+}
+
+unsigned char jite_insn_value1_used(jit_insn_t insn)
+{
+    return jite_opcodes_map[insn->opcode].value1_used;
+}
+
+unsigned char jite_insn_value1_defined(jit_insn_t insn)
+{
+    return jite_opcodes_map[insn->opcode].value1_defined;
+}
+
+
+unsigned char jite_insn_value2_used(jit_insn_t insn)
+{
+    return jite_opcodes_map[insn->opcode].value2_used;
 }
 
 

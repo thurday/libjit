@@ -7952,6 +7952,7 @@ int jit_insn_memcpy
     (jit_function_t func, jit_value_t dest,
      jit_value_t src, jit_value_t size)
 {
+    /*
     if(jit_function_extended_compiler_is_enabled(func) && (!jit_value_is_constant(size) || jit_value_is_constant(dest) || jit_value_is_constant(src)))
     {
         jit_type_t params[3];
@@ -7966,6 +7967,7 @@ int jit_insn_memcpy
         jit_insn_call_native(func, "jit_memcpy", jit_memcpy, signature, args, 3, JIT_CALL_NOTHROW);
         return 1;
     }
+    */
     return apply_ternary(func, JIT_OP_MEMCPY, dest, src, size);
 }
 
@@ -7979,6 +7981,7 @@ int jit_insn_memmove
     (jit_function_t func, jit_value_t dest,
      jit_value_t src, jit_value_t size)
 {
+/*
     if(jit_function_extended_compiler_is_enabled(func))
     {
         jit_type_t params[3];
@@ -7993,6 +7996,7 @@ int jit_insn_memmove
         jit_insn_call_native(func, "jit_memmove", jit_memmove, signature, args, 3, JIT_CALL_NOTHROW);  
         return 1;
     }
+*/
     size = jit_insn_convert(func, size, jit_type_nint, 0);
     return apply_ternary(func, JIT_OP_MEMMOVE, dest, src, size);
 }
@@ -8006,6 +8010,7 @@ int jit_insn_memset
     (jit_function_t func, jit_value_t dest,
      jit_value_t value, jit_value_t size)
 {
+/*
     if(jit_function_extended_compiler_is_enabled(func))
     {
         jit_type_t params[3];
@@ -8020,6 +8025,7 @@ int jit_insn_memset
         jit_insn_call_native(func, "jit_memset", jit_memset, signature, args, 3, JIT_CALL_NOTHROW);  
         return 1;
     }
+*/
     value = jit_insn_convert(func, value, jit_type_int, 0);
     size = jit_insn_convert(func, size, jit_type_nint, 0);
     return apply_ternary(func, JIT_OP_MEMSET, dest, value, size);

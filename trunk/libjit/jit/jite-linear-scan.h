@@ -39,6 +39,15 @@ struct _jite_opcode
     unsigned char machine_code3;
     unsigned char machine_code4;
     unsigned char has_side_effect;
+
+    unsigned char is_nop;
+    unsigned char has_multiple_paths_flow;
+
+    unsigned char dest_defined;;
+    unsigned char dest_used;
+    unsigned char value1_defined;
+    unsigned char value1_used;
+    unsigned char value2_used;
 };
 
 struct _jite_frame
@@ -306,7 +315,12 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
 unsigned char *jite_emit_function_call(jit_gencode_t gen, unsigned char *buf, jit_function_t func,
                                        void *func_address, jit_value_t indirect_ptr, int call_type);
 
-unsigned int jite_insn_has_side_effect(jit_insn_t insn);
+unsigned char jite_insn_has_side_effect(jit_insn_t insn);
+unsigned char jite_insn_dest_defined(jit_insn_t insn);
+unsigned char jite_insn_dest_used(jit_insn_t insn);
+unsigned char jite_insn_value1_defined(jit_insn_t insn);
+unsigned char jite_insn_value1_used(jit_insn_t insn);
+unsigned char jite_insn_value2_used(jit_insn_t insn);
 
 #define NORMAL_CALL              1
 #define INDIRECT_CALL            2

@@ -159,6 +159,8 @@ jite_instance_t jite_create_instance(jit_function_t func)
     {
         jite->reg_holes[index] = 0;
     }
+
+    
     jite_init(func); // Platform dependent init.
     return jite;
 }
@@ -1509,16 +1511,18 @@ void jite_compute_full_liveness(jit_function_t func)
                 && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
                 && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
             {
-		if((insn->opcode >= JIT_OP_LOAD_RELATIVE_SBYTE && insn->opcode <= JIT_OP_LOAD_RELATIVE_STRUCT)
-		   || (insn->opcode >= JIT_OP_ADD_RELATIVE     && insn->opcode <= JIT_OP_LOAD_ELEMENT_NFLOAT)
-		   || (insn->opcode >= JIT_OP_ADDRESS_OF_LABEL && insn->opcode <= JIT_OP_ADDRESS_OF)
-		   || (insn->opcode >= JIT_OP_TRUNC_SBYTE      && insn->opcode <= JIT_OP_LSHR_UN)
-		   || (insn->opcode >= JIT_OP_ICMP             && insn->opcode <= JIT_OP_NFSIGN)
-		   || (insn->opcode >= JIT_OP_LOAD_PC          && insn->opcode <= JIT_OP_LOAD_EXCEPTION_PC))
+//		if((insn->opcode >= JIT_OP_LOAD_RELATIVE_SBYTE && insn->opcode <= JIT_OP_LOAD_RELATIVE_STRUCT)
+//		   || (insn->opcode >= JIT_OP_ADD_RELATIVE     && insn->opcode <= JIT_OP_LOAD_ELEMENT_NFLOAT)
+//		   || (insn->opcode >= JIT_OP_ADDRESS_OF_LABEL && insn->opcode <= JIT_OP_ADDRESS_OF)
+//		   || (insn->opcode >= JIT_OP_TRUNC_SBYTE      && insn->opcode <= JIT_OP_LSHR_UN)
+//		   || (insn->opcode >= JIT_OP_ICMP             && insn->opcode <= JIT_OP_NFSIGN)
+//		   || (insn->opcode >= JIT_OP_LOAD_PC          && insn->opcode <= JIT_OP_LOAD_EXCEPTION_PC))
+
+		if(jite_insn_dest_defined(insn))
 		{
 		    jite_liveness_node_add_bit(&model[insn->insn_num * nodeLength * 4 + defOffset], dest->vreg->index);
 		}
-		else
+		else // if(jite_insn_dest_used(insn))
 		{
 		    jite_liveness_node_add_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], dest->vreg->index);
 
@@ -1951,6 +1955,7 @@ void jite_compute_full_liveness(jit_function_t func)
     block = 0;
 
     // Remove dead-code. And update register liveness information.
+
     jite_linked_list_t list = last_node; // reverse_nodes;
 
     while(list)
@@ -1968,7 +1973,7 @@ void jite_compute_full_liveness(jit_function_t func)
 
         while(insn)
         {
-	    unsigned int size = nodeLength;
+//	    unsigned int size = nodeLength;
 
 	    unsigned int sideEffect = jite_liveness_node_get_bit(&deadcode[insn->insn_num * nodeLength * 4 + sideEffectOffset], vregsNum);
 
@@ -1998,16 +2003,17 @@ void jite_compute_full_liveness(jit_function_t func)
     		    	            && !(insn->flags & JIT_INSN_DEST_IS_FUNCTION)
 			            && !(insn->flags & JIT_INSN_DEST_IS_NATIVE))
 		            {
-				if((insn->opcode >= JIT_OP_LOAD_RELATIVE_SBYTE && insn->opcode <= JIT_OP_LOAD_RELATIVE_STRUCT)
-				   || (insn->opcode >= JIT_OP_ADD_RELATIVE     && insn->opcode <= JIT_OP_LOAD_ELEMENT_NFLOAT)
-		    		   || (insn->opcode >= JIT_OP_ADDRESS_OF_LABEL && insn->opcode <= JIT_OP_ADDRESS_OF)
-				   || (insn->opcode >= JIT_OP_TRUNC_SBYTE      && insn->opcode <= JIT_OP_LSHR_UN)
-				   || (insn->opcode >= JIT_OP_ICMP             && insn->opcode <= JIT_OP_NFSIGN)
-				   || (insn->opcode >= JIT_OP_LOAD_PC          && insn->opcode <= JIT_OP_LOAD_EXCEPTION_PC))
+//				if((insn->opcode >= JIT_OP_LOAD_RELATIVE_SBYTE && insn->opcode <= JIT_OP_LOAD_RELATIVE_STRUCT)
+//				   || (insn->opcode >= JIT_OP_ADD_RELATIVE     && insn->opcode <= JIT_OP_LOAD_ELEMENT_NFLOAT)
+//		    		   || (insn->opcode >= JIT_OP_ADDRESS_OF_LABEL && insn->opcode <= JIT_OP_ADDRESS_OF)
+//				   || (insn->opcode >= JIT_OP_TRUNC_SBYTE      && insn->opcode <= JIT_OP_LSHR_UN)
+//				   || (insn->opcode >= JIT_OP_ICMP             && insn->opcode <= JIT_OP_NFSIGN)
+//				   || (insn->opcode >= JIT_OP_LOAD_PC          && insn->opcode <= JIT_OP_LOAD_EXCEPTION_PC))
+                                if(jite_insn_dest_defined(insn))
 				{
 				    jite_liveness_node_remove_bit(&model[insn->insn_num * nodeLength * 4 + defOffset], dest->vreg->index);
 				}
-				else
+				else // if(jite_insn_dest_used(insn))
 				{
 				    jite_liveness_node_remove_bit(&model[insn->insn_num * nodeLength * 4 + usedOffset], dest->vreg->index);
 				}
@@ -2039,6 +2045,7 @@ void jite_compute_full_liveness(jit_function_t func)
             insn = insn->prev;
 	}
     }
+
 // }
 
 

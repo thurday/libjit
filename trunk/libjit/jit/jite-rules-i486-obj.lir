@@ -714,6 +714,31 @@ JIT_OP_STORE_ELEMENT_NFLOAT:
         x86_lea_memindex(inst, gpreg1, $1, 0, $2, 3);
         sse2_movsd_membase_xmreg(inst, gpreg1, 0, $3);
     }
+    
+JIT_OP_MEMCPY, JIT_OP_MEMMOVE:
+    [reg, reg, imm] -> {
+        inst = masm_mov_membase_membase(inst, $1, 0, $2, 0, $3);
+    }
+    [reg, reg, reg] -> {
+        x86_push_reg(inst, $3);
+	x86_push_reg(inst, $2);
+	x86_push_reg(inst, $1);
+        x86_call_code(inst, jit_memcpy);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+
+
+JIT_OP_MEMSET:
+    [reg, reg, imm] -> {
+        inst = masm_memset_reg_reg_imm(inst, $1, $2, $3);
+    }
+    [reg, reg, reg] -> {
+        x86_push_reg(inst, $3);
+	x86_push_reg(inst, $2);
+	x86_push_reg(inst, $1);
+        x86_call_code(inst, jit_memset);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
 
 
 JIT_OP_LOAD_ELEMENT_SBYTE:
@@ -1077,8 +1102,3 @@ JIT_OP_ADDRESS_OF:
     [=reg, local] -> {
         x86_lea_membase(inst, $1, X86_EBP, $2);
     }
-
-JIT_OP_MEMCPY:
-       [=reg, reg, imm] -> {
-             inst = masm_mov_membase_membase(inst, $1, 0, $2, 0, $3);
-       }
