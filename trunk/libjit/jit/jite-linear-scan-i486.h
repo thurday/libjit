@@ -376,8 +376,8 @@ struct _jite_opcode jite_opcodes_map[] =
 	{JIT_OP_LOAD_PC, 0, 0, 0, 0, 0, 0, 0,                                              1, 0, 0, 1, 0},
 	{JIT_OP_LOAD_EXCEPTION_PC, 0, 0, 0, 0, 0, 0, 0,                                    1, 0, 0, 1, 0},
 	{JIT_OP_ENTER_FINALLY, 0, 0, 0, 0, 1, 0, 0,                                        0, 0, 0, 0, 0},
-	{JIT_OP_LEAVE_FINALLY, 0, 0, 0, 0, 1, 0, 0,                                        0, 0, 0, 0, 0},
-	{JIT_OP_CALL_FINALLY, 0, 0, 0, 0, 1, 0, 0,                                         0, 0, 0, 0, 0},
+	{JIT_OP_LEAVE_FINALLY, 0, 0, 0, 0, 1, 0, 1,                                        0, 0, 0, 0, 0},
+	{JIT_OP_CALL_FINALLY, 0, 0, 0, 0, 1, 0, 1,                                         0, 0, 0, 0, 0},
 	{JIT_OP_ENTER_FILTER, 0, 0, 0, 0, 1, 0, 0,                                         0, 0, 0, 0, 0},
 	{JIT_OP_LEAVE_FILTER, 0, 0, 0, 0, 1, 0, 0,                                         0, 0, 0, 0, 0},
 	{JIT_OP_CALL_FILTER, 0, 0, 0, 0, 1, 0, 0,                                          0, 0, 0, 0, 0},
@@ -398,8 +398,8 @@ struct _jite_opcode jite_opcodes_map[] =
 	{JIT_OP_ADDRESS_OF, 0, 0, 0, 0, 0, 0, 0,                                           1, 0, 0, 1, 0},
 	{JIT_OP_INCOMING_REG, 0, 0, 0, 0, 0, 0, 0,                                         0, 0, 0, 0, 0},
 	{JIT_OP_INCOMING_FRAME_POSN, 0, 0, 0, 0, 0, 0, 0,                                  0, 0, 0, 0, 0},
-	{JIT_OP_OUTGOING_REG, 0, 0, 0, 0, 0, 0, 0,                                         0, 0, 0, 1, 0},
-	{JIT_OP_OUTGOING_FRAME_POSN, 0, 0, 0, 0, 0, 0, 0,                                  0, 0, 0, 1, 0},
+	{JIT_OP_OUTGOING_REG, 0, 0, 0, 0, 1, 0, 0,                                         0, 0, 0, 1, 0},
+	{JIT_OP_OUTGOING_FRAME_POSN, 0, 0, 0, 0, 1, 0, 0,                                  0, 0, 0, 1, 0},
 	{JIT_OP_RETURN_REG, 0, 0, 0, 0, 1, 0, 0,                                           0, 0, 1, 0, 0},
 	{JIT_OP_PUSH_INT, 0, 0, 0, 0, 1, 0, 0,                                             0, 0, 0, 1, 0},
 	{JIT_OP_PUSH_LONG, 0, 0, 0, 0, 1, 0, 0,                                            0, 0, 0, 1, 0},
@@ -457,7 +457,7 @@ struct _jite_opcode jite_opcodes_map[] =
 	{JIT_OP_ALLOCA, 0, 0, 0, 0, 1, 0, 0,                                               0, 0, 0, 1, 0},
 	{JIT_OP_MARK_OFFSET, 0, 0, 0, 0, 1, 0, 0,                                          0, 0, 0, 0, 0},
 	{JIT_OP_MARK_BREAKPOINT, 0, 0, 0, 0, 1, 1, 0,                                      0, 0, 0, 0, 0},
-	{JIT_OP_JUMP_TABLE, 0, 0, 0, 0, 0, 0, 0,                                           0, 0, 0, 1, 0},
+	{JIT_OP_JUMP_TABLE, 0, 0, 0, 0, 0, 0, 1,                                           0, 0, 0, 1, 0},
 	{JIT_OP_TAIL_CALL, 0, 0, 0, 0, 1, 0, 0,                                            0, 0, 0, 0, 0}
 	};
 
@@ -534,7 +534,5 @@ jite_reg_t jite_object_register_pair(jite_reg_t reg);
 unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t func, jite_vreg_t value, jite_vreg_t value1, jite_vreg_t value2, unsigned char bUsage, unsigned int fRegCond, int typeKind, unsigned int *regFound);
 
 int jite_x86reg_to_reg(int reg);
-
-// unsigned int jite_insn_has_side_effect(jit_insn_t insn);
 
 #endif

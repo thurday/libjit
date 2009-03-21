@@ -359,7 +359,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 jite_allocate_registers_and_frames(func, insn->cpoint->vregs_born->item4);
             }
             gen->posn.ptr = (unsigned char *)inst;
-            // /* Notify the back end that the block is starting */
+            /* Notify the back end that the block is starting */
 	}
  	break;
 
@@ -480,8 +480,8 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
             if(insn->cpoint)
             {
-                // jite_free_frames(func, insn->cpoint->vregs_die);
-                if((insn->flags & JIT_INSN_DEST_IS_LABEL) == 0)
+		if(!jite_insn_has_multiple_paths_flow(insn))
+//                if((insn->flags & JIT_INSN_DEST_IS_LABEL) == 0)
                 {
 		    jite_free_frames(func, insn);
                     jite_free_registers(func, insn->cpoint->vregs_die);
@@ -668,7 +668,6 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_RETHROW:
                 case JIT_OP_ENTER_FINALLY:
                 case JIT_OP_LEAVE_FINALLY:
-//                case JIT_OP_CALL_FINALLY:
                 case JIT_OP_ENTER_FILTER:
                 case JIT_OP_LEAVE_FILTER:
                 case JIT_OP_CALL_FILTER:
@@ -742,20 +741,13 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
             if(dest)
             {
-//	    	printf("dest = \n");
-//  	     	jit_dump_value(stdout, func, dest, 0);
-//		fflush(stdout);
-//		printf("\n");
-
                 param[index] = dest->address;
                 if(dest->vreg && dest->vreg->in_reg)
-                {
-//		    printf("in_reg\n");
+		{
                     param[index] = dest->vreg->reg->reg;
                 }
                 else if(dest->vreg && dest->vreg->in_frame)
                 {
-//		    printf("in_frame\n");
 		    if(dest->vreg->frame == 0)
 		    {
                         jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
@@ -785,23 +777,15 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             
             if(value1)
             {
-              param[index] = value1->address;
-//		printf("value1 = \n");
-//  	     	jit_dump_value(stdout, func, value1, 0);
-//		fflush(stdout);
-//		printf("\n");
-
+                param[index] = value1->address;
                 if(value1->vreg)
                 {
                     if(value1->vreg->in_reg)
                     {
-//		        printf("in_reg \n");
                         param[index] = value1->vreg->reg->reg;
                     }
                     else if(value1->vreg->in_frame)
-                    {
-//		        printf("in_frame \n");
- 
+                    { 
 		        if(value1->vreg->frame == 0)
 			{
                             jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
@@ -825,23 +809,15 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
             if(value2)
             {
-//	    	printf("value2 = \n");
-//  	     	jit_dump_value(stdout, func, value2, 0);
-//		fflush(stdout);
-//		printf("\n");
-
                 param[index] = value2->address;
                 if(value2->vreg)
                 {
-//                  inst = jite_restore_local_vreg(inst, func, value2->vreg);
                     if(value2->vreg->in_reg)
                     {
-//		        printf("in_reg\n");
                         param[index] = value2->vreg->reg->reg;
                     }
                     else if(value2->vreg->in_frame)
                     {
-//		        printf("in_frame\n");
 		        if(value2->vreg->frame == 0)
 			{
                             jite_frame_t frame = jit_memory_pool_alloc(&(func->builder->jite_frame_pool),
@@ -901,7 +877,8 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
             if(insn->cpoint)
             {
-                if((insn->flags & JIT_INSN_DEST_IS_LABEL) != 0)
+//                if((insn->flags & JIT_INSN_DEST_IS_LABEL) != 0)
+		if(jite_insn_has_multiple_paths_flow(insn))
                 {
 		    jite_free_frames(func, insn);
                     jite_free_registers(func, insn->cpoint->vregs_die);
@@ -4175,10 +4152,10 @@ This is a possible optimisation
                         {
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
                         }
-			else
-			{
-			   insn->opcode = JIT_OP_NOP;
-			}
+//			else
+//			{
+//			   insn->opcode = JIT_OP_NOP;
+//			}
                     }
                     break;
 
@@ -4485,6 +4462,11 @@ int jite_x86reg_to_reg(int reg)
         return reg - X86_REG_XMM0;
     }
     return -1;
+}
+
+unsigned char jite_insn_has_multiple_paths_flow(jit_insn_t insn)
+{
+    return jite_opcodes_map[insn->opcode].has_multiple_paths_flow;
 }
 
 unsigned char jite_insn_has_side_effect(jit_insn_t insn)
