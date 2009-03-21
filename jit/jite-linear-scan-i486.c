@@ -1830,7 +1830,6 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                     if(!jite_vreg_is_in_register_liveness(func, vreg, index)
                         && (reg_weight[index] == 0 || weight < reg_weight[index])
                         && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
-//                        && (!func->has_try || jit_value_is_temporary(vreg->value)))
                     {
                         reg_weight[index] = weight;
                         vregs[index] = vreg;
@@ -2017,7 +2016,6 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                 vreg = (jite_vreg_t)(temp->item);
                 weight = jite_vreg_weight(func, vreg);
                 if(jite_vreg_weight(func, jite_gp_regs_map[found_index].vreg) > weight
-//                    && !jite_vreg_is_in_register_liveness(func, vreg, found_index)
                     && !jite_vreg_is_in_register_liveness_ignore_vreg(func, vreg, found_index, jite_gp_regs_map[found_index].vreg)
                     && (reg_weight[found_index] == 0 || weight < reg_weight[found_index])
                     && (reg_weight[found_index_pair] == 0 || weight < reg_weight[found_index_pair])
@@ -2089,7 +2087,6 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                     if(!jite_vreg_is_in_register_liveness(func, vreg, index)
                         && (reg_weight[index] == 0 || weight < reg_weight[index])
                         && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
-//                        && (!func->has_try || jit_value_is_temporary(vreg->value)))
                     {
                         reg_weight[index] = weight;
                         vregs[index] = vreg;
