@@ -791,6 +791,46 @@ unsigned char *jite_memory_copy_from_mem
     return inst;
 }
 
+#define masm_memset_reg_reg_imm(inst, reg1, reg2, size) _masm_memset_reg_reg_imm(func, lrs, inst, reg1, reg2, size);
+
+unsigned char * _masm_memset_reg_reg_imm(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, int reg1, int reg2, jit_nuint size)
+{
+    if(size <= (4 * sizeof(void *)))
+    {
+        while(size >= sizeof(void *))
+        {
+            x86_mov_membase_reg(inst, reg1, size, reg2, sizeof(void *));
+            size -= sizeof(void *);
+        }
+
+        while(size >= 4)
+        {
+            x86_mov_membase_reg(inst, reg1, size, reg2, 4);
+            size -= 4;
+        }
+
+        while(size >= 2)
+        {
+            x86_mov_membase_reg(inst, reg1, size, reg2, 2);
+            size -= 2;
+        }
+
+        while(size >= 1)
+        {
+            x86_mov_membase_reg(inst, reg1, size, reg2, 1);
+            size--;
+        }
+    }
+    else
+    {
+	x86_push_imm(inst, size);
+	x86_push_reg(inst, reg2);
+	x86_push_reg(inst, reg1);
+	x86_call_code(inst, jit_memset);
+	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    }
+    return inst;
+}
 #define masm_mov_membase_membase(inst, dreg, doffset, sreg, soffset, size) _masm_mov_membase_membase(func, lrs, inst, dreg, doffset, sreg, soffset, size);
 
 unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, int dreg, jit_nint doffset, int sreg, jit_nint soffset, jit_nuint size)
@@ -806,21 +846,6 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
             find_one_gp_reg_cond6(inst, sreg, dreg, X86_EBX, X86_EDI, X86_ESI, X86_EBP); // Hopefully one register can be found
         }
 
-        if(save_gpreg1)
-        {
-            if(dreg == X86_ESP || sreg == X86_ESP)
-            {
-                x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 16);
-            }
-            if(dreg == X86_ESP) // try to do the operation anyway
-            {
-                doffset += 16;
-            }
-            if(sreg == X86_ESP)
-            {
-                soffset += 16;
-            }
-        }
 
         if(size <= (4 * sizeof(void *)))
         {
@@ -897,11 +922,6 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
         {
             inst = jite_memory_copy(inst, dreg, doffset, sreg, soffset, size, (int)(gpreg1));
         }
-        if(save_gpreg1 && (sreg == X86_ESP || dreg == X86_ESP))
-        {
-            x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 16);
-        }
-//        release_one_gp_reg(inst);
     }
     
     return inst;
