@@ -831,6 +831,7 @@ unsigned char * _masm_memset_reg_reg_imm(jit_function_t func, local_regs_allocat
     }
     return inst;
 }
+
 #define masm_mov_membase_membase(inst, dreg, doffset, sreg, soffset, size) _masm_mov_membase_membase(func, lrs, inst, dreg, doffset, sreg, soffset, size);
 
 unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, int dreg, jit_nint doffset, int sreg, jit_nint soffset, jit_nuint size)

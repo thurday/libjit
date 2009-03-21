@@ -316,6 +316,7 @@ unsigned char *jite_emit_function_call(jit_gencode_t gen, unsigned char *buf, ji
                                        void *func_address, jit_value_t indirect_ptr, int call_type);
 
 unsigned char jite_insn_has_side_effect(jit_insn_t insn);
+unsigned char jite_insn_has_multiple_paths_flow(jit_insn_t insn);
 unsigned char jite_insn_dest_defined(jit_insn_t insn);
 unsigned char jite_insn_dest_used(jit_insn_t insn);
 unsigned char jite_insn_value1_defined(jit_insn_t insn);
