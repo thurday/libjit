@@ -3,6 +3,8 @@
 #include "jit-setjmp.h"
 #include "jit/jit-dump.h"
 
+
+
 #if defined(JITE_ENABLED)
 
 unsigned int jite_value_in_reg(jit_value_t value)
@@ -128,7 +130,7 @@ jite_vreg_t jite_create_vreg(jit_value_t value)
         jite->vregs_num++;
         list->item = (void*)vreg;
         value->vreg = vreg;
-	jite_value_set_weight(value, -1);
+	jite_value_set_weight(value, func->builder->num_insns);
     }
     return value->vreg;
 }
@@ -160,6 +162,8 @@ jite_instance_t jite_create_instance(jit_function_t func)
 
     
     jite_init(func); /* Platform dependent init. */
+//    jite_function_set_register_allocator_euristic(func, BYHAND_EURISTIC);
+    jite_function_set_register_allocator_euristic(func, NUMBER_OF_USE_EURISTIC);
     return jite;
 }
 
@@ -873,13 +877,35 @@ void jite_add_branch_target(jit_function_t func, jit_insn_t insn, jit_label_t la
 
 void jite_compute_values_weight(jit_function_t func)
 {
+    int type = jite_function_get_register_allocator_euristic(func);
     unsigned int vregs_num = func->jite->vregs_num;
     unsigned int index = 0;
-    for(index = 0; index < vregs_num; index++)
+
+    switch(type)
     {
-        jite_vreg_t vreg = func->jite->vregs_table[index];
-	if(vreg->max_range) jite_value_set_weight(vreg->value, vreg->max_range->insn_num);
-	else jite_value_set_weight(vreg->value, -1);
+
+	case NUMBER_OF_USE_EURISTIC:
+	{
+    	    for(index = 0; index < vregs_num; index++)
+    	    {
+        	jite_vreg_t vreg = func->jite->vregs_table[index];
+  		//if(vreg->max_range) 
+		jite_value_set_weight(vreg->value, func->builder->num_insns - vreg->value->usage_count);
+  		//else jite_value_set_weight(vreg->value, func->builder->num_insns);
+    	    }	    
+	}
+	break;
+
+	case LINEAR_SCAN_EURISTIC:
+	{
+    	    for(index = 0; index < vregs_num; index++)
+    	    {
+        	jite_vreg_t vreg = func->jite->vregs_table[index];
+  		if(vreg->max_range) jite_value_set_weight(vreg->value, vreg->max_range->insn_num * jite_value_get_weight(vreg->value));
+  		else jite_value_set_weight(vreg->value, -1);
+    	    }
+	}
+	break;
     }
 }
 
@@ -890,19 +916,26 @@ void jite_compute_liveness(jit_function_t func)
 
     int level = jit_function_get_optimization_level(func);
 
-    if(level <= 2)
+    switch(level)
     {
-        jite_compute_local_liveness(func);
-	jite_create_vregs_table(func);
-    }
-    else if(level == 3)
-    {
-        jite_compute_fast_liveness(func);
-	jite_create_vregs_table(func);
-    }
-    else
-    {
-        jite_compute_full_liveness(func);
+        case 0:
+	case 1:
+	{
+            jite_compute_local_liveness(func);
+	    jite_create_vregs_table(func);
+	}
+	break;
+	case 2:
+	{
+            jite_compute_fast_liveness(func);
+	    jite_create_vregs_table(func);
+	}
+	break;
+	default:
+	{
+            jite_compute_full_liveness(func);
+        }
+	break;
     }
     
     jite_compute_register_holes(func);
@@ -912,7 +945,7 @@ void jite_create_vregs_table(jit_function_t func)
 {
     jite_linked_list_t linked_list = func->jite->vregs_list;
     jite_vreg_t *vregs_table = jit_malloc(func->jite->vregs_num * sizeof(jite_vreg_t));
-    unsigned int count = 0;
+
     while(linked_list != 0)
     {
         jite_vreg_t vreg = (jite_vreg_t)(linked_list->item);
@@ -934,75 +967,7 @@ void jite_compute_local_liveness(jit_function_t func)
 
     jit_insn_t min_insn = 0, max_insn = 0;
     
-    int level = jit_function_get_optimization_level(func);
-    jit_value_t candidates[JIT_NUM_GLOBAL_REGS];
 
-    if(level == 2)
-    {
-#if JIT_NUM_GLOBAL_REGS != 0
-	int num_candidates = 0;
-	int index, reg, posn, num;
-	jit_pool_block_t block;
-	jit_value_t value, temp;
-
-
-	/* Scan all values within the function, looking for the most used.
-	   We will replace this with a better allocation strategy later */
-	block = func->builder->value_pool.blocks;
-	num = (int)(func->builder->value_pool.elems_per_block);
-	while(block != 0)
-	{
-		if(!(block->next))
-		{
-			num = (int)(func->builder->value_pool.elems_in_last);
-		}
-		for(posn = 0; posn < num; ++posn)
-		{
-			value = (jit_value_t)(block->data + posn *
-								  sizeof(struct _jit_value));
-			if(value->global_candidate && value->usage_count >= JIT_MIN_USED &&
-			   !(value->is_addressable) && !(value->is_volatile))
-			{
-				/* Insert this candidate into the list, ordered on count */
-				index = 0;
-				while(index < num_candidates &&
-				      value->usage_count <= candidates[index]->usage_count)
-				{
-					++index;
-				}
-				while(index < num_candidates)
-				{
-					temp = candidates[index];
-					candidates[index] = value;
-					value = temp;
-					++index;
-				}
-				if(index < JIT_NUM_GLOBAL_REGS)
-				{
-					candidates[num_candidates++] = value;
-				}
-			}
-		}
-		block = block->next;
-	}
-
-	/* Allocate registers to the candidates.  We allocate from the top-most
-	   register in the allocation order, because some architectures like
-	   PPC require global registers to be saved top-down for efficiency */
-	reg = JIT_NUM_REGS - 1;
-	for(index = 0; index < num_candidates; ++index)
-	{
-		while(reg >= 0 && (_jit_reg_info[reg].flags & JIT_REG_GLOBAL) == 0)
-		{
-			--reg;
-		}
-		candidates[index]->has_global_register = 1;
-		candidates[index]->global_reg = (short)reg;
-		--reg;
-	}
-
-#endif
-    }
     /* Step 1. Compute vregs liveness without branches. */
     block = 0;
     
@@ -1862,7 +1827,6 @@ void jite_compute_full_liveness(jit_function_t func)
 	    jite_vreg_t vreg = (jite_vreg_t)list->item;
 	    vreg->liveness = jit_memory_pool_alloc(&(func->builder->jite_linked_list_pool),
                                                          struct _jite_linked_list);
-//	    vregs_table[vreg->index] = vreg;
 	    list = list->next;
 	}
 	jite_vreg_t vreg = (jite_vreg_t)list->item;
@@ -1920,7 +1884,7 @@ void jite_compute_full_liveness(jit_function_t func)
 
 
 
-  if(jit_function_get_optimization_level(func) >= 6)
+  if(jit_function_get_optimization_level(func) >= 3)
   {
     memcpy(model_next, deadcode, modelSize * nodeLength * 4 * sizeof(jit_uint));
 
@@ -2505,7 +2469,7 @@ void jite_compute_full_liveness(jit_function_t func)
 	    prev_insn = insn;
 
 
-	    if(level <= 5)
+	    if(level <= 2)
 	    {
         	if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
             	    && !(dest->is_constant)
@@ -2699,6 +2663,19 @@ void jite_debug_print_vregs_ranges(jit_function_t func)
     printf("\n");
 }
 // #endif
+
+
+
+void jite_function_set_register_allocator_euristic(jit_function_t func, int type)
+{
+     func->jite->register_allocator_euristic = type;
+}
+
+unsigned char jite_function_get_register_allocator_euristic(jit_function_t func)
+{
+    return func->jite->register_allocator_euristic;
+}
+
 
 int jite_compile(jit_function_t func, void **entry_point)
 {
