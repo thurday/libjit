@@ -186,13 +186,11 @@ void jite_destroy(jit_function_t func)
     }
     
     func->jite->relative_sp_offset = 0;
-
-//  jite_memory_pool_dealloc(&(func->builder->jite_linked_list_pool), func->jite->sigsetjmps);
 }
 
 
 
-// Check for the X86_EAX, X86_ECX, X86_EDX, etc directly
+/* Check for the X86_EAX, X86_ECX, X86_EDX, etc directly */
 unsigned char jite_gp_reg_is_free(jit_function_t func, int index) 
 {
     return (func->jite->regs_state & (0x1 << gp_reg_map[index])) == 0;
@@ -481,9 +479,8 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             if(insn->cpoint)
             {
 		if(!jite_insn_has_multiple_paths_flow(insn))
-//                if((insn->flags & JIT_INSN_DEST_IS_LABEL) == 0)
                 {
-		    jite_free_frames(func, insn);
+ 	  	    jite_free_frames(func, insn);
                     jite_free_registers(func, insn->cpoint->vregs_die);
                 }
 
@@ -500,8 +497,8 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
 
 
-            // Allocate local registers that are free at this point or restore local registers that will be used
-            // for generation of native code in current opcode.
+            /* Allocate local registers that are free at this point or restore local registers that will be used
+               for generation of native code in current opcode. */
             switch(insn->opcode)
             {
                 case JIT_OP_LOAD_RELATIVE_SBYTE:
@@ -531,7 +528,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_LOAD_RELATIVE_STRUCT:
                 {
                     jit_nuint size = jit_type_get_size(jit_type_normalize(jit_value_get_type(dest)));
-                    // restore EAX, EDX
+                    /* restore EAX, EDX */
                     if(value1->vreg && value1->vreg->in_frame) inst = jite_restore_local_registers(inst, func, 0x3);
                     else if(!value1->vreg || (value1->vreg && value1->vreg->in_reg && value1->vreg->reg->hash_code != 0x1)) inst = jite_restore_local_registers(inst, func, 0x1);
                     else inst = jite_restore_local_registers(inst, func, 0x2);
@@ -539,7 +536,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
                     if(size > (4 * sizeof(void *)))
                     {
-                        // restore ECX
+                        /* restore ECX */
                         inst = jite_restore_local_registers(inst, func, 0x4);
                     }
 
@@ -577,14 +574,14 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_STORE_RELATIVE_STRUCT:
                 {
                     jit_nuint size = jit_type_get_size(jit_type_normalize(jit_value_get_type(value1)));
-                    // restore EAX, EDX
+                    /* restore EAX, EDX */
                     if(dest->vreg && dest->vreg->in_frame) inst = jite_restore_local_registers(inst, func, 0x3);
                     else if(!dest->vreg || (dest->vreg && dest->vreg->in_reg && dest->vreg->reg->hash_code != 0x1)) inst = jite_restore_local_registers(inst, func, 0x1);
                     else inst = jite_restore_local_registers(inst, func, 0x2);
 
                     if(size > (4 * sizeof(void *)))
                     {
-                        // restore ECX
+                        /* restore ECX */
                         inst = jite_restore_local_registers(inst, func, 0x4);
                     }
                     inst = jite_allocate_local_register(inst, func, dest->vreg, value1->vreg, value2->vreg, LOCAL_ALLOCATE_FOR_INPUT, 0, 0, 0);
@@ -593,11 +590,11 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_COPY_STRUCT:
                 {
                     jit_nuint size = jit_type_get_size(jit_type_normalize(jit_value_get_type(dest)));
-                    // restore eax
+                    /* restore eax */
                     inst = jite_restore_local_registers(inst, func, 0x1);
                     if(size > (4 * sizeof(void *)))
                     {
-                        // restore edx and ecx
+                        /* restore edx and ecx */
                         inst = jite_restore_local_registers(inst, func, 0x6);
                     }
                 }
@@ -877,7 +874,6 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
 
             if(insn->cpoint)
             {
-//                if((insn->flags & JIT_INSN_DEST_IS_LABEL) != 0)
 		if(jite_insn_has_multiple_paths_flow(insn))
                 {
 		    jite_free_frames(func, insn);
@@ -1345,14 +1341,10 @@ unsigned char *jite_throw_builtin
         }
         else
         {
-//	    printf("Generating jite_throw_builtin\n");
-//	    jit_dump_value(stdout, func, func->builder->setjmp_value, 0);
             int pc = (int) inst;
             x86_mov_membase_imm(inst, X86_EBP,
                         func->builder->setjmp_value->vreg->frame->frame_offset
                         + jit_jmp_catch_pc_offset, pc, 4);
-//	   printf(" frame_offset = 0x%x\n", func->builder->setjmp_value->vreg->frame->frame_offset);
-//	   printf(" jite_jmp_catch_pc_offset = 0x%x\n", jit_jmp_catch_pc_offset);
         }
     }
 
@@ -1418,6 +1410,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                                         }
                                     }
                                 }
+
 
                                 if(indexFound != -1)
                                 {
@@ -1504,7 +1497,6 @@ void jite_preallocate_global_registers(jit_function_t func)
                             if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                             {
                                 int indexFound = -1;
-                                // if(!func->has_try && 
 				if(!jit_value_is_addressable(value))
                                 {
                                     if(!jite_vreg_is_in_register_liveness(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
@@ -1596,7 +1588,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                             
                             // If the value is used less than 4 times
                             // then there is no need to allocate a register for it.
-			    if(!jit_value_is_addressable(value) && value->usage_count > 3 )
+			    if(!jit_value_is_addressable(value) && value->usage_count > JIT_MIN_USED )
                             {
                                 int index;
                                 for(index = 0; index < JITE_N_GP_REGISTERS; index++)
@@ -1685,7 +1677,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                             if(value->vreg && value->vreg->min_range != value->vreg->max_range && value->usage_count > 3 )
                             {
                                 int indexFound = -1;
-                                //if(!func->has_try && 
+
 				if(!jit_value_is_addressable(value))
                                 {
                                     int index;
@@ -1789,16 +1781,16 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
     jite_vreg_t vregs[max];
     memset(vregs, 0, sizeof(jite_vreg_t) * max);
 
-    // Group of virtual registers that use general purpose registers.
+    /* Group of virtual registers that use general purpose registers. */
     jite_linked_list_t dword_list = list->item1;
 
-    // Group of virtual registers that use 64-bit values.
+    /* Group of virtual registers that use 64-bit values. */
     jite_linked_list_t qword_list = list->item2;
 
-    // Group of virtual registers that use XMM registers.
+    /* Group of virtual registers that use XMM registers. */
     jite_linked_list_t float_list = list->item3;
 
-    // Group of virtual registers that use frame and local memory.
+    /* Group of virtual registers that use frame and local memory. */
     jite_linked_list_t large_frames_list = list->item4;
 
     unsigned int need_n_gp = jite_count_items(func, dword_list);
@@ -1810,7 +1802,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
     int weight;
     int index;
 
-    // Allocates registers for parallel group of virtual registers.
+    /* Allocates registers for parallel group of virtual registers. */
 
     for(index = 0; func && func->jite && list
                 && (index < JITE_N_GP_REGISTERS) && dword_list && (need_n_gp > 0); index++)
@@ -1825,7 +1817,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                 while(temp)
                 {
                     vreg = (jite_vreg_t)(temp->item);
-                    weight = jite_vreg_weight(func, vreg);
+                    weight = jite_vreg_weight(vreg);
 
                     if(!jite_vreg_is_in_register_liveness(func, vreg, index)
                         && (reg_weight[index] == 0 || weight < reg_weight[index])
@@ -1861,14 +1853,14 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         unsigned int count;
         for(count = 0; count < JITE_N_GP_REGISTERS; count++)
         {
-            // All free register were used, or cannot be used.
-            // The register is not free, and was not just allocated.
+            /* All free register were used, or cannot be used.
+               The register is not free, and was not just allocated. */
             if((reg_weight[count] == 0) && 
-	           !jite_gp_reg_index_is_free(func, count)) // jite_gp_regs_map[count].vreg != 0)||
+	           !jite_gp_reg_index_is_free(func, count))
             {
                 if(found_index == -1
-                    || ((found_index != -1) && jite_vreg_weight(func, jite_gp_regs_map[count].vreg)
-                        > jite_vreg_weight(func, jite_gp_regs_map[found_index].vreg)))
+                    || ((found_index != -1) && jite_vreg_weight(jite_gp_regs_map[count].vreg)
+                        > jite_vreg_weight(jite_gp_regs_map[found_index].vreg)))
                 {
                     found_index = count;
                 }
@@ -1884,9 +1876,9 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
             while(temp)
             {
                 vreg = (jite_vreg_t)(temp->item);
-                weight = jite_vreg_weight(func, vreg);
+                weight = jite_vreg_weight(vreg);
 
-                if(jite_vreg_weight(func, jite_gp_regs_map[found_index].vreg) >= weight
+                if(jite_vreg_weight(jite_gp_regs_map[found_index].vreg) >= weight
                     && !jite_vreg_is_in_register_liveness_ignore_vreg(func, vreg, found_index, jite_gp_regs_map[found_index].vreg)
                     && (reg_weight[found_index] == 0 || weight < reg_weight[found_index])
                     && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
@@ -1917,7 +1909,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         }
     }
 
-    // Allocate a memory frame.
+    /* Allocate a memory frame. */
     if((need_n_gp > 0) && func && list && func->jite && dword_list)
     {
         jite_linked_list_t temp = dword_list;
@@ -1932,7 +1924,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         }
     }
 
-    // Allocates registers for parallel group of virtual registers.
+    /* Allocates registers for parallel group of virtual registers. */
 
     for(index = 0; func && func->jite && list
                 && (index < JITE_N_GP_REGISTERS - 1) && qword_list && (need_n_long > 0); index++)
@@ -1948,7 +1940,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                 while(temp)
                 {
                     vreg = (jite_vreg_t)(temp->item);
-                    weight = jite_vreg_weight(func, vreg);
+                    weight = jite_vreg_weight(vreg);
 
                     if(!jite_vreg_is_in_register_liveness(func, vreg, index)
                         && (reg_weight[index] == 0 || weight < reg_weight[index])
@@ -1988,16 +1980,16 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         unsigned int count;
         for(count = 0; count < JITE_N_GP_REGISTERS - 1; count++)
         {
-            // All free register were used, or cannot be used.
-            // The register is not free, and was not just allocated.
+            /* All free register were used, or cannot be used.
+               The register is not free, and was not just allocated. */
             int count_pair = jite_index_register_pair(count);
             if(reg_weight[count] == 0 && !jite_gp_reg_index_is_free(func, count)
                 && reg_weight[count_pair] == 0
 		&& !jite_gp_reg_index_is_free(func, count_pair))
             {
                 if(found_index == -1 || ((found_index != -1)
-                    && jite_vreg_weight(func, jite_gp_regs_map[count].vreg) > jite_vreg_weight(func, jite_gp_regs_map[found_index].vreg)
-                    && jite_vreg_weight(func, jite_gp_regs_map[count_pair].vreg) > jite_vreg_weight(func, jite_gp_regs_map[count_pair].vreg)))
+                    && jite_vreg_weight(jite_gp_regs_map[count].vreg) > jite_vreg_weight(jite_gp_regs_map[found_index].vreg)
+                    && jite_vreg_weight(jite_gp_regs_map[count_pair].vreg) > jite_vreg_weight(jite_gp_regs_map[count_pair].vreg)))
                 {
                     found_index = count;
                     found_index_pair = jite_index_register_pair(found_index);
@@ -2014,8 +2006,8 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
             while(temp)
             {
                 vreg = (jite_vreg_t)(temp->item);
-                weight = jite_vreg_weight(func, vreg);
-                if(jite_vreg_weight(func, jite_gp_regs_map[found_index].vreg) > weight
+                weight = jite_vreg_weight(vreg);
+                if(jite_vreg_weight(jite_gp_regs_map[found_index].vreg) > weight
                     && !jite_vreg_is_in_register_liveness_ignore_vreg(func, vreg, found_index, jite_gp_regs_map[found_index].vreg)
                     && (reg_weight[found_index] == 0 || weight < reg_weight[found_index])
                     && (reg_weight[found_index_pair] == 0 || weight < reg_weight[found_index_pair])
@@ -2054,7 +2046,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         }
     }
 
-    // Allocate a memory frame.
+    /* Allocate a memory frame. */
     if(need_n_long > 0 && func && list && func->jite && qword_list)
     {
         jite_linked_list_t temp = qword_list;
@@ -2083,7 +2075,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
                 while(temp)
                 {
                     vreg = (jite_vreg_t)(temp->item);
-                    weight = jite_vreg_weight(func, vreg);
+                    weight = jite_vreg_weight(vreg);
                     if(!jite_vreg_is_in_register_liveness(func, vreg, index)
                         && (reg_weight[index] == 0 || weight < reg_weight[index])
                         && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
@@ -2118,14 +2110,14 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         unsigned int count;
         for(count = 0; count < JITE_N_XMM_REGISTERS; count++)
         {
-            // All free register were used, or cannot be used.
-            // The register is not free, and was not just allocated.
+            /* All free register were used, or cannot be used.
+               The register is not free, and was not just allocated. */
             if(reg_weight[count] == 0
 	        && !jite_xmm_reg_index_is_free(func, count))
             {
                 if(found_index == -1
-                    || ((found_index != -1) && jite_vreg_weight(func, jite_xmm_regs_map[count].vreg)
-                        > jite_vreg_weight(func, jite_xmm_regs_map[found_index].vreg)))
+                    || ((found_index != -1) && jite_vreg_weight(jite_xmm_regs_map[count].vreg)
+                        > jite_vreg_weight(jite_xmm_regs_map[found_index].vreg)))
                 {
                     found_index = count;
                 }
@@ -2141,9 +2133,9 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
             while(temp)
             {
                 vreg = (jite_vreg_t)(temp->item);
-                weight = jite_vreg_weight(func, vreg);
+                weight = jite_vreg_weight(vreg);
 
-                if(jite_vreg_weight(func, jite_xmm_regs_map[found_index].vreg) > weight
+                if(jite_vreg_weight(jite_xmm_regs_map[found_index].vreg) > weight
                     && !jite_vreg_is_in_register_liveness_ignore_vreg(func, vreg, found_index, jite_xmm_regs_map[found_index].vreg)
                     && (reg_weight[found_index] == 0 || weight < reg_weight[found_index])
                     && weight != 0 && vreg->in_reg == 0 && vreg->in_frame == 0 && !jit_value_is_addressable(vreg->value))
@@ -2175,7 +2167,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         }
     }
 
-    // Allocate a memory frame.
+    /* Allocate a memory frame. */
     if((need_n_xmm > 0) && func && list && func->jite && float_list)
     {
         jite_linked_list_t temp = float_list;
@@ -2190,7 +2182,7 @@ void jite_preallocate_registers_and_frames(jit_function_t func, jite_list_t list
         }
     }
 
-    // Allocate large memory frames.
+    /* Allocate large memory frames. */
     if(need_n_large_frames > 0 && func && list && func->jite && large_frames_list)
     {
         jite_linked_list_t temp = large_frames_list;
@@ -2507,7 +2499,7 @@ void jite_allocate_large_frame_cond6(jit_function_t func, jite_frame_t frame, in
                     {
                         if(((unsigned int)(temp->item1) & (1 << offset))==0)
                         {
-                            // allocate memory aligned to 8 bytes
+                            /* allocate memory aligned to 8 bytes */
                             if(flag == 0 && ((index & ~0x1) == index))
                             {
                                 state_begin = temp;
@@ -2787,7 +2779,7 @@ void jite_allocate_large_frame(jit_function_t func, jite_frame_t frame, int size
                     {
                         if(((unsigned int)(temp->item1) & (1 << offset))==0)
                         {
-                            // allocate memory aligned to 8 bytes
+                            /* allocate memory aligned to 8 bytes */
                             if(flag == 0 && ((index & ~0x1) == index))
                             {
                                 state_begin = temp;
@@ -4149,10 +4141,6 @@ This is a possible optimisation
                         {
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
                         }
-//			else
-//			{
-//			   insn->opcode = JIT_OP_NOP;
-//			}
                     }
                     break;
 
