@@ -16,6 +16,11 @@
 
 // #define JITE_DUMP_LIVENESS_RANGES 1
 
+#define LINEAR_SCAN_EURISTIC          0
+#define NUMBER_OF_USE_EURISTIC        1
+#define BYHAND_EURISTIC               2
+
+
 typedef struct _jite_vreg *jite_vreg_t;
 typedef struct _jite_instance *jite_instance_t;
 typedef struct _jite_critical_point *jite_critical_point_t;
@@ -108,6 +113,7 @@ struct _jite_instance
     jite_linked_list_t reg_holes[32];
     int relative_sp_offset;
     jite_vreg_t *vregs_table;
+    unsigned char register_allocator_euristic;
 };
 
 struct _jite_vreg
@@ -175,6 +181,10 @@ struct _jite_linked_list
 #endif
 
 
+void jite_function_set_register_allocator_euristic(jit_function_t func, int type);
+
+unsigned char jite_function_get_register_allocator_euristic(jit_function_t func);
+
 void jite_debug_print_vregs_ranges(jit_function_t func);
 
 int jite_count_items(jit_function_t func, jite_linked_list_t list);
@@ -185,7 +195,7 @@ jit_type_t jite_type_get_param(jit_type_t signature, int index);
 
 jit_value_t jite_value_get_param(jit_function_t func, int index);
 
-char jite_is_virtual_reference(jit_value_t value);
+// char jite_is_virtual_reference(jit_value_t value);
 
 // jit_value_t jite_find_work_value(jit_insn_t insn, jit_value_t value);
 
