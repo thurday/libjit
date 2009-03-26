@@ -10,6 +10,8 @@
 #define JITE_ENABLED
 #endif
 
+#define JIT_MIN_USED 3
+
 // #define JITE_DEBUG_ENABLED 1
 
 // #define JITE_DUMP_LIVENESS_RANGES 1
@@ -96,7 +98,7 @@ struct _jite_instance
     jit_insn_t insn;
     jite_critical_point_t cpoints_list;
     jite_linked_list_t vregs_list;
-    short vregs_num;
+    unsigned int vregs_num;
     jite_list_t branch_list;
     unsigned int regs_state;
     jite_list_t frame_state;
@@ -105,6 +107,7 @@ struct _jite_instance
     unsigned int scratch_frame;
     jite_linked_list_t reg_holes[32];
     int relative_sp_offset;
+    jite_vreg_t *vregs_table;
 };
 
 struct _jite_vreg
@@ -192,22 +195,32 @@ void jite_reinit(jit_function_t func);
 
 
 // Create a new virtual register value, the vreg is born.
-jite_vreg_t jite_create_vreg(jit_function_t func, jit_value_t value);
+jite_vreg_t jite_create_vreg(jit_value_t value);
 
 // Returns 1 if the value is already in a vreg.
-char jite_value_is_in_vreg(jit_function_t func, jit_value_t value);
+char jite_value_is_in_vreg(jit_value_t value);
 
 // Count a vreg weight
-short jite_vreg_weight(jit_function_t func, jite_vreg_t vreg);
+void jite_value_set_weight(jit_value_t value, unsigned int weight);
+
+unsigned int jite_value_get_weight(jit_value_t value);
+
+unsigned int jite_vreg_weight(jite_vreg_t vreg);
 
 void jite_add_branch_target(jit_function_t func, jit_insn_t insn, jit_label_t label);
 
 // Compute values liveness period
 void jite_compute_liveness(jit_function_t func);
 
+void jite_create_vregs_table(jit_function_t func);
+
+void jite_compute_local_liveness(jit_function_t func);
+
 void jite_compute_fast_liveness(jit_function_t func);
 
 void jite_compute_full_liveness(jit_function_t func);
+
+void jite_compute_values_weight(jit_function_t func);
 
 // Create a new jite instance.
 jite_instance_t jite_create_instance(jit_function_t func);
