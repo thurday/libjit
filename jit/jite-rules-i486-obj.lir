@@ -1128,12 +1128,13 @@ JIT_OP_LOAD_ELEMENT_NFLOAT:
         sse2_movsd_xmreg_membase(inst, $1, gpreg1, 0);
     }
 
-JIT_OP_COPY_LOAD_SBYTE, JIT_OP_COPY_LOAD_UBYTE, JIT_OP_COPY_STORE_BYTE, JIT_OP_COPY_LOAD_SHORT, JIT_OP_COPY_LOAD_USHORT, JIT_OP_COPY_STORE_SHORT, JIT_OP_COPY_INT, JIT_OP_COPY_LONG, JIT_OP_COPY_FLOAT32, JIT_OP_COPY_FLOAT64, JIT_OP_COPY_NFLOAT, JIT_OP_COPY_STRUCT:
+
+JIT_OP_COPY_LOAD_SBYTE, JIT_OP_COPY_LOAD_UBYTE, JIT_OP_COPY_STORE_BYTE, JIT_OP_COPY_LOAD_SHORT, JIT_OP_COPY_LOAD_USHORT, JIT_OP_COPY_STORE_SHORT, JIT_OP_COPY_INT:
     [=reg, reg] -> {
-        // Both registers and locals allocated are 32-bits long.
-        // Just storing the first 8 or 16 bits we could lose the format,
-        // for example, in "int a = 0xffeedd; short b = (short)a;"
-        // gives 0xffffeedd, and not 0xeedd.
+        /* Both registers and locals allocated are 32-bits long.
+           Just storing the first 8 or 16 bits we could lose the format,
+           for example, in "int a = 0xffeedd; short b = (short)a;"
+           gives 0xffffeedd, and not 0xeedd. */
         inst = masm_mov_reg_reg(inst, $1, $2, sourceType);
     }
     [=reg, local] -> {
@@ -1154,11 +1155,120 @@ JIT_OP_COPY_LOAD_SBYTE, JIT_OP_COPY_LOAD_UBYTE, JIT_OP_COPY_STORE_BYTE, JIT_OP_C
 	   value */
     }
     [=local, local] -> {
-        inst = masm_mov_membase_membase(inst, X86_EBP, $1, X86_EBP, $2, jite_type_get_size(jit_value_get_type(dest)));
+      unsigned int foundReg;
+      if($1 != $2)
+      {
+//        int hash = have_free_gpregs();
+//
+//        if(hash & LOCAL_REGISTERS_HASH)
+//	{
+//             inst = jite_allocate_local_register(inst, func, insn->dest->vreg, insn->value1->vreg, 0, LOCAL_ALLOCATE_FOR_OUTPUT, LOCAL_REGISTERS_HASH, 0, &foundReg);
+//
+//             inst = masm_mov_reg_membase(inst, insn->dest->vreg->reg->reg, X86_EBP, $2, jit_value_get_type(dest));
+//	}
+//	else
+//	{
+
+            inst = masm_mov_membase_membase(inst, X86_EBP, $1, X86_EBP, $2, jite_type_get_size(jit_value_get_type(dest)));
+
+//	}
+      }
     }
     [=local, imm] -> {
         inst = masm_mov_membase_imm(inst, X86_EBP, $1, $2, sourceType);
     }
+
+
+
+JIT_OP_COPY_FLOAT32, JIT_OP_COPY_FLOAT64, JIT_OP_COPY_NFLOAT:
+    [=reg, reg] -> {
+        /* Both registers and locals allocated are 32-bits long.
+           Just storing the first 8 or 16 bits we could lose the format,
+           for example, in "int a = 0xffeedd; short b = (short)a;"
+           gives 0xffffeedd, and not 0xeedd. */
+        inst = masm_mov_reg_reg(inst, $1, $2, sourceType);
+    }
+    [=reg, local] -> {
+        // int typeKind = jit_type_get_kind(sourceType);
+        // inst = jite_allocate_local_register(inst, func, insn->value1->vreg, 0, 0, LOCAL_ALLOCATE_FOR_ALIASING, ~(jite_reg2object(func, $1, sourceType)->hash_code), typeKind, 0);
+        inst = masm_mov_reg_membase(inst, $1, X86_EBP, $2, sourceType);
+    }
+    [=reg, imm] -> {
+        inst = masm_mov_reg_imm(inst, $1, $2, sourceType);
+    }
+    [=local, reg] -> {
+        int typeKind = jit_type_get_kind(sourceType);
+	unsigned int regFound = 0xffffffff;
+        inst = jite_allocate_local_register(inst, func, insn->dest->vreg, 0, 0, LOCAL_ALLOCATE_FOR_ALIASING, ~(jite_reg2object(func, $2, sourceType)->hash_code), typeKind, &regFound);
+        if(regFound != $2) inst = masm_mov_membase_reg(inst, X86_EBP, $1, $2, sourceType);
+	/* We try to allocate for value $1 register $2 locally. If this register was really allocated then we do not
+	   need to do the move here. Then it will be done by the register allocator later with restore_local_frame for dest
+	   value */
+    }
+    [=local, local] -> {
+      unsigned int foundReg;
+      if($1 != $2)
+      {
+            inst = masm_mov_membase_membase(inst, X86_EBP, $1, X86_EBP, $2, jit_type_get_size(jit_value_get_type(dest)));
+//            inst = jite_allocate_local_register(inst, func, insn->dest->vreg, insn->value1->vreg, 0, LOCAL_ALLOCATE_FOR_OUTPUT, LOCAL_REGISTERS_HASH, 0, &foundReg);
+//            inst = jite_allocate_local_register(inst, func, insn->dest->vreg, insn->value1->vreg, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, 0, &foundReg);
+
+//            inst = masm_mov_reg_membase(inst, insn->dest->vreg->reg->reg, X86_EBP, $2, jit_value_get_type(dest));
+
+//          if(have_free_xmmregs())
+//          {
+//            inst = jite_allocate_local_register(inst, func, insn->dest->vreg, insn->value1->vreg, 0, LOCAL_ALLOCATE_FOR_OUTPUT, 0, 0, &foundReg);
+//          }
+//          else
+//          {
+//              inst = jite_allocate_local_register(inst, func, insn->dest->vreg, insn->value1->vreg, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, 0, &foundReg);
+//          }
+//          inst = masm_mov_reg_membase(inst, insn->dest->vreg->reg->reg, X86_EBP, $2, sourceType);
+      }
+    }
+    [=local, imm] -> {
+        inst = masm_mov_membase_imm(inst, X86_EBP, $1, $2, sourceType);
+    }
+
+
+JIT_OP_COPY_STRUCT, JIT_OP_COPY_LONG:
+    [=reg, reg] -> {
+        /* Both registers and locals allocated are 32-bits long.
+           Just storing the first 8 or 16 bits we could lose the format,
+           for example, in "int a = 0xffeedd; short b = (short)a;"
+           gives 0xffffeedd, and not 0xeedd. */
+        inst = masm_mov_reg_reg(inst, $1, $2, sourceType);
+    }
+    [=reg, local] -> {
+        // int typeKind = jit_type_get_kind(sourceType);
+        // inst = jite_allocate_local_register(inst, func, insn->value1->vreg, 0, 0, LOCAL_ALLOCATE_FOR_ALIASING, ~(jite_reg2object(func, $1, sourceType)->hash_code), typeKind, 0);
+        inst = masm_mov_reg_membase(inst, $1, X86_EBP, $2, sourceType);
+    }
+    [=reg, imm] -> {
+        inst = masm_mov_reg_imm(inst, $1, $2, sourceType);
+    }
+    [=local, reg] -> {
+        int typeKind = jit_type_get_kind(sourceType);
+	unsigned int regFound = 0xffffffff;
+        inst = jite_allocate_local_register(inst, func, insn->dest->vreg, 0, 0, LOCAL_ALLOCATE_FOR_ALIASING, ~(jite_reg2object(func, $2, sourceType)->hash_code), typeKind, &regFound);
+        if(regFound != $2) inst = masm_mov_membase_reg(inst, X86_EBP, $1, $2, sourceType);
+	/* We try to allocate for value $1 register $2 locally. If this register was really allocated then we do not
+	   need to do the move here. Then it will be done by the register allocator later with restore_local_frame for dest
+	   value */
+    }
+    [=local, local] -> {
+//      unsigned int foundReg;
+      if($1 != $2)
+      {
+
+            inst = masm_mov_membase_membase(inst, X86_EBP, $1, X86_EBP, $2, jite_type_get_size(jit_value_get_type(dest)));
+
+      }
+    }
+    [=local, imm] -> {
+        inst = masm_mov_membase_imm(inst, X86_EBP, $1, $2, sourceType);
+    }
+
 
 JIT_OP_ADDRESS_OF: 
     [=reg, reg] -> {

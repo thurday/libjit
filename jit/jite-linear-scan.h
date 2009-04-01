@@ -10,7 +10,7 @@
 #define JITE_ENABLED
 #endif
 
-#define JIT_MIN_USED 3
+#define JIT_MIN_USED 4
 
 // #define JITE_DEBUG_ENABLED 1
 
@@ -217,6 +217,10 @@ unsigned int jite_value_get_weight(jit_value_t value);
 
 unsigned int jite_vreg_weight(jite_vreg_t vreg);
 
+unsigned int jite_vreg_get_weight(jite_vreg_t vreg);
+
+unsigned int jite_get_max_weight();
+
 void jite_add_branch_target(jit_function_t func, jit_insn_t insn, jit_label_t label);
 
 // Compute values liveness period
@@ -329,6 +333,7 @@ unsigned char *jite_call_internal(jit_gencode_t gen, unsigned char *buf, unsigne
 unsigned int jite_value_in_reg(jit_value_t value);
 
 unsigned int jite_value_in_frame(jit_value_t value);
+
 
 int jite_regIndex2reg(jit_function_t func, int regIndex, jit_type_t type);
 

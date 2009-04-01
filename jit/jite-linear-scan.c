@@ -163,9 +163,18 @@ jite_instance_t jite_create_instance(jit_function_t func)
     
     jite_init(func); /* Platform dependent init. */
 //    jite_function_set_register_allocator_euristic(func, BYHAND_EURISTIC);
-    jite_function_set_register_allocator_euristic(func, NUMBER_OF_USE_EURISTIC);
+//    jite_function_set_register_allocator_euristic(func, NUMBER_OF_USE_EURISTIC);
+//    jite_function_set_register_allocator_euristic(func, NUMBER_OF_USE_EURISTIC);
+    jite_function_set_register_allocator_euristic(func, LINEAR_SCAN_EURISTIC);
     return jite;
 }
+
+
+unsigned int jite_get_max_weight()
+{
+    return 0xffffffff;
+}
+
 
 void jite_destroy_instance(jit_function_t func)
 {
@@ -831,10 +840,17 @@ unsigned int jite_vreg_weight(jite_vreg_t vreg)
     return vreg->weight;
 }
 
+unsigned int jite_vreg_get_weight(jite_vreg_t vreg)
+{
+    return jite_vreg_weight(vreg);
+}
+
+
 unsigned int jite_value_get_weight(jit_value_t value)
 {
     return value->vreg->weight;
 }
+
 
 jite_vreg_t jite_regs_higher_criteria(jite_vreg_t vreg1, jite_vreg_t vreg2)
 {
@@ -847,6 +863,10 @@ jite_vreg_t jite_regs_higher_criteria(jite_vreg_t vreg1, jite_vreg_t vreg2)
     return vreg2;
 }
 
+jit_value_t jite_vreg_get_value(jite_vreg_t vreg)
+{
+    return vreg->value;
+}
 
 void jite_add_branch_target(jit_function_t func, jit_insn_t insn, jit_label_t label)
 {
@@ -889,10 +909,51 @@ void jite_compute_values_weight(jit_function_t func)
     	    for(index = 0; index < vregs_num; index++)
     	    {
         	jite_vreg_t vreg = func->jite->vregs_table[index];
-  		//if(vreg->max_range) 
-		jite_value_set_weight(vreg->value, func->builder->num_insns - vreg->value->usage_count);
-  		//else jite_value_set_weight(vreg->value, func->builder->num_insns);
-    	    }	    
+
+//		if(jit_value_is_temporary(vreg->value) || jit_value_is_local(vreg->value))
+//		{
+  		if(vreg->max_range != vreg->min_range)
+		{
+//		    printf("\n");
+//		    jit_dump_value(stdout, func, vreg->value, 0);
+//		    printf("   ");
+//		    printf("vreg->value->usage_count = %d", vreg->value->usage_count);
+//		    printf("\n");
+//		    
+		    jite_value_set_weight(vreg->value, func->builder->num_insns - vreg->value->usage_count);
+//                    jite_value_set_weight
+
+//		    jite_value_set_weight(vreg->value, (vreg->max_range->insn_num - vreg->min_range->insn_num));// / vreg->value->usage_count);
+
+//		    jite_value_set_weight(vreg->value, (vreg->max_range->insn_num * jite_value_get_weight(vreg->value)) / vreg->value->usage_count);
+
+//                    if(jit_value_is_local(vreg->value) || jit_value_is_temporary(vreg->value))
+//		    {
+//		        jite_value_set_weight(vreg->value, 1);
+//		    }
+//		    else
+//		    {
+//		        jit_value_set_addressable(vreg->value);
+//		        jite_value_set_weight(vreg->value, 1);
+//                        if(vreg->max_range->insn_num - vreg->min_range->insn_num > 1)
+//			{
+//		            jite_value_set_weight(vreg->value, func->builder->num_insns - vreg->value->usage_count);
+//			}
+//			else
+//			{
+		            jite_value_set_weight(vreg->value, 1);
+//			}
+//		    }
+  		}
+		else jite_value_set_weight(vreg->value, -1);
+
+//		}
+//		else
+//		{
+  //		    if(vreg->max_range) jite_value_set_weight(vreg->value, vreg->max_range->insn_num * jite_value_get_weight(vreg->value));
+  //		    else jite_value_set_weight(vreg->value, -1);
+//		}
+    	    }
 	}
 	break;
 
@@ -901,8 +962,15 @@ void jite_compute_values_weight(jit_function_t func)
     	    for(index = 0; index < vregs_num; index++)
     	    {
         	jite_vreg_t vreg = func->jite->vregs_table[index];
-  		if(vreg->max_range) jite_value_set_weight(vreg->value, vreg->max_range->insn_num * jite_value_get_weight(vreg->value));
-  		else jite_value_set_weight(vreg->value, -1);
+//		if(vreg->value->usage_count != 1)
+//		{
+  		    if(vreg->max_range) jite_value_set_weight(vreg->value, vreg->max_range->insn_num);// * jite_value_get_weight(vreg->value));
+  		    else jite_value_set_weight(vreg->value, -1);
+//		}
+//		else
+//		{
+//		    jite_value_set_weight(vreg->value, 1);
+//		}
     	    }
 	}
 	break;
@@ -970,7 +1038,7 @@ void jite_compute_local_liveness(jit_function_t func)
 
     /* Step 1. Compute vregs liveness without branches. */
     block = 0;
-    
+
     while((block = jit_block_next(func, block)) != 0)
     {
         if(!(block->entered_via_top) && !(block->entered_via_branch))
@@ -1884,7 +1952,7 @@ void jite_compute_full_liveness(jit_function_t func)
 
 
 
-  if(jit_function_get_optimization_level(func) >= 3)
+  if(jit_function_get_optimization_level(func) >= 4)
   {
     memcpy(model_next, deadcode, modelSize * nodeLength * 4 * sizeof(jit_uint));
 
@@ -2469,7 +2537,7 @@ void jite_compute_full_liveness(jit_function_t func)
 	    prev_insn = insn;
 
 
-	    if(level <= 2)
+	    if(level <= 3)
 	    {
         	if(insn && dest && !(insn->flags & JIT_INSN_DEST_IS_LABEL)
             	    && !(dest->is_constant)
@@ -2733,6 +2801,11 @@ int jite_compile(jit_function_t func, void **entry_point)
     func->jite = jite_create_instance(func);
     jite_compute_liveness(func);
     jite_compute_values_weight(func);
+
+//    jit_dump_function(stdout, func, 0);
+//    fflush(stdout);
+//    printf("\n");
+
     /* We may need to perform output twice, if the first attempt fails
        due to a lack of space in the current method cache page */
 

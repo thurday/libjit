@@ -2,8 +2,8 @@
 
 #include "jite-linear-scan.h"
 #include "jit-gen-i486-simd.h"
-// Item = {reg,    index,          hash_code,      vreg,    local_vreg, liveness}.
-//        1 param  2 param         3 param         4 param  5 param     6 param
+/* Item = {reg,    index,          hash_code,      vreg,    local_vreg, liveness}.
+          1 param  2 param         3 param         4 param  5 param     6 param */
 
 struct _jite_reg jite_gp_regs_map[] =
         {
@@ -14,6 +14,8 @@ struct _jite_reg jite_gp_regs_map[] =
         {X86_EDI, 4, 0x10, 0, 0, 0, 0},
         {X86_ESI, 5, 0x20, 0, 0, 0, 0}
         };
+
+#define LOCAL_REGISTERS_HASH (0x1 | 0x2 | 0x4)
 
 struct _jite_reg jite_xmm_regs_map[] =
         {
@@ -27,15 +29,15 @@ struct _jite_reg jite_xmm_regs_map[] =
         {XMM7, 7, 0x2000, 0, 0, 0, 0}
         };
 
-// In the following table all opcodes are aranged according to their own integer code, which means that
-// JIT_OP_TRUCT_SBYTE has a 0x1 integer code.
-// hash
-// machine_code1     machine_code2  machine_code3                 machine_code4
-// has_side_effect   is_nop         has_branching
-// dest_defined      dest_used      value1_defined                value1_used    value2_used
+/* In the following table all opcodes are aranged according to their own integer code, which means that
+   JIT_OP_TRUCT_SBYTE has a 0x1 integer code.
+   hash
+   machine_code1     machine_code2  machine_code3                 machine_code4
+   has_side_effect   is_nop         has_branching
+   dest_defined      dest_used      value1_defined                value1_used    value2_used */
 
 struct _jite_opcode jite_opcodes_map[] =
-	{// OPCODE                        OBJECT CODE PARAMS  	 OBJECT CODE PROPERTIES    VALUES PROPERTIES
+	{/* OPCODE                        OBJECT CODE PARAMS  	 OBJECT CODE PROPERTIES    VALUES PROPERTIES */
 	{JIT_OP_NOP,                      0, 0, 0, 0, 		  	0, 1, 0,           0, 0, 0, 0, 0},
 	{JIT_OP_TRUNC_SBYTE,              0, 0, 0, 0,   		0, 0, 0,           1, 0, 0, 1, 0},
 	{JIT_OP_TRUNC_UBYTE,              0, 0, 0, 0,   	 	0, 0, 0,           1, 0, 0, 1, 0},

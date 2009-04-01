@@ -676,8 +676,8 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_JUMP_TABLE:
                 {
                     inst = jite_restore_local_registers(inst, func, 0xffffffff);
-                    // We allocate EAX if the value is in frame, which we will free right after
-                    // generating code for the 'switch'.
+                    /* We allocate EAX if the value is in frame, which we will free right after
+                       generating code for the 'switch'. */
                     if(dest->vreg && dest->vreg->in_frame)
                     {
                         inst = jite_allocate_local_register(inst, func, dest->vreg, 0, 0, LOCAL_ALLOCATE_FOR_INPUT, 0, 0, 0);
@@ -724,17 +724,17 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 break;
             }
 
-            // if the current opcode is a branch then all local registers will be restored
-            // just before generation of a branch
+            /* if the current opcode is a branch then all local registers will be restored
+               just before generation of a branch */
 
-            jit_type_t sourceType = 0; // type of source value
+            jit_type_t sourceType = 0; /* type of source value */
 
-            // Build current input state
+            /* Build current input state */
             jit_nint param[3];
             int index = 0;
             unsigned int offset = 1;
             unsigned int state = 0;
-	    
+
 
             if(dest)
             {
@@ -769,9 +769,9 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             }
 	    
 
-	    // In case a value is in frame but no frame has been allocated
-	    // allocate one.
-            
+	    /* In case a value is in frame but no frame has been allocated
+	       allocate one. */
+
             if(value1)
             {
                 param[index] = value1->address;
@@ -3006,6 +3006,7 @@ void jite_allocate_frame(jit_function_t func, jite_frame_t frame)
 }
 
 
+/* TODO: Add support for 64-bit values, which occupy two registers */
 unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t func, jite_vreg_t vreg, jite_vreg_t vreg1, jite_vreg_t vreg2, unsigned char bUsage, unsigned int fRegCond, int typeKind, unsigned int *foundReg)
 {
     if((vreg && vreg->in_frame) || bUsage == LOCAL_ALLOCATE_FOR_TEMP)
@@ -3065,85 +3066,71 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
         {
             CASE_USE_WORD
             {
-                // Can use a general-purpose register
-                unsigned int count;
-                // First, try to find a free local register
+                /* Can use a general-purpose register */
+                int count;
+
+                /* First, try to find a free local register */
+		int found_count = -1;
+
                 for(count = 0; count < JITE_N_GP_REGISTERS; count++)
                 {
+		    unsigned int found_weight = jite_get_max_weight();
+
                     if(jite_gp_regs_map[count].vreg == 0 && jite_gp_regs_map[count].local_vreg == 0 &&
                         &jite_gp_regs_map[count] != reg1 && &jite_gp_regs_map[count] != reg2 &&
                         &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 &&
                         !(jite_gp_regs_map[count].hash_code & fRegCond))
                     {
-                        jite_gp_regs_map[count].local_vreg = vreg;
-                        if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
-			{
-			    x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
-                        }
-			if(vreg)
-                        {
-                            vreg->in_frame = 0;
-                            vreg->in_reg = 1;
-                            vreg->reg = &jite_gp_regs_map[count];
-                        }
-
-                        func->jite->scratch_regs = func->jite->scratch_regs | jite_gp_regs_map[count].hash_code;
-                        func->jite->regs_state = func->jite->regs_state | jite_gp_regs_map[count].hash_code;
-                        
-                        bRegFound = 1;
-                        if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
-                        
-                        break;
-                    }
+			    found_count = count;
+			    break;
+		    }
                 }
 
-                if(!bRegFound) // if we did not find any free register unused
+                count = found_count;
+                if(count != -1)
+		{
+        	    jite_gp_regs_map[count].local_vreg = vreg;
+            	    if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+		    {
+			x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
+            	    }
+		    if(vreg)
+            	    {
+                	vreg->in_frame = 0;
+                	vreg->in_reg = 1;
+                	vreg->reg = &jite_gp_regs_map[count];
+            	    }
+
+            	    func->jite->scratch_regs = func->jite->scratch_regs | jite_gp_regs_map[count].hash_code;
+            	    func->jite->regs_state = func->jite->regs_state | jite_gp_regs_map[count].hash_code;
+                        
+            	    bRegFound = 1;
+            	    if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
+		}
+
+
+                if(!bRegFound) /* if we did not find any free register at all try to find one already saved locally */
                 {
+		    int found_count = -1;
+
                     for(count = 0; count < JITE_N_GP_REGISTERS; count++)
                     {
-                        if(jite_gp_regs_map[count].vreg == 0 &&
-                             &jite_gp_regs_map[count] != reg1 && &jite_gp_regs_map[count] != reg2 &&
-                             &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 &&
-                             !(jite_gp_regs_map[count].hash_code & fRegCond))
-                        {
-                            // restore the old local register content to frame
-                            jite_vreg_t local_vreg = jite_gp_regs_map[count].local_vreg;
-                            if(local_vreg)
-                            {
-                                local_vreg->in_reg = 0;
-                                local_vreg->in_frame = 1;
-                            }
-                            
-                            // load new content into local register
-                            jite_gp_regs_map[count].local_vreg = vreg;
-                            if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
-			    {
-			        x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
-                            }
-			    if(vreg)
-                            {
-                                vreg->in_frame = 0;
-                                vreg->in_reg = 1;
-                                vreg->reg = &jite_gp_regs_map[count];
-                            }
-                            bRegFound = 1;
-                            if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
+		        unsigned int found_weight = jite_get_max_weight();
 
-                            break;
-                        }
-                    }
-                }
-
-                if(!bRegFound) // if we did not find any free register at all try to find one already saved locally
-                {
-                    for(count = 0; count < JITE_N_GP_REGISTERS; count++)
-                    {
                         if(&jite_gp_regs_map[count] != reg1 && &jite_gp_regs_map[count] != reg2 &&
                            &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 &&
                            jite_gp_regs_map[count].temp_frame &&
                            !(jite_gp_regs_map[count].hash_code & fRegCond))
                         {
-                            // load new content into local register
+				found_count = count;
+				break;
+                        }
+		    }
+
+		    count = found_count;
+                    if(count != -1)
+		    {
+                            /* load new content into local register */
                             if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
 			    {
 			        x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
@@ -3164,21 +3151,96 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                             }
                             bRegFound = 1;                            
                             if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
-
-                            break;
-                        }
-                    }
+            	    }
                 }
-                if(!bRegFound && (bUsage != LOCAL_ALLOCATE_FOR_ALIASING)) // if we did not find any free register at all try to find one not saved yet locally
+
+
+
+                if(!bRegFound) /* if we did not find any register used, try to find one not saved yet locally */
                 {
+		    int found_count = -1;
+		    unsigned int found_weight = jite_get_max_weight();
+
+		    int count;
+
                     for(count = 0; count < JITE_N_GP_REGISTERS; count++)
                     {
+                        if(jite_gp_regs_map[count].vreg == 0 &&
+                             &jite_gp_regs_map[count] != reg1 && &jite_gp_regs_map[count] != reg2 &&
+                             &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 &&
+                             !(jite_gp_regs_map[count].hash_code & fRegCond))
+                        {
+//			    jite_vreg_t vreg = jite_gp_regs_map[count].local_vreg;
+//			    int weight = jite_vreg_get_weight(vreg);
+//			    if(found_weight > weight)
+//			    {
+//			        found_weight = weight;
+				found_count = count;
+//			    }
+			    break;
+                        }
+		    }
+		    count = found_count;
+                    
+		    if(count != -1)
+		    { 
+                            /* restore the old local register content to frame */
+                            jite_vreg_t local_vreg = jite_gp_regs_map[count].local_vreg;
+                            if(local_vreg)
+                            {
+                                local_vreg->in_reg = 0;
+                                local_vreg->in_frame = 1;
+                            }
 
+                            /* load new content into local register */
+                            jite_gp_regs_map[count].local_vreg = vreg;
+
+
+
+                            if(vreg && vreg->frame && bUsage == LOCAL_ALLOCATE_FOR_INPUT)
+			    {
+			        x86_mov_reg_membase(inst, jite_gp_regs_map[count].reg, X86_EBP, vreg->frame->frame_offset, 4);
+                            }
+			    if(vreg)
+                            {
+                                vreg->in_frame = 0;
+                                vreg->in_reg = 1;
+                                vreg->reg = &jite_gp_regs_map[count];
+                            }
+                            bRegFound = 1;
+
+                            if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
+                    }
+                }
+
+
+                if(!bRegFound && (bUsage != LOCAL_ALLOCATE_FOR_ALIASING)) /* if we did not find any free register at all try to find one not saved yet locally */
+                {
+		    int found_count = -1;
+		    unsigned int found_weight = jite_get_max_weight();
+
+                    for(count = 0; count < JITE_N_GP_REGISTERS; count++)
+                    {
                         if(&jite_gp_regs_map[count] != reg1 && &jite_gp_regs_map[count] != reg2 &&
                            &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 && 
                            !(jite_gp_regs_map[count].hash_code & fRegCond))
                         {
-                            // load new content into local register
+//			    jite_vreg_t vreg = jite_gp_regs_map[count].vreg;
+//			    int weight = jite_vreg_get_weight(vreg);
+//			    if(found_weight > weight)
+//			    {
+//			        found_weight = weight;
+				found_count = count;
+//			    }
+                            break;
+                        }
+                    }
+
+                    count = found_count;
+		    
+		    if(count != -1)
+		    {
+                            /* load new content into local register */
                             jite_frame_t frame = jite_gp_regs_map[count].temp_frame;
                             if(frame == 0)
                             {
@@ -3191,9 +3253,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
 			        jite_occupy_frame(func, frame);
 			    }
                             jite_gp_regs_map[count].temp_frame = frame;
-
-
-                            
+            
                             jit_type_t type = jit_value_get_type(jite_gp_regs_map[count].vreg->value);
                             type = jit_type_normalize(type);
                             int typeKind = jit_type_get_kind(type);
@@ -3224,12 +3284,9 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                                 vreg->reg = &jite_gp_regs_map[count];
                             }
                             bRegFound = 1;
-                            if(foundReg) *foundReg = jite_gp_regs_map[count].reg;
-                            
-                            break;
-                        }
-                    }
-                }
+                            if(foundReg) *foundReg = jite_gp_regs_map[count].reg;                            
+            	    }
+		}
             }
             break;
             CASE_USE_FLOAT
@@ -3412,6 +3469,9 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
             break;
         }
     }
+
+//    printf("return from local register allocator\n");
+//    fflush(stdout);
 
     return inst;
 }
