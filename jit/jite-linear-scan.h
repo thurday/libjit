@@ -10,7 +10,7 @@
 #define JITE_ENABLED
 #endif
 
-#define JIT_MIN_USED 4
+#define JIT_MIN_USED 0
 
 // #define JITE_DEBUG_ENABLED 1
 
@@ -212,6 +212,8 @@ char jite_value_is_in_vreg(jit_value_t value);
 
 // Count a vreg weight
 void jite_value_set_weight(jit_value_t value, unsigned int weight);
+
+void jite_value_set_weight_using_insn(jit_value_t value, jit_insn_t insn);
 
 unsigned int jite_value_get_weight(jit_value_t value);
 

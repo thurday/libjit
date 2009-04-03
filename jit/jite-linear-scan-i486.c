@@ -460,7 +460,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
             jit_value_t dest = jit_insn_get_dest(insn);
             jit_value_t value1 = jit_insn_get_value1(insn);
             jit_value_t value2 = jit_insn_get_value2(insn);
-	    
+
 	    if(jit_insn_dest_is_value(insn))
 	    {
 	        inst = jite_restore_local_vreg(inst, func, dest->vreg);
@@ -635,13 +635,13 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_LDIV:
                 case JIT_OP_LDIV_UN:
                 {
-                    // restore EAX, EDX, ECX, EBX, EDI, ESI
+                    /* restore EAX, EDX, ECX, EBX, EDI, ESI */
                     inst = jite_restore_local_registers(inst, func, 0x3f);
                 }
                 break;
                 case JIT_OP_LMUL:
                 {
-                    // Restore EAX, EDX, ECX and EBX
+                    /* Restore EAX, EDX, ECX and EBX */
                     inst = jite_restore_local_registers(inst, func, 0x15);
                 }
                 break;
@@ -649,7 +649,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_LSHR_UN:
                 case JIT_OP_LSHL:
                 {
-                    // Restore ECX
+                    /* Restore ECX */
                     inst = jite_restore_local_registers(inst, func, 0x4);
                 }
                 break;
@@ -657,7 +657,7 @@ void gen_insn(jit_gencode_t gen, jit_function_t func,
                 case JIT_OP_ISHR_UN:
                 case JIT_OP_ISHL:
                 {
-                    // Restore ECX
+                    /* Restore ECX */
                     inst = jite_restore_local_registers(inst, func, 0x4);
                 }
                 break;
@@ -1113,13 +1113,13 @@ void jite_free_reg(jit_function_t func, jite_vreg_t vreg)
 
 unsigned char *jite_restore_local_vreg(unsigned char *inst, jit_function_t func, jite_vreg_t vreg)
 {
-    // Called if a value is used for input.
+    /* Called if a value is used for input. */
     if(vreg && vreg->in_reg && vreg->reg)
     {
-        // This value is used with the register globally.
+        /* This value is used with the register globally. */
         if(vreg->reg->vreg == vreg || (vreg->reg->vreg == 0 && vreg->reg->local_vreg != vreg))
         {
-            if(vreg->reg->temp_frame) // if the input value was saved to a temporary local frame restore it
+            if(vreg->reg->temp_frame) /* if the input value was saved to a temporary local frame restore it */
             {
                 jit_type_t type = jit_value_get_type(vreg->value);
                 type = jit_type_remove_tags(type);
@@ -1129,9 +1129,9 @@ unsigned char *jite_restore_local_vreg(unsigned char *inst, jit_function_t func,
                 vreg->reg->temp_frame = 0;
             }
 
-            // if this is the value which is used globally with the register
+            /* if this is the value which is used globally with the register */
 
-            if(vreg->reg->local_vreg) // if there is a value used locally with the register then restore it
+            if(vreg->reg->local_vreg) /* if there is a value used locally with the register then restore it */
             {
                 vreg->reg->local_vreg->in_reg = 0;
                 vreg->reg->local_vreg->in_frame = 1;
@@ -1145,10 +1145,10 @@ unsigned char *jite_restore_local_vreg(unsigned char *inst, jit_function_t func,
 
 unsigned char *jite_restore_local_frame(unsigned char *inst, jit_function_t func, jite_vreg_t vreg)
 {
-    // Called if a value is used for output.
+    /* Called if a value is used for output. */
     if(vreg && vreg->in_reg && vreg->reg)
     {
-        // if the value is used with the register locally then restore the value in frame
+        /* if the value is used with the register locally then restore the value in frame */
         if(vreg == vreg->reg->local_vreg)
         {
             if(vreg->frame)
@@ -1371,6 +1371,8 @@ void jite_preallocate_global_registers(jit_function_t func)
         jit_insn_iter_init(&iter, block);
         while((insn = jit_insn_iter_next(&iter)) != 0)
         {
+	    jite_compute_values_weight_using_insn(func);
+
             switch(insn->opcode)
             {
                 case JIT_OP_INCOMING_REG:
@@ -1389,10 +1391,10 @@ void jite_preallocate_global_registers(jit_function_t func)
                         {
                             int indexFound = -1;
                             
-                            // If the value is used less than 2 times (created once and used once)
-                            // then there is no need to allocate a register for it.
+                            /* If the value is used less than JIT_MIN_USED times (created once and used once)
+                               then there is no need to allocate a register for it. */
 
-			    if(!jit_value_is_addressable(value))
+			    if(!jit_value_is_addressable(value) && value->usage_count >= JIT_MIN_USED )
                             {
                                 if(!jite_vreg_is_in_register_liveness(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
                                 {
@@ -1549,7 +1551,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                     }
                     break;
 
-                    default: // Anything else is a structure or a union.
+                    default: /* Anything else is a structure or a union. */
                     {
                         if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
@@ -1586,9 +1588,9 @@ void jite_preallocate_global_registers(jit_function_t func)
                         {
                             int indexFound = -1;
                             
-                            // If the value is used less than 4 times
-                            // then there is no need to allocate a register for it.
-			    if(!jit_value_is_addressable(value) && value->usage_count > JIT_MIN_USED )
+                            /* If the value is used less than JIT_MIN_USED times
+                               then there is no need to allocate a register for it. */
+			    if(!jit_value_is_addressable(value) && value->usage_count >= JIT_MIN_USED )
                             {
                                 int index;
                                 for(index = 0; index < JITE_N_GP_REGISTERS; index++)
@@ -1629,7 +1631,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                         if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
-			    if(!jit_value_is_addressable(value) && value->usage_count > 3 )
+			    if(!jit_value_is_addressable(value) && value->usage_count >= JIT_MIN_USED )
                             {
                                 int index;
                                 for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
@@ -1674,11 +1676,11 @@ void jite_preallocate_global_registers(jit_function_t func)
                         }
                         else
                         {
-                            if(value->vreg && value->vreg->min_range != value->vreg->max_range && value->usage_count > 3 )
+                            if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                             {
                                 int indexFound = -1;
 
-				if(!jit_value_is_addressable(value))
+				if(!jit_value_is_addressable(value) && value->usage_count >= JIT_MIN_USED)
                                 {
                                     int index;
                                     for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
@@ -3237,7 +3239,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                     }
 
                     count = found_count;
-		    
+
 		    if(count != -1)
 		    {
                             /* load new content into local register */
@@ -3479,6 +3481,9 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
 
 unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned char *buf, jit_type_t signature, void *func_address, int call_type)
 {
+//    printf("jite_emit_trampoline_for_internal_abi\n");
+//    fflush(stdout);
+
     int index;
     int long_index = 0;
     int xmm_index = 0;
@@ -3717,7 +3722,7 @@ unsigned char *jite_emit_trampoline_for_internal_abi(jit_gencode_t gen, unsigned
                 n_frames += num_frames;
                 x86_alu_reg_imm(buf, X86_SUB, X86_ESP, num_frames * 4);
                 offset += (num_frames * 4);
-                buf = (unsigned char*)jite_memory_copy_with_reg(buf, X86_ESP, 0,
+                buf = (unsigned char*)jite_memory_copy_with_reg(buf, 0, gen, X86_ESP, 0,
                             X86_ESP, (stack_offset + offset),
                             (jit_type_get_size(type)), X86_EAX);
             }
@@ -3791,7 +3796,8 @@ unsigned char *jite_emit_function_call(jit_gencode_t gen, unsigned char *buf, ji
     else if(call_type == INDIRECT_TAIL_CALL)
     {
         buf = restore_callee_saved_registers(buf, func);
-        // After call to restore_callee_saved_registers, ESP register is in state as after return address was just pushed at function call
+        /* After call to restore_callee_saved_registers, ESP register is in state 
+	   as after return address was just pushed at function call */
         buf = masm_jump_indirect(buf, indirect_ptr);
     }
 
@@ -3956,8 +3962,8 @@ unsigned int jite_stack_depth_used(jit_function_t func)
             break;
             default:
             {
-                // structures are not always passed on top of stack,
-                // but it is the case for cdecl and gcc/GNU/Linux
+                /* structures are not always passed on top of stack,
+                   but it is the case for cdecl and gcc/GNU/Linux */
                 depth += jite_type_get_size(type);
             }
             break;
@@ -4130,11 +4136,11 @@ This is a possible optimisation
                     {
                         jit_value_t dest = jit_insn_get_dest(insn);
                         jit_nuint size = jit_type_get_size(jit_type_normalize(jit_value_get_type(dest)));
-                        // We consider the worst case that an external function is called
-                        // to perform the operation.
-                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]); // At least one free register is always needed to perform a copy operation between memory.
+                        /* We consider the worst case that an external function is called
+                           to perform the operation. */
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]); /* At least one free register is always needed to perform a copy operation between memory. */
                         jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
-                        if(size > (4 * sizeof(void *))) // In this case an external 'memcpy' will be called and eax, edx, ecx are scratched.
+                        if(size > (4 * sizeof(void *))) /* In this case an external 'memcpy' will be called and eax, edx, ecx are scratched. */
                         {
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
                         }
@@ -4144,11 +4150,11 @@ This is a possible optimisation
                     {
                         jit_value_t value1 = jit_insn_get_value1(insn);
                         jit_nuint size = jit_type_get_size(jit_value_get_type(value1));
-                        // We consider the worst case that an external function is called
-                        // to perform the operation.
-                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]); // At least one free register is always needed to perform a copy operation between memory.
+                        /* We consider the worst case that an external function is called
+                           to perform the operation. */
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]); /* At least one free register is always needed to perform a copy operation between memory. */
                         jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
-                        if(size > (4 * sizeof(void *))) // In this case an external 'memcpy' will be called and eax, edx, ecx are scratched.
+                        if(size > (4 * sizeof(void *))) /* In this case an external 'memcpy' will be called and eax, edx, ecx are scratched. */
                         {
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
                         }
@@ -4158,10 +4164,10 @@ This is a possible optimisation
                     {
                         jit_value_t dest = jit_insn_get_dest(insn);
                         jit_nuint size = jit_type_get_size(jit_value_get_type(dest));
-                        // We consider the worst case that an external function is called
-                        // to perform the operation.
-                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]); // At least one free register is always needed to perform a copy operation between memory.
-                        if(size > (4 * sizeof(void *))) // In this case an external 'memcpy' will be called and eax, edx, ecx are scratched.
+                        /* We consider the worst case that an external function is called
+                           to perform the operation. */
+                        jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]); /* At least one free register is always needed to perform a copy operation between memory. */
+                        if(size > (4 * sizeof(void *))) /* In this case an external 'memcpy' will be called and eax, edx, ecx are scratched. */
                         {
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
@@ -4189,18 +4195,18 @@ This is a possible optimisation
 		    case JIT_OP_MEMMOVE:
 		    case JIT_OP_MEMSET:
                     {
-                        jit_value_t value2 = jit_insn_get_value2(insn);
-                        if(!jit_value_is_constant(value2) ||
-                            (jit_value_is_constant(value2) && jit_value_get_nint_constant(value2) > (4 * sizeof(void *))))
-                        {
+//                        jit_value_t value2 = jit_insn_get_value2(insn);
+//                        if(!jit_value_is_constant(value2) ||
+//                            (jit_value_is_constant(value2) && jit_value_get_nint_constant(value2) > (4 * sizeof(void *))))
+//                        {
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_EAX]);
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_EDX]);
                             jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
-                        }
-                        else if(jit_value_is_constant(value2) && jit_value_get_nint_constant(value2) != 0)
-                        {
-                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
-                        }
+//                        }
+//                        else if(jit_value_is_constant(value2) && jit_value_get_nint_constant(value2) != 0)
+//                        {
+//                            jite_add_item_to_linked_list(func, insn, holes[X86_REG_ECX]);
+//                        }
                     }
                     break;
 

@@ -114,9 +114,7 @@ JIT_OP_LOAD_RELATIVE_STRUCT:
     [=local, imm, imm] -> {
         int size = jit_type_get_size(jit_value_get_type(dest));
         find_one_gp_reg_cond2(inst, X86_ESI, X86_EDI);
-        if(save_gpreg1) x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 16);
-        inst = jite_memory_copy_from_mem(inst, X86_EBP, $1, (void *)($2 + $3), size, gpreg1);
-        if(save_gpreg1) x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 16);
+        inst = jite_memory_copy_from_mem(inst, func, gen, X86_EBP, $1, (void *)($2 + $3), size, gpreg1);
     }
     [=local, reg, imm] -> {
         inst = masm_mov_membase_membase(inst, X86_EBP, $1, $2, $3, jit_type_get_size(jit_value_get_type(dest)));
@@ -344,7 +342,6 @@ JIT_OP_STORE_ELEMENT_BYTE:
         }
         else
         {
-            // was find_two_gp_regs_cond2_cond2_for_gpreg1(inst, $2, $3, X86_ESI, X86_EDI);
             find_two_gp_regs_cond1_cond2_for_gpreg1(inst, $2, X86_ESI, X86_EDI);
             x86_mov_reg_reg(inst, gpreg1, $3, 4);
             x86_mov_reg_imm(inst, gpreg2, $1);
@@ -714,99 +711,98 @@ JIT_OP_STORE_ELEMENT_NFLOAT:
         x86_lea_memindex(inst, gpreg1, $1, 0, $2, 3);
         sse2_movsd_membase_xmreg(inst, gpreg1, 0, $3);
     }
+
     
 JIT_OP_MEMCPY, JIT_OP_MEMMOVE:
-    [reg, reg, imm] -> {
+    [=reg, reg, imm] -> {
         inst = masm_mov_membase_membase(inst, $1, 0, $2, 0, $3);
     }
-    [reg, reg, reg] -> {
+    [=reg, reg, reg] -> {
         x86_push_reg(inst, $3);
 	x86_push_reg(inst, $2);
 	x86_push_reg(inst, $1);
         x86_call_code(inst, jit_memcpy);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
-    [reg, imm, reg] -> {
+    [=reg, imm, reg] -> {
         x86_push_reg(inst, $3);
 	x86_push_imm(inst, $2);
 	x86_push_reg(inst, $1);
         x86_call_code(inst, jit_memcpy);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
-    [imm, reg, reg] -> {
+    [=imm, reg, reg] -> {
         x86_push_reg(inst, $3);
 	x86_push_reg(inst, $2);
 	x86_push_imm(inst, $1);
         x86_call_code(inst, jit_memcpy);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
-    [imm, imm, reg] -> {
+    [=imm, imm, reg] -> {
         x86_push_reg(inst, $3);
 	x86_push_imm(inst, $2);
 	x86_push_imm(inst, $1);
         x86_call_code(inst, jit_memcpy);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
-    [reg, imm, imm] -> {
-        x86_push_imm(inst, $3);
-	x86_push_imm(inst, $2);
-	x86_push_reg(inst, $1);
-        x86_call_code(inst, jit_memcpy);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    [=reg, imm, imm] -> {
+        find_one_gp_reg_cond1(inst, $1);
+	x86_mov_reg_imm(inst, gpreg1, $2);
+        inst = masm_mov_membase_membase(inst, $1, 0, gpreg1, 0, $3);
     }
-    [imm, imm, imm] -> {
-        x86_push_imm(inst, $3);
-	x86_push_imm(inst, $2);
-	x86_push_imm(inst, $1);
-        x86_call_code(inst, jit_memcpy);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    [=imm, imm, imm] -> {
+        find_two_gp_regs(inst);
+	x86_mov_reg_imm(inst, gpreg1, $1);
+	x86_mov_reg_imm(inst, gpreg2, $2);
+        inst = masm_mov_membase_membase(inst, gpreg1, 0, gpreg2, 0, $3);
     }
 
+
 JIT_OP_MEMSET:
-    [reg, reg, imm] -> {
+    [=reg, reg, imm] -> {
         inst = masm_memset_reg_reg_imm(inst, $1, $2, $3);
     }
-    [reg, reg, reg] -> {
+    [=reg, reg, reg] -> {
         x86_push_reg(inst, $3);
 	x86_push_reg(inst, $2);
 	x86_push_reg(inst, $1);
         x86_call_code(inst, jit_memset);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
-    [reg, imm, reg] -> {
+    [=reg, imm, reg] -> {
         x86_push_reg(inst, $3);
 	x86_push_imm(inst, $2);
 	x86_push_reg(inst, $1);
         x86_call_code(inst, jit_memset);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
-    [imm, reg, reg] -> {
+    [=imm, reg, reg] -> {
         x86_push_reg(inst, $3);
 	x86_push_reg(inst, $2);
 	x86_push_imm(inst, $1);
         x86_call_code(inst, jit_memset);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
-    [imm, imm, reg] -> {
+    [=imm, imm, reg] -> {
         x86_push_reg(inst, $3);
 	x86_push_imm(inst, $2);
 	x86_push_imm(inst, $1);
         x86_call_code(inst, jit_memset);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
-    [reg, imm, imm] -> {
-        x86_push_imm(inst, $3);
-	x86_push_imm(inst, $2);
-	x86_push_reg(inst, $1);
-        x86_call_code(inst, jit_memset);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    [=reg, imm, imm] -> {
+        inst = masm_memset_reg_imm_imm(inst, $1, $2, $3);
     }
-    [imm, imm, imm] -> {
-        x86_push_imm(inst, $3);
-	x86_push_imm(inst, $2);
-	x86_push_imm(inst, $1);
-        x86_call_code(inst, jit_memset);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+    [=imm, imm, imm] -> {
+        inst = masm_memset_imm_imm_imm(inst, $1, $2, $3);
     }
 
 
@@ -1210,6 +1206,7 @@ JIT_OP_COPY_FLOAT32, JIT_OP_COPY_FLOAT64, JIT_OP_COPY_NFLOAT:
       if($1 != $2)
       {
             inst = masm_mov_membase_membase(inst, X86_EBP, $1, X86_EBP, $2, jit_type_get_size(jit_value_get_type(dest)));
+
 //            inst = jite_allocate_local_register(inst, func, insn->dest->vreg, insn->value1->vreg, 0, LOCAL_ALLOCATE_FOR_OUTPUT, LOCAL_REGISTERS_HASH, 0, &foundReg);
 //            inst = jite_allocate_local_register(inst, func, insn->dest->vreg, insn->value1->vreg, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, 0, &foundReg);
 
@@ -1257,12 +1254,9 @@ JIT_OP_COPY_STRUCT, JIT_OP_COPY_LONG:
 	   value */
     }
     [=local, local] -> {
-//      unsigned int foundReg;
       if($1 != $2)
       {
-
             inst = masm_mov_membase_membase(inst, X86_EBP, $1, X86_EBP, $2, jite_type_get_size(jit_value_get_type(dest)));
-
       }
     }
     [=local, imm] -> {
