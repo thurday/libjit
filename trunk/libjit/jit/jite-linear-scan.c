@@ -852,6 +852,39 @@ unsigned int jite_value_get_weight(jit_value_t value)
 }
 
 
+void jite_value_set_weight_using_insn(jit_value_t value, jit_insn_t insn)
+{
+    return;
+//    jite_value_set_weight(value, value->vreg->max_range->insn_num);
+
+//    return;
+    unsigned int num_use = 0;
+    jite_linked_list_t list = value->vreg->liveness;
+    while(list && list->item)
+    {
+        jit_insn_t min_insn = ((jit_insn_t)(list->item));
+	list = list->next;
+	jit_insn_t max_insn = ((jit_insn_t)(list->item));
+	list = list->next;
+	if(min_insn->insn_num <= insn->insn_num && max_insn->insn_num >= insn->insn_num)
+	{
+	    num_use += max_insn->insn_num - insn->insn_num;
+	}
+	else if(insn->insn_num >= min_insn->insn_num)
+	{
+	    num_use += max_insn->insn_num - min_insn->insn_num;
+	}
+    }
+    
+    // if(num_use != 0) 
+    jite_value_set_weight(value, (value->vreg->max_range->insn_num - insn->insn_num) - num_use);
+//    else
+//    {
+//        jite_value_set_weight(value, -1);
+//    }
+}
+
+
 jite_vreg_t jite_regs_higher_criteria(jite_vreg_t vreg1, jite_vreg_t vreg2)
 {
     if(vreg1 && vreg2)
@@ -910,49 +943,12 @@ void jite_compute_values_weight(jit_function_t func)
     	    {
         	jite_vreg_t vreg = func->jite->vregs_table[index];
 
-//		if(jit_value_is_temporary(vreg->value) || jit_value_is_local(vreg->value))
-//		{
   		if(vreg->max_range != vreg->min_range)
 		{
-//		    printf("\n");
-//		    jit_dump_value(stdout, func, vreg->value, 0);
-//		    printf("   ");
-//		    printf("vreg->value->usage_count = %d", vreg->value->usage_count);
-//		    printf("\n");
-//		    
 		    jite_value_set_weight(vreg->value, func->builder->num_insns - vreg->value->usage_count);
-//                    jite_value_set_weight
-
-//		    jite_value_set_weight(vreg->value, (vreg->max_range->insn_num - vreg->min_range->insn_num));// / vreg->value->usage_count);
-
-//		    jite_value_set_weight(vreg->value, (vreg->max_range->insn_num * jite_value_get_weight(vreg->value)) / vreg->value->usage_count);
-
-//                    if(jit_value_is_local(vreg->value) || jit_value_is_temporary(vreg->value))
-//		    {
-//		        jite_value_set_weight(vreg->value, 1);
-//		    }
-//		    else
-//		    {
-//		        jit_value_set_addressable(vreg->value);
-//		        jite_value_set_weight(vreg->value, 1);
-//                        if(vreg->max_range->insn_num - vreg->min_range->insn_num > 1)
-//			{
-//		            jite_value_set_weight(vreg->value, func->builder->num_insns - vreg->value->usage_count);
-//			}
-//			else
-//			{
-		            jite_value_set_weight(vreg->value, 1);
-//			}
-//		    }
+		    jite_value_set_weight(vreg->value, 1);
   		}
 		else jite_value_set_weight(vreg->value, -1);
-
-//		}
-//		else
-//		{
-  //		    if(vreg->max_range) jite_value_set_weight(vreg->value, vreg->max_range->insn_num * jite_value_get_weight(vreg->value));
-  //		    else jite_value_set_weight(vreg->value, -1);
-//		}
     	    }
 	}
 	break;
@@ -962,20 +958,55 @@ void jite_compute_values_weight(jit_function_t func)
     	    for(index = 0; index < vregs_num; index++)
     	    {
         	jite_vreg_t vreg = func->jite->vregs_table[index];
-//		if(vreg->value->usage_count != 1)
-//		{
-  		    if(vreg->max_range) jite_value_set_weight(vreg->value, vreg->max_range->insn_num);// * jite_value_get_weight(vreg->value));
-  		    else jite_value_set_weight(vreg->value, -1);
-//		}
-//		else
-//		{
-//		    jite_value_set_weight(vreg->value, 1);
-//		}
+  		if(vreg->max_range) jite_value_set_weight(vreg->value, vreg->max_range->insn_num);
+		else jite_value_set_weight(vreg->value, -1);
     	    }
 	}
 	break;
     }
 }
+
+void jite_compute_values_weight_using_insn(jit_function_t func, jit_insn_t insn)
+{
+    return;
+    int type = jite_function_get_register_allocator_euristic(func);
+    unsigned int vregs_num = func->jite->vregs_num;
+    unsigned int index = 0;
+
+    switch(type)
+    {
+
+	case NUMBER_OF_USE_EURISTIC:
+	{
+    	    for(index = 0; index < vregs_num; index++)
+    	    {
+        	jite_vreg_t vreg = func->jite->vregs_table[index];
+
+  		if(vreg->max_range != vreg->min_range)
+		{
+		    jite_value_set_weight(vreg->value, func->builder->num_insns - vreg->value->usage_count);
+
+		    jite_value_set_weight(vreg->value, 1);
+  		}
+		else jite_value_set_weight(vreg->value, -1);
+    	    }
+	}
+	break;
+
+	case LINEAR_SCAN_EURISTIC:
+	{
+    	    for(index = 0; index < vregs_num; index++)
+    	    {
+        	jite_vreg_t vreg = func->jite->vregs_table[index];
+  		if(vreg->max_range) jite_value_set_weight_using_insn(vreg->value, insn);
+		else jite_value_set_weight(vreg->value, -1);
+    	    }
+	}
+	break;
+    }
+}
+
+
 
 
 void jite_compute_liveness(jit_function_t func)
@@ -2723,6 +2754,7 @@ void jite_debug_print_vregs_ranges(jit_function_t func)
             }
             if(jit_value_is_addressable(vreg->value)) printf("is_addressable; ");
             if(jit_value_is_temporary(vreg->value)) printf("is_temporary; ");
+
             printf("\n");
             fflush(stdout);
         }
@@ -2952,9 +2984,9 @@ int jite_compile(jit_function_t func, void **entry_point)
     
     jit_mutex_unlock(&(func->context->cache_lock));
 
-// #ifdef JITE_DUMP_LIVENESS_RANGES
-//    jite_debug_print_vregs_ranges(func);
-// #endif
+#ifdef JITE_DUMP_LIVENESS_RANGES
+    jite_debug_print_vregs_ranges(func);
+#endif
 
     /* Free the builder structure, which no longer require */
     _jit_function_free_builder(func);

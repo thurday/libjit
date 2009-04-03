@@ -374,7 +374,7 @@ JIT_OP_RETURN_REG:
 JIT_OP_TAIL_CALL:
     [] -> {
         unsigned int size = jite_stack_depth_used(func);
-        // Add two extra dwords for the return address after call and EBP in stack.
+        /* Add two extra dwords for the return address after call and EBP in stack. */
         size += 8;
         x86_lea_membase(inst, X86_ESP, X86_EBP, size);
     }
@@ -522,9 +522,10 @@ JIT_OP_PUSH_STRUCT:
         unsigned int size = jite_type_get_size(sourceType);
         func->jite->relative_sp_offset -= size;
         find_one_gp_reg(inst);
-        inst = jite_memory_copy_with_reg(inst, X86_ESP, func->jite->relative_sp_offset, X86_EBP, insn->value1->vreg->frame->frame_offset, size, gpreg1);
+        inst = jite_memory_copy_with_reg(inst, func, X86_ESP, func->jite->relative_sp_offset, X86_EBP, insn->value1->vreg->frame->frame_offset, size, gpreg1);
         gen->stack_changed = 1;
     }
+
 
 JIT_OP_OUTGOING_REG:
     [reg, imm] -> {

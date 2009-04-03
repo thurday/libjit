@@ -131,16 +131,7 @@ static unsigned char* __find_one_gp_reg_cond1(jit_function_t func, local_regs_al
 
 static unsigned char* __find_one_gp_reg_cond1_vreg(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, jite_vreg_t cond1)
 {
-//    if(vreg && vreg->in_reg && vreg->reg)
-//    {
-//        unsigned int cond = jite_gp_regs_map[gp_reg_map[cond1]].hash_code;
-//        inst = jite_allocate_local_register(inst, func, 0, 0, 0, LOCAL_ALLOCATE_FOR_TEMP, cond, JIT_TYPE_PTR, &gpreg1);
-//    }
-//    else if(vreg && vreg->in_frame && vreg->frame)
-//    {
-        //unsigned int frame = vreg->frame->frame_offset;
     inst = jite_allocate_local_register(inst, func, 0, cond1, 0, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
-//    }
     return inst;
 }
 
@@ -489,7 +480,7 @@ static unsigned char *output_branch
  */
 
 unsigned char *jite_memory_copy_with_reg
-    (unsigned char *inst, int dreg, jit_nint doffset,
+    (unsigned char *inst, jit_function_t func, jit_gencode_t gen, int dreg, jit_nint doffset,
      int sreg, jit_nint soffset, jit_nuint size, int temp_reg)
 {
     if(size <= 4 * sizeof(void *))
@@ -573,7 +564,11 @@ unsigned char *jite_memory_copy_with_reg
             x86_push_reg(inst, temp_reg);
         }
         x86_call_code(inst, jit_memcpy);
+
+//	gen->stack_changed = 1;
+//	if(func) func->jite->relative_sp_offset -= (3 * sizeof(void *));
         x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
+
     }
     return inst;
 }
@@ -581,7 +576,7 @@ unsigned char *jite_memory_copy_with_reg
 // Registers EAX, EDX and ECX are scratched if an external function is called
 // to perform this operation.
 unsigned char *jite_memory_copy
-    (unsigned char *inst, int dreg, jit_nint doffset,
+    (unsigned char *inst, jit_function_t func, jit_gencode_t gen, int dreg, jit_nint doffset,
      int sreg, jit_nint soffset, jit_nuint size, int temp_reg)
 {
     if(size <= 4 * sizeof(void *))
@@ -652,7 +647,11 @@ unsigned char *jite_memory_copy
             x86_push_reg(inst, temp_reg);
         }
         x86_call_code(inst, jit_memcpy);
+
         x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
+
+//	gen->stack_changed = 1;
+//	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
     return inst;
 }
@@ -722,7 +721,7 @@ unsigned char *jite_memory_copy_to_mem
 // Registers EAX, EDX and ECX are scratched if an external function is called
 // to perform this operation.
 unsigned char *jite_memory_copy_from_mem
-    (unsigned char *inst, int dreg, jit_nint doffset,
+    (unsigned char *inst, jit_function_t func, jit_gencode_t gen, int dreg, jit_nint doffset,
      void *soffset, jit_nuint size, int temp_reg)
 {
     if(size <= 4 * sizeof(void *))
@@ -786,39 +785,43 @@ unsigned char *jite_memory_copy_from_mem
             x86_push_reg(inst, temp_reg);
         }
         x86_call_code(inst, jit_memcpy);
-        x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
+//        x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
     }
     return inst;
 }
 
-#define masm_memset_reg_reg_imm(inst, reg1, reg2, size) _masm_memset_reg_reg_imm(func, lrs, inst, reg1, reg2, size);
+#define masm_memset_reg_reg_imm(inst, reg1, reg2, size) _masm_memset_reg_reg_imm(func, gen, lrs, inst, reg1, reg2, size);
+#define masm_memset_reg_imm_imm(inst, reg1, reg2, size) _masm_memset_reg_imm_imm(func, gen, lrs, inst, reg1, reg2, size);
+#define masm_memset_imm_imm_imm(inst, reg1, reg2, size) _masm_memset_imm_imm_imm(func, gen, lrs, inst, reg1, reg2, size);
 
-unsigned char * _masm_memset_reg_reg_imm(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, int reg1, int reg2, jit_nuint size)
+unsigned char * _masm_memset_reg_reg_imm(jit_function_t func, jit_gencode_t gen, local_regs_allocator_t lrs, unsigned char *inst, int reg1, int reg2, jit_nuint size)
 {
     if(size <= (4 * sizeof(void *)))
     {
         while(size >= sizeof(void *))
         {
-            x86_mov_membase_reg(inst, reg1, size, reg2, sizeof(void *));
             size -= sizeof(void *);
+            x86_mov_membase_reg(inst, reg1, size, reg2, sizeof(void *));
         }
 
         while(size >= 4)
         {
+            size -= 4;	
             x86_mov_membase_reg(inst, reg1, size, reg2, 4);
-            size -= 4;
         }
 
         while(size >= 2)
         {
-            x86_mov_membase_reg(inst, reg1, size, reg2, 2);
             size -= 2;
+            x86_mov_membase_reg(inst, reg1, size, reg2, 2);
         }
 
         while(size >= 1)
         {
-            x86_mov_membase_reg(inst, reg1, size, reg2, 1);
             size--;
+            x86_mov_membase_reg(inst, reg1, size, reg2, 1);
         }
     }
     else
@@ -827,14 +830,100 @@ unsigned char * _masm_memset_reg_reg_imm(jit_function_t func, local_regs_allocat
 	x86_push_reg(inst, reg2);
 	x86_push_reg(inst, reg1);
 	x86_call_code(inst, jit_memset);
-	x86_alu_reg_imm(inst, X86_SUB, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
     return inst;
 }
 
-#define masm_mov_membase_membase(inst, dreg, doffset, sreg, soffset, size) _masm_mov_membase_membase(func, lrs, inst, dreg, doffset, sreg, soffset, size);
 
-unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, int dreg, jit_nint doffset, int sreg, jit_nint soffset, jit_nuint size)
+unsigned char * _masm_memset_reg_imm_imm(jit_function_t func, jit_gencode_t gen, local_regs_allocator_t lrs, unsigned char *inst, int reg1, unsigned int value, jit_nuint size)
+{
+    if(size <= (4 * sizeof(void *)))
+    {
+        while(size >= sizeof(void *))
+        {
+            size -= sizeof(void *);
+            x86_mov_membase_imm(inst, reg1, size, value, sizeof(void *));
+        }
+
+        while(size >= 4)
+        {
+            size -= 4;	
+            x86_mov_membase_imm(inst, reg1, size, value, 4);
+        }
+
+        while(size >= 2)
+        {
+            size -= 2;	
+            x86_mov_membase_imm(inst, reg1, size, value, 2);
+        }
+
+        while(size >= 1)
+        {
+            size--;	
+            x86_mov_membase_imm(inst, reg1, size, value, 1);
+        }
+    }
+    else
+    {
+	x86_push_imm(inst, size);
+	x86_push_imm(inst, value);
+	x86_push_reg(inst, reg1);
+	x86_call_code(inst, jit_memset);
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
+    }
+    return inst;
+}
+
+
+unsigned char * _masm_memset_imm_imm_imm(jit_function_t func, jit_gencode_t gen, local_regs_allocator_t lrs, unsigned char *inst, unsigned int address, unsigned int value, jit_nuint size)
+{
+    if(size <= (4 * sizeof(void *)))
+    {
+        while(size >= sizeof(void *))
+        {
+            size -= sizeof(void *);
+            x86_mov_mem_imm(inst, address + size, value, sizeof(void *));
+
+        }
+
+        while(size >= 4)
+        {
+            size -= 4;
+            x86_mov_mem_imm(inst, address + size, value, 4);
+        }
+
+        while(size >= 2)
+        {
+            size -= 2;
+            x86_mov_mem_imm(inst, address + size, value, 2);
+        }
+
+        while(size >= 1)
+        {
+            size--;
+            x86_mov_mem_imm(inst, address + size, value, 1);
+        }
+    }
+    else
+    {
+	x86_push_imm(inst, size);
+	x86_push_imm(inst, value);
+	x86_push_imm(inst, address);
+	x86_call_code(inst, jit_memset);
+	gen->stack_changed = 1;
+	func->jite->relative_sp_offset -= (3 * sizeof(void *));
+    }
+    return inst;
+}
+
+
+
+#define masm_mov_membase_membase(inst, dreg, doffset, sreg, soffset, size) _masm_mov_membase_membase(func, gen, lrs, inst, dreg, doffset, sreg, soffset, size);
+
+unsigned char * _masm_mov_membase_membase(jit_function_t func, jit_gencode_t gen, local_regs_allocator_t lrs, unsigned char *inst, int dreg, jit_nint doffset, int sreg, jit_nint soffset, jit_nuint size)
 {
     if(size > 0 && (dreg != sreg || doffset != soffset))
     {
@@ -844,7 +933,7 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
         }
         else
         {
-            find_one_gp_reg_cond6(inst, sreg, dreg, X86_EBX, X86_EDI, X86_ESI, X86_EBP); // Hopefully one register can be found
+            find_one_gp_reg_cond6(inst, sreg, dreg, X86_EBX, X86_EDI, X86_ESI, X86_EBP); /* Hopefully one register can be found */
         }
 
 
@@ -921,10 +1010,10 @@ unsigned char * _masm_mov_membase_membase(jit_function_t func, local_regs_alloca
         }
         else
         {
-            inst = jite_memory_copy(inst, dreg, doffset, sreg, soffset, size, (int)(gpreg1));
+            inst = jite_memory_copy(inst, func, gen, dreg, doffset, sreg, soffset, size, (int)(gpreg1));
         }
     }
-    
+
     return inst;
 }
 
@@ -2607,7 +2696,7 @@ unsigned char *__masm_irem_un_reg_reg_imm(unsigned char *inst, jit_function_t fu
             }
             else
             {
-                    find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
+                find_one_gp_reg_cond2(inst, X86_EAX, X86_EDX);
                 if(gpreg1 != sreg) x86_mov_reg_reg(inst, gpreg1, sreg, 4);
                 x86_alu_reg_imm(inst, X86_CMP, sreg, imm);
                 x86_mov_reg_imm(inst, X86_EAX, 0);
