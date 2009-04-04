@@ -60,7 +60,7 @@ struct int128 shift_right(struct int128 value, jit_uint offset)
 
 struct int128 add(struct int128 value1, struct int128 value2)
 {
-    // two's complement arithmetics
+    /* two's complement arithmetics */
     struct int128 result = value1;
     int add_one = 0;
     if((value1.low + value2.low) <= value1.low) add_one = 1;
@@ -173,7 +173,7 @@ struct int128 abs_int128(struct int128 value1)
 
 int cmp(struct int128 value1, struct int128 value2)
 {
-    // is boolean in fact. TODO
+    /* is boolean in fact. TODO */
     if(value1.high > value2.high) { return 1; }
     if(value1.high < value2.high) { return -1; }
     if(value1.low > value2.low) { return 1; }
@@ -297,8 +297,8 @@ struct int128 create_int128_from_lli(jit_long value)
     return temp;
 }
 
-// Count params according to divcnst-pldi94.pdf by Torbjorn Granlund and Peter L. Montgomery
-// "Division By Invariant Integers using Multiplication"
+/* Count params according to divcnst-pldi94.pdf by Torbjorn Granlund and Peter L. Montgomery
+  "Division By Invariant Integers using Multiplication" */
 void count_64bit_reciprocal_params(jit_ulong d, 
     jit_uint *sh_pre,
     jit_uint *sh_post, struct int128 *m, int *l)

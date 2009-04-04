@@ -142,7 +142,9 @@ static unsigned char* __find_one_gp_reg_cond1_vreg(jit_function_t func, local_re
 
 #define find_one_gp_reg_cond2_vreg_cond2(inst, cond1, cond2, cond3, cond4) inst = __find_one_gp_reg_cond2_vreg_cond2(func, lrs, inst, cond1, cond2, cond3, cond4);
 
+/*
 #define find_one_gp_reg_cond3_vreg(inst, cond1, cond2, cond3) inst = __find_one_gp_reg_cond3_vreg(func, lrs, inst, cond1, cond2, cond3);
+*/
 
 static unsigned char* __find_one_gp_reg_cond2(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, unsigned char cond1, unsigned char cond2)
 {
@@ -178,12 +180,13 @@ static unsigned char* __find_one_gp_reg_cond3(jit_function_t func, local_regs_al
     return inst;
 }
 
-
+/*
 static unsigned char* __find_one_gp_reg_cond3_vreg(jit_function_t func, local_regs_allocator_t lrs, unsigned char *inst, jite_vreg_t cond1, jite_vreg_t cond2, jite_vreg_t cond3)
 {
     inst = jite_allocate_local_register(inst, func, cond1, cond2, cond3, LOCAL_ALLOCATE_FOR_TEMP, 0, JIT_TYPE_PTR, &gpreg1);
     return inst;
 }
+*/
 
 #define find_one_gp_reg_cond4(inst, cond1, cond2, cond3, cond4) inst = __find_one_gp_reg_cond4(func, lrs, inst, cond1, cond2, cond3, cond4);
 

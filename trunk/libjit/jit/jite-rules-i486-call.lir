@@ -522,7 +522,7 @@ JIT_OP_PUSH_STRUCT:
         unsigned int size = jite_type_get_size(sourceType);
         func->jite->relative_sp_offset -= size;
         find_one_gp_reg(inst);
-        inst = jite_memory_copy_with_reg(inst, func, X86_ESP, func->jite->relative_sp_offset, X86_EBP, insn->value1->vreg->frame->frame_offset, size, gpreg1);
+        inst = jite_memory_copy_with_reg(inst, func, gen, X86_ESP, func->jite->relative_sp_offset, X86_EBP, insn->value1->vreg->frame->frame_offset, size, gpreg1);
         gen->stack_changed = 1;
     }
 
