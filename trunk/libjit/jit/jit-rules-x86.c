@@ -32,11 +32,32 @@
 #include <stdio.h>
 
 /*
+ * Pseudo register numbers for the x86 registers.  These are not the
+ * same as the CPU instruction register numbers.  The order of these
+ * values must match the order in "JIT_REG_INFO".
+ */
+#define	X86_REG_EAX			0
+#define	X86_REG_ECX			1
+#define	X86_REG_EDX			2
+#define	X86_REG_EBX			3
+#define	X86_REG_ESI			4
+#define	X86_REG_EDI			5
+#define	X86_REG_EBP			6
+#define	X86_REG_ESP			7
+#define	X86_REG_ST0			8
+#define	X86_REG_ST1			9
+#define	X86_REG_ST2			10
+#define	X86_REG_ST3			11
+#define	X86_REG_ST4			12
+#define	X86_REG_ST5			13
+#define	X86_REG_ST6			14
+#define	X86_REG_ST7			15
+
+/*
  * Determine if a pseudo register number is word-based or float-based.
  */
 #define	IS_WORD_REG(reg)	((reg) < X86_REG_ST0)
 #define	IS_FLOAT_REG(reg)	((reg) >= X86_REG_ST0)
-#define	IS_XMM_REG(reg)	        ((reg) >= X86_REG_XMM0)
 
 /*
  * Round a size up to a multiple of the stack word size.
@@ -48,7 +69,6 @@ static _jit_regclass_t *x86_reg;
 static _jit_regclass_t *x86_breg;
 static _jit_regclass_t *x86_freg;
 static _jit_regclass_t *x86_lreg;
-static _jit_regclass_t *x86_sreg;
 
 void _jit_init_backend(void)
 {
@@ -73,13 +93,6 @@ void _jit_init_backend(void)
 	x86_lreg = _jit_regclass_create(
 		"lreg", JIT_REG_LONG, 2,
 		X86_REG_EAX, X86_REG_ECX);
-
-	x86_sreg = _jit_regclass_create(
-		"xmmreg", JIT_REG_X86_FLOAT, 8,
-		X86_REG_XMM0, X86_REG_XMM1,
-		X86_REG_XMM2, X86_REG_XMM3,
-		X86_REG_XMM4, X86_REG_XMM5,
-		X86_REG_XMM6, X86_REG_XMM7);
 }
 
 void _jit_gen_get_elf_info(jit_elf_info_t *info)
@@ -111,24 +124,15 @@ int _jit_create_call_return_insns
 	unsigned int size;
 	jit_type_t return_type;
 	int ptr_return;
-	
-	/* This is a temporary work around to be able to call
-	   functions with internal abi. If an abi function
-  	   is called from a cdecl function with -O0 then
-	   we push all params to stack first as in cdecl. */
-	jit_type_t callee_signature = jit_function_get_signature(func);
-	jit_abi_t  callee_abi = jit_type_get_abi(callee_signature);
-	jit_abi_t  called_abi = jit_type_get_abi(signature);
 
 	/* Calculate the number of bytes that we need to pop */
 	return_type = jit_type_normalize(jit_type_get_return(signature));
 	ptr_return = jit_type_return_via_pointer(return_type);
 #if JIT_APPLY_X86_FASTCALL == 1
-	if(jit_type_get_abi(signature) == jit_abi_stdcall  ||
-	   jit_type_get_abi(signature) == jit_abi_fastcall ||
- 	  (jit_type_get_abi(signature) == jit_abi_internal && jit_function_extended_compiler_is_enabled(func)))
+	if(jit_type_get_abi(signature) == jit_abi_stdcall ||
+	   jit_type_get_abi(signature) == jit_abi_fastcall)
 	{
-		/* STDCALL, FASTCALL, and INTERNAL functions pop their own arguments */
+		/* STDCALL and FASTCALL functions pop their own arguments */
 		pop_bytes = 0;
 	}
 	else
@@ -188,9 +192,7 @@ int _jit_create_call_return_insns
 			return_type == jit_type_float64 ||
 			return_type == jit_type_nfloat)
 	{
-		int return_reg = X86_REG_ST0;
-		if(callee_abi == jit_abi_internal && called_abi == jit_abi_internal) return_reg = X86_REG_XMM0;
-		if(!jit_insn_return_reg(func, return_value, return_reg))
+		if(!jit_insn_return_reg(func, return_value, X86_REG_ST0))
 		{
 			return 0;
 		}
@@ -209,30 +211,30 @@ int _jit_create_call_return_insns
 
 int _jit_opcode_is_supported(jit_function_t func, int opcode)
 {
-	if(jit_function_extended_compiler_is_enabled(func))
+        if(jit_function_extended_compiler_is_enabled(func))
 	{
-		switch(opcode)
-		{
-		#define JIT_INCLUDE_SUPPORTED
-		#include "jite-rules-i486-arith.inc"
-		#include "jite-rules-i486-branch.inc"
-		#include "jite-rules-i486-call.inc"
-		#include "jite-rules-i486-math.inc"
-		#include "jite-rules-i486-conv.inc"
-		#include "jite-rules-i486-except.inc"
-		#include "jite-rules-i486-obj.inc"
-		#include "jite-rules-i486-logic.inc"
-		#undef JIT_INCLUDE_SUPPORTED
-		}
+	    switch(opcode)
+	    {
+	    #define JIT_INCLUDE_SUPPORTED
+	    #include "jite-rules-i486-arith.inc"
+	    #include "jite-rules-i486-branch.inc"
+	    #include "jite-rules-i486-call.inc"
+	    #include "jite-rules-i486-math.inc"
+	    #include "jite-rules-i486-conv.inc"
+	    #include "jite-rules-i486-except.inc"
+	    #include "jite-rules-i486-obj.inc"
+	    #include "jite-rules-i486-logic.inc"
+	    #undef JIT_INCLUDE_SUPPORTED
+	    }
 	}
 	else
 	{
-		switch(opcode)
-		{
-		#define JIT_INCLUDE_SUPPORTED
-		#include "jit-rules-x86.inc"
-		#undef JIT_INCLUDE_SUPPORTED
-		}
+	    switch(opcode)
+	    {
+	    #define JIT_INCLUDE_SUPPORTED
+	    #include "jit-rules-x86.inc"
+	    #undef JIT_INCLUDE_SUPPORTED
+	    }
 	}
 	return 0;
 }
@@ -694,7 +696,7 @@ _jit_gen_exch_top(jit_gencode_t gen, int reg)
 }
 
 void
- _jit_gen_move_top(jit_gencode_t gen, int reg)
+_jit_gen_move_top(jit_gencode_t gen, int reg)
 {
 	if(IS_FLOAT_REG(reg))
 	{
@@ -822,13 +824,14 @@ _jit_gen_load_value(jit_gencode_t gen, int reg, int other_reg, jit_value_t value
 				float32_value = jit_value_get_float32_constant(value);
 				if(IS_WORD_REG(reg))
 				{
-				    union
-				    {
-				            jit_float32 float32_value;
-					    jit_int int_value;
-				    } un;
-				    un.float32_value = float32_value;
-				    x86_mov_reg_imm(inst, _jit_reg_info[reg].cpu_reg, un.int_value);
+					union
+					{
+						jit_float32 float32_value;
+						jit_int int_value;
+					} un;
+
+					un.float32_value = float32_value;
+					x86_mov_reg_imm(inst, _jit_reg_info[reg].cpu_reg, un.int_value);
 				}
 				else
 				{
@@ -856,12 +859,12 @@ _jit_gen_load_value(jit_gencode_t gen, int reg, int other_reg, jit_value_t value
 				float64_value = jit_value_get_float64_constant(value);
 				if(IS_WORD_REG(reg))
 				{
-				        union
+					union
 					{
-					        jit_float64 float64_value;
+						jit_float64 float64_value;
 						jit_int int_value[2];
 					} un;
-					
+
 					un.float64_value = float64_value;
 					x86_mov_reg_imm(inst, _jit_reg_info[reg].cpu_reg,
 							un.int_value[0]);
@@ -894,12 +897,12 @@ _jit_gen_load_value(jit_gencode_t gen, int reg, int other_reg, jit_value_t value
 				nfloat_value = jit_value_get_nfloat_constant(value);
 				if(IS_WORD_REG(reg) && sizeof(jit_nfloat) == sizeof(jit_float64))
 				{
-				        union
+					union
 					{
-					        jit_nfloat nfloat_value;
+						jit_nfloat nfloat_value;
 						jit_int int_value[2];
 					} un;
-					
+
 					un.nfloat_value = nfloat_value;
 					x86_mov_reg_imm(inst, _jit_reg_info[reg].cpu_reg,
 							un.int_value[0]);
@@ -941,7 +944,7 @@ _jit_gen_load_value(jit_gencode_t gen, int reg, int other_reg, jit_value_t value
 			src_reg = value->reg;
 			if(other_reg >= 0)
 			{
-				other_src_reg = _jit_reg_info[src_reg].other_reg;
+				other_src_reg = jit_reg_other_reg(src_reg);
 			}
 			else
 			{
@@ -1536,6 +1539,20 @@ int _jit_gen_is_global_candidate(jit_type_t type)
 		case JIT_TYPE_SIGNATURE:	return 1;
 	}
 	return 0;
+}
+
+int
+_jit_reg_get_pair(jit_type_t type, int reg)
+{
+	type = jit_type_normalize(type);
+	if(type)
+	{
+		if(type->kind == JIT_TYPE_LONG || type->kind == JIT_TYPE_ULONG)
+		{
+			return jit_reg_other_reg(reg);
+		}
+	}
+	return -1;
 }
 
 #endif /* JIT_BACKEND_X86 */

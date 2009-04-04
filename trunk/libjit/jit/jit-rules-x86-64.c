@@ -823,6 +823,7 @@ x86_64_call_code(unsigned char *inst, jit_nint func)
 {
 	jit_nint offset;
 
+	x86_64_mov_reg_imm_size(inst, X86_64_RAX, 8, 4);
 	offset = func - ((jit_nint)inst + 5);
 	if(offset >= jit_min_int && offset <= jit_max_int)
 	{
@@ -899,6 +900,7 @@ _spill_reg(unsigned char **inst_ptr, jit_type_t type,
 	{
 		switch(type->kind)
 		{
+#if 0
 			case JIT_TYPE_SBYTE:
 			case JIT_TYPE_UBYTE:
 			{
@@ -914,7 +916,12 @@ _spill_reg(unsigned char **inst_ptr, jit_type_t type,
 											_jit_reg_info[reg].cpu_reg, 2);
 			}
 			break;
-
+#else
+			case JIT_TYPE_SBYTE:
+			case JIT_TYPE_UBYTE:
+			case JIT_TYPE_SHORT:
+			case JIT_TYPE_USHORT:
+#endif
 			case JIT_TYPE_INT:
 			case JIT_TYPE_UINT:
 			case JIT_TYPE_FLOAT32:

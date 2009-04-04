@@ -1371,7 +1371,7 @@ void jite_preallocate_global_registers(jit_function_t func)
         jit_insn_iter_init(&iter, block);
         while((insn = jit_insn_iter_next(&iter)) != 0)
         {
-	    jite_compute_values_weight_using_insn(func);
+	    jite_compute_values_weight_using_insn(func, insn);
 
             switch(insn->opcode)
             {
@@ -3076,7 +3076,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
 
                 for(count = 0; count < JITE_N_GP_REGISTERS; count++)
                 {
-		    unsigned int found_weight = jite_get_max_weight();
+//		    unsigned int found_weight = jite_get_max_weight();
 
                     if(jite_gp_regs_map[count].vreg == 0 && jite_gp_regs_map[count].local_vreg == 0 &&
                         &jite_gp_regs_map[count] != reg1 && &jite_gp_regs_map[count] != reg2 &&
@@ -3117,7 +3117,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
 
                     for(count = 0; count < JITE_N_GP_REGISTERS; count++)
                     {
-		        unsigned int found_weight = jite_get_max_weight();
+//		        unsigned int found_weight = jite_get_max_weight();
 
                         if(&jite_gp_regs_map[count] != reg1 && &jite_gp_regs_map[count] != reg2 &&
                            &jite_gp_regs_map[count] != reg3 && &jite_gp_regs_map[count] != reg4 &&
@@ -3161,7 +3161,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                 if(!bRegFound) /* if we did not find any register used, try to find one not saved yet locally */
                 {
 		    int found_count = -1;
-		    unsigned int found_weight = jite_get_max_weight();
+//		    unsigned int found_weight = jite_get_max_weight();
 
 		    int count;
 
@@ -3219,7 +3219,7 @@ unsigned char *jite_allocate_local_register(unsigned char *inst, jit_function_t 
                 if(!bRegFound && (bUsage != LOCAL_ALLOCATE_FOR_ALIASING)) /* if we did not find any free register at all try to find one not saved yet locally */
                 {
 		    int found_count = -1;
-		    unsigned int found_weight = jite_get_max_weight();
+//		    unsigned int found_weight = jite_get_max_weight();
 
                     for(count = 0; count < JITE_N_GP_REGISTERS; count++)
                     {

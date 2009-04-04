@@ -73,14 +73,13 @@ struct _jite_reg
     jite_vreg_t local_vreg;
     jite_frame_t temp_frame;
     jite_linked_list_t liveness;
-//  jite_linked_list_t sigsetjmps;
 };
 
 struct _jite_critical_point
 {
     char is_branch_target : 1;
-    jite_list_t vregs_die;   // Vregs which die at this critical point.
-    jite_list_t vregs_born;  // Vregs which are born at this critical point.
+    jite_list_t vregs_die;   /* Vregs which die at this critical point. */
+    jite_list_t vregs_born;  /* Vregs which are born at this critical point. */
     unsigned int regs_state_1;
     unsigned int regs_state_2;
 };
@@ -195,22 +194,18 @@ jit_type_t jite_type_get_param(jit_type_t signature, int index);
 
 jit_value_t jite_value_get_param(jit_function_t func, int index);
 
-// char jite_is_virtual_reference(jit_value_t value);
-
-// jit_value_t jite_find_work_value(jit_insn_t insn, jit_value_t value);
-
 void jite_init(jit_function_t func);
 
 void jite_reinit(jit_function_t func);
 
 
-// Create a new virtual register value, the vreg is born.
+/* Create a new virtual register value, the vreg is born. */
 jite_vreg_t jite_create_vreg(jit_value_t value);
 
-// Returns 1 if the value is already in a vreg.
+/* Returns 1 if the value is already in a vreg. */
 char jite_value_is_in_vreg(jit_value_t value);
 
-// Count a vreg weight
+/* Count a vreg weight */
 void jite_value_set_weight(jit_value_t value, unsigned int weight);
 
 void jite_value_set_weight_using_insn(jit_value_t value, jit_insn_t insn);
@@ -225,8 +220,11 @@ unsigned int jite_get_max_weight();
 
 void jite_add_branch_target(jit_function_t func, jit_insn_t insn, jit_label_t label);
 
-// Compute values liveness period
+/* Compute values liveness period */
+
 void jite_compute_liveness(jit_function_t func);
+
+void jite_compute_values_weight_using_insn(jit_function_t func, jit_insn_t insn);
 
 void jite_create_vregs_table(jit_function_t func);
 
@@ -238,19 +236,19 @@ void jite_compute_full_liveness(jit_function_t func);
 
 void jite_compute_values_weight(jit_function_t func);
 
-// Create a new jite instance.
+/* Create a new jite instance. */
 jite_instance_t jite_create_instance(jit_function_t func);
 
-// Destroy a jite instance.
+/* Destroy a jite instance. */
 void jite_destroy_instance(jit_function_t func);
 
-// Create a new critical point.
-// Critical points are points where values are born and die.
+/* Create a new critical point. */
+/* Critical points are points where values are born and die. */
 void jite_create_critical_point(jit_function_t func, jit_insn_t insn);
 
-// Given two critical points that are united by a branch, we need to update the vregs liveness.
-// We assume that the order of the jump is not important.
-// It is as we have linked data about two time frames.
+/* Given two critical points that are united by a branch, we need to update the vregs liveness. */
+/* We assume that the order of the jump is not important. */
+/* It is as we have linked data about two time frames. */
 unsigned char jite_update_liveness_for_branch(jit_function_t func, jit_insn_t insn_from, jit_insn_t insn_to);
 
 void jite_add_fixup_branch(jit_function_t func, jit_insn_t insn_from, jit_insn_t insn_to);
@@ -261,7 +259,7 @@ void jite_dump_registers(unsigned int buf, unsigned int ecx, unsigned int edx, u
 unsigned char* jite_generate_dump(unsigned char *inst, jit_gencode_t gen);
 #endif
 
-// void jite_allocate_registers_and_locals(jit_function_t func);
+/* void jite_allocate_registers_and_locals(jit_function_t func); */
 
 void jite_add_vreg_to_complex_list(jit_function_t func, jite_vreg_t vreg, jite_list_t list);
 
@@ -279,13 +277,12 @@ jite_linked_list_t jite_remove_item_from_linked_list(jit_function_t func, void *
 
 jite_vreg_t jite_vregs_higher_criteria(jit_function_t func, jite_vreg_t vreg1, jite_vreg_t vreg2);
 
-// Make a CPU or a memory frame which is used by a certain virtual register to be available.
+/* Make a CPU or a memory frame which is used by a certain virtual register to be available. */
 
 void jite_free_registers(jit_function_t func, jite_list_t list);
 
 void jite_free_reg(jit_function_t func, jite_vreg_t vreg);
 
-//void jite_free_frames(jit_function_t func, jite_list_t list);
 void jite_free_frames(jit_function_t func, jit_insn_t insn);
 
 void jite_free_vreg_frame(jit_function_t func, jite_vreg_t vreg);

@@ -565,9 +565,9 @@ unsigned char *jite_memory_copy_with_reg
         }
         x86_call_code(inst, jit_memcpy);
 
-//	gen->stack_changed = 1;
-//	if(func) func->jite->relative_sp_offset -= (3 * sizeof(void *));
-        x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
+	gen->stack_changed = 1;
+	if(func) func->jite->relative_sp_offset -= (3 * sizeof(void *));
+//        x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
 
     }
     return inst;
