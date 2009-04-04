@@ -649,15 +649,12 @@ unsigned char *jite_memory_copy
         x86_call_code(inst, jit_memcpy);
 
         x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
-
-//	gen->stack_changed = 1;
-//	func->jite->relative_sp_offset -= (3 * sizeof(void *));
     }
     return inst;
 }
 
-// Registers EAX, EDX and ECX are scratched if an external function is called
-// to perform this operation.
+/* Registers EAX, EDX and ECX are scratched if an external function is called
+   to perform this operation. */
 unsigned char *jite_memory_copy_to_mem
     (unsigned char *inst, void *doffset,
      int sreg, jit_nint soffset, jit_nuint size, int temp_reg)
