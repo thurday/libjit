@@ -1151,7 +1151,7 @@ JIT_OP_COPY_LOAD_SBYTE, JIT_OP_COPY_LOAD_UBYTE, JIT_OP_COPY_STORE_BYTE, JIT_OP_C
 	   value */
     }
     [=local, local] -> {
-      unsigned int foundReg;
+//      unsigned int foundReg;
       if($1 != $2)
       {
 //        int hash = have_free_gpregs();
@@ -1202,7 +1202,7 @@ JIT_OP_COPY_FLOAT32, JIT_OP_COPY_FLOAT64, JIT_OP_COPY_NFLOAT:
 	   value */
     }
     [=local, local] -> {
-      unsigned int foundReg;
+//      unsigned int foundReg;
       if($1 != $2)
       {
             inst = masm_mov_membase_membase(inst, X86_EBP, $1, X86_EBP, $2, jit_type_get_size(jit_value_get_type(dest)));

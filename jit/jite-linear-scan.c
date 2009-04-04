@@ -855,9 +855,8 @@ unsigned int jite_value_get_weight(jit_value_t value)
 void jite_value_set_weight_using_insn(jit_value_t value, jit_insn_t insn)
 {
     return;
-//    jite_value_set_weight(value, value->vreg->max_range->insn_num);
 
-//    return;
+
     unsigned int num_use = 0;
     jite_linked_list_t list = value->vreg->liveness;
     while(list && list->item)
@@ -876,12 +875,7 @@ void jite_value_set_weight_using_insn(jit_value_t value, jit_insn_t insn)
 	}
     }
     
-    // if(num_use != 0) 
     jite_value_set_weight(value, (value->vreg->max_range->insn_num - insn->insn_num) - num_use);
-//    else
-//    {
-//        jite_value_set_weight(value, -1);
-//    }
 }
 
 
