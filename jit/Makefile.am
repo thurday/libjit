@@ -94,7 +94,8 @@ EXTRA_DIST = \
 		jite-rules-i486-call.lir \
 		jite-rules-i486-math.lir \
 		jite-rules-i486-branch.lir \
-		jite-rules-i486-except.lir
+		jite-rules-i486-except.lir \
+		jite-rules-i486-logic.lir
 
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include -I. -I$(srcdir)
 
