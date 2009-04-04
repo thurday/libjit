@@ -1,3 +1,31 @@
+0.1.2 + / 0.1.2 1/2 version release (code name: "libJIT-ON-TESTOSTERONE") 
+
+	* main branch + libJIT-linear-scan-register-allocator
+	* Add optimization levels for IA-32 from 0 to 4 (jit_set_optimization_level)
+	* Add a new specialized jit_abi_internal
+	* Add brand new optimized object code generator (level 1, 2, 3, 4 of optimization)
+	* SIMD SSE/SSE3/SSE3 for floating point value operations (level 1, 2, 3, 4 of optimization)
+	* Data-flow and control-flow based analysis (level 1, 2, 3, 4 of optimization)
+	* Fast liveness analysis (level 2 of optimization)
+	* Dead-code elimination (level 4 of optimization)
+	* Full liveness analysis (level 3, 4 of optimization)
+	* Linear scan register allocator algorithm (level 2)
+	* Bin packing register allocator algorithm (level 3, 4)
+	* Tested on DotGNU Portable.NET Common Language Runtime / a Microsoft Common Intermediate Language Virtual Machine
+
+(a special research release version by Kirill Kononenko <Kirill.Kononenko@gmail.com> <http://code.google.com/p/libjit-linear-scan-register-allocator> <jit-cil.net>)
+
+
+0.1.2 (10 Decemeber 2008)
+
+	* Switch from GPL to LGPL 2.1 license.
+	* Implement x86-64 backend (Klaus Treichel).
+	* Fix interpreter backend (Klaus Treichel, Aleksey Demakov).
+	* Introduce jit-unwind interface (Aleksey Demakov, Klaus Treichel).
+	* Code cache pages can now grow if needed (Aleksey Demakov).
+	* Various fixes (Klaus Treichel, Aleksey Demakov, Juan Jesus Garcia
+	  de Soria, Dalibor Topic, Arto Bendiken)
+
 0.1.0 (3 March 2007)
 
 	General improvements:
@@ -18,7 +46,7 @@
 	* Fix problems that take place after compilation is restarted on cache
 	  page overflow (Aleksey Demakov).
 
-	Register allocation/instruction selction improvements (Aleksey Demakov):
+	Register allocation/instruction selection improvements (Aleksey Demakov):
 
 	* Completely rewrite register allocator. The new allocator works with
 	  three-value intermediate instructions rather than with individual

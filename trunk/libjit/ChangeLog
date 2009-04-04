@@ -1,5 +1,9 @@
-2009-04-04  Kirill Kononenko  <Kirill.Kononenko@gmail.com> <http://code.google.com/p/libjit-linear-scan-register-allocator> <jit-cil.net>
-        * Merge the two branches for a libJIT 0.1.2 + / libJIT 0.1.2 1/2 version release (code name: "libJIT-ON-TESTOSTERONE")
+2009-04-04  Kirill Kononenko  <Kirill.Kononenko@gmail.com>
+        <http://code.google.com/p/libjit-linear-scan-register-allocator>
+	<http://jit-cil.net>
+
+        * Merge the two branches for a libJIT 0.1.2 + / libJIT 0.1.2 1/2 version release
+	  (code name: "libJIT-ON-TESTOSTERONE")
 	* main branch + libJIT-linear-scan-register-allocator
 	* Add optimization levels for IA-32 from 0 to 4 (jit_set_optimization_level)
 	* Add a new specialized jit_abi_internal
@@ -11,7 +15,8 @@
 	* Full liveness analysis (level 3, 4 of optimization)
 	* Linear scan register allocator algorithm (level 2)
 	* Bin packing register allocator algorithm (level 3, 4)
-	* Tested on DotGNU Portable.NET Common Language Runtime / a Microsoft Common Intermediate Language Virtual Machine
+	* Tested on DotGNU Portable.NET Common Language Runtime
+	  / a Microsoft Common Intermediate Language Virtual Machine
 
 2009-03-28  Aleksey Demakov  <ademakov@gmail.com>
 
