@@ -8,7 +8,7 @@
 	* Aggressive optimization of division by integer constants as
 	  by Torbjorn Granlund and Peter L. Montgomery in "Division By Invariant Integers using Multiplication"
 	* Add primitive code generators for MMX/Streaming SIMD Extensions/SSE/SSE2/SSE3 and others
-	* SIMD SSE/SSE3/SSE3 for floating point value operations (level 1, 2, 3, 4 of optimization)
+	* Use SIMD SSE/SSE3/SSE3 for floating point values and operations (level 1, 2, 3, 4 of optimization)
 	* Data-flow and control-flow based analysis (level 1, 2, 3, 4 of optimization)
 	* Fast liveness analysis (level 2 of optimization)
 	* Dead-code elimination (level 4 of optimization)
