@@ -53,11 +53,13 @@
 #define	X86_REG_ST6			14
 #define	X86_REG_ST7			15
 
+
 /*
  * Determine if a pseudo register number is word-based or float-based.
  */
 #define	IS_WORD_REG(reg)	((reg) < X86_REG_ST0)
 #define	IS_FLOAT_REG(reg)	((reg) >= X86_REG_ST0)
+#define	IS_XMM_REG(reg)	        ((reg) >= X86_REG_XMM0)
 
 /*
  * Round a size up to a multiple of the stack word size.
@@ -69,6 +71,8 @@ static _jit_regclass_t *x86_reg;
 static _jit_regclass_t *x86_breg;
 static _jit_regclass_t *x86_freg;
 static _jit_regclass_t *x86_lreg;
+static _jit_regclass_t *x86_sreg;
+
 
 void _jit_init_backend(void)
 {
@@ -93,6 +97,13 @@ void _jit_init_backend(void)
 	x86_lreg = _jit_regclass_create(
 		"lreg", JIT_REG_LONG, 2,
 		X86_REG_EAX, X86_REG_ECX);
+		
+	x86_sreg = _jit_regclass_create(
+	        "xmmreg", JIT_REG_X86_FLOAT, 8,
+		X86_REG_XMM0, X86_REG_XMM1,
+		X86_REG_XMM2, X86_REG_XMM3,
+		X86_REG_XMM4, X86_REG_XMM5,
+		X86_REG_XMM6, X86_REG_XMM7);
 }
 
 void _jit_gen_get_elf_info(jit_elf_info_t *info)
@@ -124,15 +135,24 @@ int _jit_create_call_return_insns
 	unsigned int size;
 	jit_type_t return_type;
 	int ptr_return;
+	
+	/* This is a temporary work around to be able to call
+	   functions with internal abi. If an abi function
+	   is called from a cdecl function with -O0 then
+	   we push all params to stack first as in cdecl */
+	jit_type_t callee_signature = jit_function_get_signature(func);
+	jit_abi_t  callee_abi = jit_type_get_abi(callee_signature);
+	jit_abi_t  called_abi = jit_type_get_abi(signature);
 
 	/* Calculate the number of bytes that we need to pop */
 	return_type = jit_type_normalize(jit_type_get_return(signature));
 	ptr_return = jit_type_return_via_pointer(return_type);
 #if JIT_APPLY_X86_FASTCALL == 1
-	if(jit_type_get_abi(signature) == jit_abi_stdcall ||
-	   jit_type_get_abi(signature) == jit_abi_fastcall)
+	if(jit_type_get_abi(signature) == jit_abi_stdcall  ||
+	   jit_type_get_abi(signature) == jit_abi_fastcall ||
+	   (jit_type_get_abi(signature) == jit_abi_internal && jit_function_extended_compiler_is_enabled(func)))
 	{
-		/* STDCALL and FASTCALL functions pop their own arguments */
+		/* STDCALL and FASTCALL, and INTERNAL functions pop their own arguments */
 		pop_bytes = 0;
 	}
 	else
@@ -192,7 +212,9 @@ int _jit_create_call_return_insns
 			return_type == jit_type_float64 ||
 			return_type == jit_type_nfloat)
 	{
-		if(!jit_insn_return_reg(func, return_value, X86_REG_ST0))
+	        int return_reg = X86_REG_ST0;
+		if(callee_abi == jit_abi_internal && called_abi == jit_abi_internal) return_reg = X86_REG_XMM0;
+		if(!jit_insn_return_reg(func, return_value, return_reg))
 		{
 			return 0;
 		}
