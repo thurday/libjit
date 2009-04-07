@@ -7823,12 +7823,13 @@ int jit_insn_call_finally(jit_function_t func, jit_label_t *finally_label)
 	{
 		return 0;
 	}
-#if defined(JITE_ENABLED)
 	insn->opcode = (short)JIT_OP_CALL_FINALLY;
 	insn->flags = JIT_INSN_DEST_IS_LABEL;
 	insn->dest = (jit_value_t)(*finally_label);
+#if defined(JITE_ENABLED)
 	return jit_insn_new_block(func);
 #else
+
         return 1;
 #endif
 }
