@@ -1979,6 +1979,8 @@ void jite_compute_full_liveness(jit_function_t func)
 
   if(jit_function_get_optimization_level(func) >= 4)
   {
+//    printf("compute dead-code\n");
+    
     memcpy(model_next, deadcode, modelSize * nodeLength * 4 * sizeof(jit_uint));
 
     do
@@ -2653,7 +2655,7 @@ void jite_compute_full_liveness(jit_function_t func)
 	if(vreg && vreg->value && jit_value_is_addressable(vreg->value))
 	{
             jite_linked_list_t list = vreg->liveness;
-  	    while(list && list->item)
+  	    while(list && list->item)// && list->next)
 	    {
 	        jit_insn_t min_insn = ((jit_insn_t)(list->item));
 	        list = list->next;
@@ -2677,7 +2679,7 @@ void jite_compute_full_liveness(jit_function_t func)
     for(count = 0; count < vregsNum; count++)
     {
         jite_linked_list_t list = vregs_table[count]->liveness;
-        while(list && list->item)
+        while(list && list->item) //&& list->next)
 	{
 	    jit_insn_t min_insn = ((jit_insn_t)(list->item));
 	    list = list->next;
