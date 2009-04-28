@@ -1,14 +1,14 @@
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
 #ifndef    _JIT_LINEAR_SCAN_H
 #define    _JIT_LINEAR_SCAN_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "jit-memory.h"
 #include "jit-rules.h"
+#include <config.h>
+#include "jit-rules.h"
 
-#if !defined(JIT_BACKEND_INTERP) && (defined(__i386) || defined(__i386__) || defined(_M_IX86))
-#define JITE_ENABLED
-#endif
+// #if defined(JITE_ENABLED)
 
 #define JIT_MIN_USED 0
 
@@ -356,8 +356,8 @@ unsigned char jite_insn_value2_used(jit_insn_t insn);
 #define INDIRECT_TAIL_CALL       4
 
 #endif
-#else
+// #else
 
-int jite_regIndex2reg(jit_function_t func, int regIndex, jit_type_t type) { return 1; }
+// int jite_regIndex2reg(jit_function_t func, int regIndex, jit_type_t type) { return 1; }
 
-#endif
+// #endif

@@ -55,7 +55,7 @@ jit_function_t jit_function_create(jit_context_t context, jit_type_t signature)
     jit_cache_t cache;
 #endif
 
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     jit_abi_t abi;
 #endif
 
@@ -136,7 +136,7 @@ jit_function_t jit_function_create(jit_context_t context, jit_type_t signature)
     }
     context->last_function = func;
 
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     func->cdecl_trampoline = 0;
     abi = jit_type_get_abi(signature);
     if(abi != jit_abi_cdecl)
@@ -203,7 +203,7 @@ int _jit_function_ensure_builder(jit_function_t func)
     jit_memory_pool_init(&(func->builder->value_pool),     struct _jit_value);
     jit_memory_pool_init(&(func->builder->insn_pool),      struct _jit_insn);
     jit_memory_pool_init(&(func->builder->meta_pool),      struct _jit_meta);
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     jit_memory_pool_init(&(func->builder->jite_vreg_pool), struct _jite_vreg);
     jit_memory_pool_init(&(func->builder->jite_critical_point_pool), struct _jite_critical_point);
     jit_memory_pool_init(&(func->builder->jite_list_pool),  struct _jite_list);
@@ -242,7 +242,7 @@ void _jit_function_free_builder(jit_function_t func)
     {
         _jit_block_free(func);
 
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
         jit_memory_pool_free(&(func->builder->jite_vreg_pool), 0);
         jit_memory_pool_free(&(func->builder->jite_critical_point_pool), 0);
         jit_memory_pool_free(&(func->builder->jite_list_pool), 0);
@@ -735,7 +735,7 @@ cleanup_on_restart(jit_gencode_t gen, jit_function_t func)
 static int
 compile(jit_function_t func, void **entry_point)
 {
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     if(jit_function_extended_compiler_is_enabled(func))
     {
         return jite_compile(func, entry_point);
@@ -1693,7 +1693,7 @@ jit_abi_t jit_function_get_abi(jit_function_t func)
 
 int jit_function_extended_compiler_is_enabled(jit_function_t func)
 {
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     jit_type_t signature = jit_function_get_signature(func);
     jit_abi_t abi = jit_type_get_abi(signature);
     unsigned int level = jit_function_get_optimization_level(func);

@@ -1,9 +1,16 @@
-#if defined(JITE_ENABLED) //defined(__i386) || defined(__i386__) || defined(_M_IX86)
+#ifndef    _JITE_LINEAR_SCAN_I486
+#define    _JITE_LINEAR_SCAN_I486
+
+#include <config.h>
+
 #include "jit-internal.h"
 #include "jite-linear-scan-i486.h"
 #include "jit-setjmp.h"
 #include "jite-gen-i486-masm.h"
 #include <math.h>
+#include "jit-rules.h"
+
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
 
 void jite_init(jit_function_t func)
 {
@@ -4604,5 +4611,6 @@ unsigned char* jite_generate_dump(unsigned char *inst, jit_gencode_t gen)
     return inst;
 }
 
+#endif
 #endif
 #endif

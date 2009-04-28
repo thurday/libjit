@@ -233,6 +233,7 @@ int _jit_create_call_return_insns
 
 int _jit_opcode_is_supported(jit_function_t func, int opcode)
 {
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
         if(jit_function_extended_compiler_is_enabled(func))
 	{
 	    switch(opcode)
@@ -250,6 +251,7 @@ int _jit_opcode_is_supported(jit_function_t func, int opcode)
 	    }
 	}
 	else
+#endif
 	{
 	    switch(opcode)
 	    {

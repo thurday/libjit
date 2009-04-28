@@ -5366,7 +5366,7 @@ static int create_call_setup_insns
 			return 1;
 		}
 	}
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
 	else
 	{
 		if((flags & JIT_CALL_TAIL) != 0 && func == callee)
@@ -5885,7 +5885,7 @@ jit_value_t jit_insn_call_indirect
 
     insn->value1 = value;
 
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     insn->signature = jit_type_copy(signature);
 #endif
 
@@ -6033,7 +6033,7 @@ jit_value_t jit_insn_call_indirect_vtable
     }
     insn->value1 = value;
 
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     insn->signature = jit_type_copy(signature);
 #endif
 
@@ -6178,7 +6178,7 @@ jit_value_t jit_insn_call_native
     insn->value2 = (jit_value_t)jit_type_copy(signature);
 #endif
 
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     insn->signature = jit_type_copy(signature);
 #endif
 
@@ -7836,7 +7836,7 @@ int jit_insn_call_finally(jit_function_t func, jit_label_t *finally_label)
 	insn->opcode = (short)JIT_OP_CALL_FINALLY;
 	insn->flags = JIT_INSN_DEST_IS_LABEL;
 	insn->dest = (jit_value_t)(*finally_label);
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
 	return jit_insn_new_block(func);
 #else
 

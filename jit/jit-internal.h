@@ -24,10 +24,7 @@
 #define    _JIT_INTERNAL_H
 
 #include <jit/jit.h>
-
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
-#include "jite-linear-scan.h"
-#endif
+#include <config.h>
 
 #ifdef    __cplusplus
 extern    "C" {
@@ -180,6 +177,11 @@ struct _jit_meta
     jit_function_t        pool_owner;
 };
 
+
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
+#include "jite-linear-scan.h"
+#endif
+
 /*
  * Internal structure of a block.
  */
@@ -198,7 +200,7 @@ struct _jit_block
     void                *address;
     void                *fixup_list;
     void                *fixup_absolute_list;
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     int                 analysed;
     jite_linked_list_t  list;
 #endif
@@ -236,8 +238,7 @@ struct _jit_value
     jit_nuint            usage_count;
     int                index;
     jit_value_t            address_of;
-//#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     jite_vreg_t            vreg;
 #endif
 };
@@ -267,7 +268,7 @@ struct _jit_insn
     jit_value_t            dest;
     jit_value_t            value1;
     jit_value_t            value2;
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     unsigned int            insn_num;
     jite_critical_point_t        cpoint;
     jit_type_t             signature;
@@ -357,7 +358,7 @@ struct _jit_builder
     jit_memory_pool        value_pool;
     jit_memory_pool        insn_pool;
     jit_memory_pool        meta_pool;
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     jit_memory_pool        jite_vreg_pool;
     jit_memory_pool        jite_critical_point_pool;
     jit_memory_pool        jite_list_pool;
@@ -439,14 +440,15 @@ struct _jit_function
        stored in the entry_point field. Indirectors are used
        to support recompilation and on-demand compilation. */
     unsigned char        *indirector;
-//#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
-#if defined(JITE_ENABLE)
+#endif
+
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     jite_instance_t        jite;
+    jit_function_t        cdecl_trampoline;
 #endif
     /* Trampoline with CDECL ABI used with jit_function_apply
        for functions under different ABI */
-    jit_function_t        cdecl_trampoline;
-#endif
+
 };
 
 /*

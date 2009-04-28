@@ -205,7 +205,7 @@ static jit_value_t alloc_value(jit_function_t func, jit_type_t type)
 	value->reg = -1;
 	value->frame_offset = JIT_INVALID_FRAME_OFFSET;
 	value->index = -1;
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
 	value->vreg  = 0;
 #endif
 	return value;
