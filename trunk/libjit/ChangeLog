@@ -1,9 +1,12 @@
+2009-04-28  Kirill Kononenko  <Kirill.Kononenko@gmail.com>
+        Fix build break for interpreter.
+
 2009-04-04  Kirill Kononenko  <Kirill.Kononenko@gmail.com>
         <http://code.google.com/p/libjit-linear-scan-register-allocator>
 	<http://jit-cil.net>
 
         * Merge the two branches for a libJIT 0.1.2.5 + / libJIT 0.1.2 1/2 version release
-	  (code name: "libJIT-ON-TESTOSTERONE")
+	  (code name: "libJIT-ON-TEST-OSTE-RONE")
 	* main branch + libJIT-linear-scan-register-allocator
 	* Add optimization levels for IA-32 from 0 to 4 (jit_set_optimization_level)
 	* Add a new specialized jit_abi_internal

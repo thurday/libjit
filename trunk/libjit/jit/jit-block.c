@@ -103,7 +103,9 @@ jit_block_t _jit_block_create(jit_function_t func, jit_label_t *label)
 		func->builder->first_block = block;
 	}
 	func->builder->last_block = block;
+#if defined(JITE_ENABLED)
 	block->analysed = 0;
+#endif
 	return block;
 }
 
@@ -289,8 +291,10 @@ jit_insn_t _jit_block_add_insn(jit_block_t block)
 		insns = builder->insns;
 	}
 	insns[builder->num_insns] = insn;
+#if defined(JITE_ENABLED)
 	insn->insn_num   = builder->num_insns;
 	insn->next       = 0;
+#endif
 	block->last_insn = (builder->num_insns)++;
 	/* Return the instruction, which is now ready to fill in */
 	return insn;

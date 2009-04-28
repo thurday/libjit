@@ -236,7 +236,8 @@ struct _jit_value
     jit_nuint            usage_count;
     int                index;
     jit_value_t            address_of;
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+//#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+#if defined(JITE_ENABLED)
     jite_vreg_t            vreg;
 #endif
 };
@@ -438,7 +439,8 @@ struct _jit_function
        stored in the entry_point field. Indirectors are used
        to support recompilation and on-demand compilation. */
     unsigned char        *indirector;
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+//#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+#if defined(JITE_ENABLE)
     jite_instance_t        jite;
 #endif
     /* Trampoline with CDECL ABI used with jit_function_apply
