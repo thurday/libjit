@@ -1,11 +1,10 @@
 #include "jit-internal.h"
-#include "config.h"
+#include <config.h>
+#include "jit-rules.h"
 #include "jit-setjmp.h"
 #include "jit/jit-dump.h"
 
-
-
-#if defined(JITE_ENABLED)
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
 
 unsigned int jite_value_in_reg(jit_value_t value)
 {

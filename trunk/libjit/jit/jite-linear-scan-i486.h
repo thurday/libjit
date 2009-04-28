@@ -1,4 +1,7 @@
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+#include <config.h>
+#include "jit-rules.h"
+
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
 
 #include "jite-linear-scan.h"
 #include "jit-gen-i486-simd.h"

@@ -3,8 +3,14 @@
  *
  */
 
+
+
 #ifndef JIT_GEN_I486_MASM_H
 #define JIT_GEN_I486_MASM_H
+
+#include <config.h>
+
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
 
 #include <jit-gen-i486-simd.h>
 #include <jite-i486-extra-arith.h>
@@ -12,7 +18,6 @@
 
 // #define DEBUG_ENABLED 1
 
-#if defined(JITE_ENABLED)
 
 
 #define JITE_N_GP_REGISTERS     6

@@ -21,6 +21,7 @@ AC_SUBST(JIT_ARCH)
 case "$host" in
 	i[[3456789]]86-*-*)
 		JIT_ARCH=x86
+	        AC_DEFINE(JITE_ENABLED, 1, [Define if you want to use advanced JIT compiler support by Kirill Kononenko])
 		;;
 	x86_64-*-*)
 		JIT_ARCH=x86-64

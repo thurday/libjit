@@ -44,6 +44,7 @@ extern	"C" {
 # define JIT_HAVE_BACKEND		1
 #elif defined(__i386) || defined(__i386__) || defined(_M_IX86)
 # define JIT_BACKEND_X86		1
+# define JITE_ENABLED                   1
 # define JIT_HAVE_BACKEND		1
 #elif defined(__amd64) || defined(__amd64__) || defined(_x86_64) || defined(_x86_64__)
 # define JIT_BACKEND_X86_64		1
