@@ -54,7 +54,11 @@ jit_function_t jit_function_create(jit_context_t context, jit_type_t signature)
 #if !defined(JIT_BACKEND_INTERP) && (defined(jit_redirector_size) || defined(jit_indirector_size))
     jit_cache_t cache;
 #endif
+
+#if defined(JITE_ENABLED)
     jit_abi_t abi;
+#endif
+
     /* Allocate memory for the function and clear it */
     func = jit_cnew(struct _jit_function);
     if(!func)
@@ -131,12 +135,15 @@ jit_function_t jit_function_create(jit_context_t context, jit_type_t signature)
         context->functions = func;
     }
     context->last_function = func;
+
+#if defined(JITE_ENABLED)
     func->cdecl_trampoline = 0;
     abi = jit_type_get_abi(signature);
     if(abi != jit_abi_cdecl)
     {
         func->cdecl_trampoline = jit_function_create_cdecl_trampoline(context, signature);
     }
+#endif
     jit_function_set_optimization_level(func, 0);
     /* Return the function to the caller */
     return func;
@@ -196,12 +203,15 @@ int _jit_function_ensure_builder(jit_function_t func)
     jit_memory_pool_init(&(func->builder->value_pool),     struct _jit_value);
     jit_memory_pool_init(&(func->builder->insn_pool),      struct _jit_insn);
     jit_memory_pool_init(&(func->builder->meta_pool),      struct _jit_meta);
+#if defined(JITE_ENABLED)
     jit_memory_pool_init(&(func->builder->jite_vreg_pool), struct _jite_vreg);
     jit_memory_pool_init(&(func->builder->jite_critical_point_pool), struct _jite_critical_point);
     jit_memory_pool_init(&(func->builder->jite_list_pool),  struct _jite_list);
     jit_memory_pool_init(&(func->builder->jite_frame_pool), struct _jite_frame);
+
     jit_memory_pool_init(&(func->builder->memory_pool),     void *);
     jit_memory_pool_init(&(func->builder->jite_linked_list_pool), struct _jite_linked_list);
+#endif
 
     /* Create the initial entry block */
     if(!_jit_block_init(func))
@@ -231,15 +241,19 @@ void _jit_function_free_builder(jit_function_t func)
     if(func->builder)
     {
         _jit_block_free(func);
+
+#if defined(JITE_ENABLED)
         jit_memory_pool_free(&(func->builder->jite_vreg_pool), 0);
         jit_memory_pool_free(&(func->builder->jite_critical_point_pool), 0);
         jit_memory_pool_free(&(func->builder->jite_list_pool), 0);
         jit_memory_pool_free(&(func->builder->jite_frame_pool), 0);
         jit_memory_pool_free(&(func->builder->memory_pool), _jit_memory_free);
+        jit_memory_pool_free(&(func->builder->jite_linked_list_pool), 0);
+#endif
+
         jit_memory_pool_free(&(func->builder->insn_pool), 0);
         jit_memory_pool_free(&(func->builder->value_pool), _jit_value_free);
         jit_memory_pool_free(&(func->builder->meta_pool), _jit_meta_free_one);
-        jit_memory_pool_free(&(func->builder->jite_linked_list_pool), 0);
 
         jit_free(func->builder->param_values);
         jit_free(func->builder->insns);
@@ -721,10 +735,12 @@ cleanup_on_restart(jit_gencode_t gen, jit_function_t func)
 static int
 compile(jit_function_t func, void **entry_point)
 {
+#if defined(JITE_ENABLED)
     if(jit_function_extended_compiler_is_enabled(func))
     {
         return jite_compile(func, entry_point);
     }
+#endif
 
     struct jit_gencode gen;
     jit_cache_t cache;

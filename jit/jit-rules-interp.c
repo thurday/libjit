@@ -645,7 +645,7 @@ int _jit_create_call_return_insns
  * operations.
  * @end deftypefun
 @*/
-int _jit_opcode_is_supported(int opcode)
+int _jit_opcode_is_supported(jit_function_t func, int opcode)
 {
 	/* We support all opcodes in the interpreter */
 	return 1;

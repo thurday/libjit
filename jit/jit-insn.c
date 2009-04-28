@@ -5366,6 +5366,7 @@ static int create_call_setup_insns
 			return 1;
 		}
 	}
+#if defined(JITE_ENABLED)
 	else
 	{
 		if((flags & JIT_CALL_TAIL) != 0 && func == callee)
@@ -5523,6 +5524,7 @@ static int create_call_setup_insns
 			return 1;
 		}
 	}
+#endif
 	/* Let the back end do the work */
 	return _jit_create_call_setup_insns
 		(func, signature, args, num_args,
@@ -5882,7 +5884,10 @@ jit_value_t jit_insn_call_indirect
     }
 
     insn->value1 = value;
+
+#if defined(JITE_ENABLED)
     insn->signature = jit_type_copy(signature);
+#endif
 
     /* If the function does not return, then end the current block.
        The next block does not have "entered_via_top" set so that
@@ -6027,7 +6032,10 @@ jit_value_t jit_insn_call_indirect_vtable
         insn->opcode = JIT_OP_CALL_VTABLE_PTR;
     }
     insn->value1 = value;
+
+#if defined(JITE_ENABLED)
     insn->signature = jit_type_copy(signature);
+#endif
 
     /* If the function does not return, then end the current block.
        The next block does not have "entered_via_top" set so that
@@ -6170,7 +6178,9 @@ jit_value_t jit_insn_call_native
     insn->value2 = (jit_value_t)jit_type_copy(signature);
 #endif
 
+#if defined(JITE_ENABLED)
     insn->signature = jit_type_copy(signature);
+#endif
 
     /* If the function does not return, then end the current block.
        The next block does not have "entered_via_top" set so that

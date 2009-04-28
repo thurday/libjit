@@ -12,6 +12,7 @@
 
 // #define DEBUG_ENABLED 1
 
+#if defined(JITE_ENABLED)
 
 
 #define JITE_N_GP_REGISTERS     6
@@ -2767,5 +2768,7 @@ unsigned char *__masm_irem_un_reg_reg_imm(unsigned char *inst, jit_function_t fu
 
 #define ROUND_STACK(size)    \
         (((size) + (sizeof(void *) - 1)) & ~(sizeof(void *) - 1))
+
+#endif
 
 #endif /* JIT_GEN_I486_MASM_H */

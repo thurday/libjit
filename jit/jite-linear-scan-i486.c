@@ -1,4 +1,4 @@
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+#if defined(JITE_ENABLED) //defined(__i386) || defined(__i386__) || defined(_M_IX86)
 #include "jit-internal.h"
 #include "jite-linear-scan-i486.h"
 #include "jit-setjmp.h"

@@ -2025,6 +2025,11 @@ restart_tail:
 			}
 		}
 		VMBREAK;
+		
+		VMCASE(JIT_OP_TAIL_CALL):
+		{
+		}
+		VMBREAK;
 
 		/******************************************************************
 		 * Comparison opcodes.
