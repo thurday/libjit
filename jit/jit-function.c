@@ -1485,6 +1485,7 @@ void *_jit_function_compile_on_demand(jit_function_t func)
 
 int jit_function_apply(jit_function_t func, void **args, void *return_area)
 {
+#if defined(JITE_ENABLED) && !defined(JIT_BACKEND_INTERP)
     jit_type_t signature = jit_function_get_signature(func);
     jit_abi_t abi = jit_type_get_abi(signature);
     if(abi != jit_abi_cdecl)
@@ -1500,6 +1501,8 @@ int jit_function_apply(jit_function_t func, void **args, void *return_area)
         trampoline_args[num_params] = &func_ptr;
         return jit_function_apply(func->cdecl_trampoline, trampoline_args, return_area);
     }
+#endif
+
     if(func)
     {
         return jit_function_apply_vararg
