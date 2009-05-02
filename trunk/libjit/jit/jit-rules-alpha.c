@@ -368,7 +368,7 @@ void _jit_gen_free_reg(jit_gencode_t gen, int reg, int other_reg, int value_used
  * Since alpha processors below ev6 need help with floating-point, we'll use the 
  * intrinsic floating-point functions on this systems.
  */
-int _jit_opcode_is_supported(int opcode) {
+int _jit_opcode_is_supported(jit_function_t func, int opcode) {
 
 	switch(opcode) {
 		#define JIT_INCLUDE_SUPPORTED

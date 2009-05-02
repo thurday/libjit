@@ -266,7 +266,7 @@ _jit_init_backend(void)
 }
 
 int
-_jit_opcode_is_supported(int opcode)
+_jit_opcode_is_supported(jit_function_t func, int opcode)
 {
 	switch(opcode)
 	{
