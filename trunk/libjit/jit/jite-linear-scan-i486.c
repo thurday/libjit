@@ -1398,10 +1398,10 @@ void jite_preallocate_global_registers(jit_function_t func)
                         {
                             int indexFound = -1;
                             
-                            /* If the value is used less than JIT_MIN_USED times (created once and used once)
+                            /* If the value is used less than JITE_MIN_USED times (created once and used once)
                                then there is no need to allocate a register for it. */
 
-			    if(!jit_value_is_addressable(value) && value->usage_count >= JIT_MIN_USED )
+			    if(!jit_value_is_addressable(value) && value->usage_count >= JITE_MIN_USED )
                             {
                                 if(!jite_vreg_is_in_register_liveness(func, value->vreg, regIndex) && jite_regIndex_is_free(func, regIndex, value))
                                 {
@@ -1595,9 +1595,9 @@ void jite_preallocate_global_registers(jit_function_t func)
                         {
                             int indexFound = -1;
                             
-                            /* If the value is used less than JIT_MIN_USED times
+                            /* If the value is used less than JITE_MIN_USED times
                                then there is no need to allocate a register for it. */
-			    if(!jit_value_is_addressable(value) && value->usage_count >= JIT_MIN_USED )
+			    if(!jit_value_is_addressable(value) && value->usage_count >= JITE_MIN_USED )
                             {
                                 int index;
                                 for(index = 0; index < JITE_N_GP_REGISTERS; index++)
@@ -1638,7 +1638,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                         if(value->vreg && value->vreg->min_range != value->vreg->max_range)
                         {
                             int indexFound = -1;
-			    if(!jit_value_is_addressable(value) && value->usage_count >= JIT_MIN_USED )
+			    if(!jit_value_is_addressable(value) && value->usage_count >= JITE_MIN_USED )
                             {
                                 int index;
                                 for(index = 0; index < JITE_N_XMM_REGISTERS; index++)
@@ -1687,7 +1687,7 @@ void jite_preallocate_global_registers(jit_function_t func)
                             {
                                 int indexFound = -1;
 
-				if(!jit_value_is_addressable(value) && value->usage_count >= JIT_MIN_USED)
+				if(!jit_value_is_addressable(value) && value->usage_count >= JITE_MIN_USED)
                                 {
                                     int index;
                                     for(index = 0; index < JITE_N_XMM_REGISTERS; index++)

@@ -576,14 +576,14 @@ unsigned char *jite_memory_copy_with_reg
 
 	gen->stack_changed = 1;
 	if(func) func->jite->relative_sp_offset -= (3 * sizeof(void *));
-//        x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
 
+	inst = jite_restore_local_registers(inst, func, 0x6); /* Restore EAX, EDX, and ECX destroyed after call of native function */
     }
     return inst;
 }
 
-// Registers EAX, EDX and ECX are scratched if an external function is called
-// to perform this operation.
+/* Registers EAX, EDX and ECX are scratched if an external function is called
+   to perform this operation */
 unsigned char *jite_memory_copy
     (unsigned char *inst, jit_function_t func, jit_gencode_t gen, int dreg, jit_nint doffset,
      int sreg, jit_nint soffset, jit_nuint size, int temp_reg)
@@ -656,8 +656,9 @@ unsigned char *jite_memory_copy
             x86_push_reg(inst, temp_reg);
         }
         x86_call_code(inst, jit_memcpy);
-
         x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
+
+	inst = jite_restore_local_registers(inst, func, 0x6); /* Restore EAX, EDX, and ECX destroyed after call of native function */
     }
     return inst;
 }
@@ -724,8 +725,8 @@ unsigned char *jite_memory_copy_to_mem
 }
 
 
-// Registers EAX, EDX and ECX are scratched if an external function is called
-// to perform this operation.
+/* Registers EAX, EDX and ECX are scratched if an external function is called
+   to perform this operation. */
 unsigned char *jite_memory_copy_from_mem
     (unsigned char *inst, jit_function_t func, jit_gencode_t gen, int dreg, jit_nint doffset,
      void *soffset, jit_nuint size, int temp_reg)
@@ -793,6 +794,7 @@ unsigned char *jite_memory_copy_from_mem
         x86_call_code(inst, jit_memcpy);
 	gen->stack_changed = 1;
 	func->jite->relative_sp_offset -= (3 * sizeof(void *));
+	inst = jite_restore_local_registers(inst, func, 0x6); /* Restore EAX, EDX, and ECX destroyed after call of native function */
 //        x86_alu_reg_imm(inst, X86_ADD, X86_ESP, 3 * sizeof(void *));
     }
     return inst;
@@ -838,6 +840,7 @@ unsigned char * _masm_memset_reg_reg_imm(jit_function_t func, jit_gencode_t gen,
 	x86_call_code(inst, jit_memset);
 	gen->stack_changed = 1;
 	func->jite->relative_sp_offset -= (3 * sizeof(void *));
+	inst = jite_restore_local_registers(inst, func, 0x6); /* Restore EAX, EDX, and ECX destroyed after call of native function */
     }
     return inst;
 }
@@ -879,6 +882,7 @@ unsigned char * _masm_memset_reg_imm_imm(jit_function_t func, jit_gencode_t gen,
 	x86_call_code(inst, jit_memset);
 	gen->stack_changed = 1;
 	func->jite->relative_sp_offset -= (3 * sizeof(void *));
+	inst = jite_restore_local_registers(inst, func, 0x6); /* Restore EAX, EDX, and ECX destroyed after call of native function */
     }
     return inst;
 }
@@ -921,6 +925,7 @@ unsigned char * _masm_memset_imm_imm_imm(jit_function_t func, jit_gencode_t gen,
 	x86_call_code(inst, jit_memset);
 	gen->stack_changed = 1;
 	func->jite->relative_sp_offset -= (3 * sizeof(void *));
+	inst = jite_restore_local_registers(inst, func, 0x6); /* Restore EAX, EDX, and ECX destroyed after call of native function */
     }
     return inst;
 }
