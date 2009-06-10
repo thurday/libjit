@@ -152,11 +152,11 @@ jite-rules-i486-logic.inc: jite-rules-i486-logic.lir $(top_builddir)/tools/gen-l
 			>jite-rules-i486-logic.inc
 
 
-jit-rules-arm.lo: jit-rules-arm.slc
+jit-rules-arm.lo: jit-rules-arm.inc
 
-jit-rules-arm.slc: jit-rules-arm.sel $(top_builddir)/tools/gen-sel$(EXEEXT)
-	$(top_builddir)/tools/gen-sel$(EXEEXT) $(srcdir)/jit-rules-arm.sel \
-			>jit-rules-arm.slc
+jit-rules-arm.inc: jit-rules-arm.ins $(top_builddir)/tools/gen-rules$(EXEEXT)
+	$(top_builddir)/tools/gen-rules$(EXEEXT) $(srcdir)/jit-rules-arm.ins \
+			>jit-rules-arm.inc
 
 jit-rules-alpha.lo: jit-rules-alpha.inc
 
@@ -173,7 +173,7 @@ jit-rules-x86-64.inc: jit-rules-x86-64.ins $(top_builddir)/tools/gen-rules$(EXEE
 CLEANFILES = \
 	jit-interp-labels.h \
 	jit-rules-alpha.inc \
-	jit-rules-arm.slc \
+	jit-rules-arm.inc \
 	jit-rules-x86.inc \
 	jit-rules-x86-64.inc \
 	jite-rules-i486-arith.inc \

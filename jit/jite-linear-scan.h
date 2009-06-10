@@ -10,7 +10,7 @@
 
 // #if defined(JITE_ENABLED)
 
-#define JIT_MIN_USED 0
+#define JITE_MIN_USED 0
 
 // #define JITE_DEBUG_ENABLED 1
 

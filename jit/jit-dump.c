@@ -374,12 +374,18 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 	name = jit_opcodes[opcode].name;
 	flags = jit_opcodes[opcode].flags;
 	infix_name = 0;
+	
 	/* Dump branch, call, or register information */
 	if((flags & JIT_OPCODE_IS_BRANCH) != 0)
 	{
 		if(opcode == JIT_OP_BR)
 		{
 			fprintf(stream, "goto .L%ld", (long)(jit_insn_get_label(insn)));
+			return;
+		}
+		if(opcode == JIT_OP_CALL_FINALLY || opcode == JIT_OP_CALL_FILTER)
+		{
+		        fprintf(stream, "%s .L%ld", name, (long)(jit_insn_get_label(insn)));
 			return;
 		}
 		fprintf(stream, "if ");
@@ -410,7 +416,7 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 		putc('(', stream);
 		jit_dump_value(stream, func, jit_insn_get_value1(insn), 0);
 		fputs(", ", stream);
-		fputs(_jit_reg_info[(int)reg].name, stream);
+		fputs(jit_reg_name(reg), stream);
 		putc(')', stream);
 		return;
 	}
@@ -426,7 +432,7 @@ void jit_dump_insn(FILE *stream, jit_function_t func, jit_insn_t insn)
 		jit_nint num_labels, label;
 		labels = (jit_label_t *)jit_value_get_nint_constant(jit_insn_get_value1(insn));
 		num_labels = jit_value_get_nint_constant(jit_insn_get_value2(insn));
-		fprintf(stream, "jump_table ");
+		fprintf(stream, "%s ", name);
 		dump_value(stream, func, jit_insn_get_dest(insn), flags & JIT_OPCODE_DEST_MASK);
 		printf(" : {");
 		for(label = 0; label < num_labels; label++)
@@ -757,11 +763,11 @@ void jit_dump_function(FILE *stream, jit_function_t func, const char *name)
 	jit_block_t block;
 	jit_insn_iter_t iter;
 	jit_insn_t insn;
-	int prev_block;
 	jit_type_t signature;
 	unsigned int param;
 	unsigned int num_params;
 	jit_value_t value;
+	int prev_block;
 
 	/* Bail out if we don't have sufficient information to dump */
 	if(!stream || !func)
@@ -865,6 +871,7 @@ void jit_dump_function(FILE *stream, jit_function_t func, const char *name)
 	fprintf(stream, ") : ");
 	jit_dump_type(stream, jit_type_get_return(signature));
 	putc('\n', stream);
+
 
 	/* Should we dump the three address code or the native code? */
 	if(func->builder)
